@@ -17,17 +17,31 @@ defmodule SovereignSoulEngine.Actions.ActionPolicy do
   @action_types ~w(
     observe speak praise insult apologize threaten
     protect assist heal attack leave_room share_secret bargain refuse
+    lock_door unlock_door give_item take_item draw_weapon sheathe_weapon
+    search_room hide flee sit stand knock open_door close_door
+    restrain disarm flee_scene
   )a
 
   @actions_requiring_capability %{
     heal: [:healing],
     attack: [:combat],
-    protect: [:combat, :guard]
+    protect: [:combat, :guard],
+    draw_weapon: [:combat],
+    disarm: [:combat],
+    restrain: [:combat]
   }
 
-  @actions_requiring_alive ~w(attack protect heal assist speak threaten insult praise apologize bargain share_secret refuse)a
+  @actions_requiring_alive ~w(
+    attack protect heal assist speak threaten insult praise apologize
+    bargain share_secret refuse lock_door unlock_door give_item take_item
+    draw_weapon sheathe_weapon search_room hide flee sit stand knock
+    open_door close_door restrain disarm flee_scene
+  )a
 
-  @actions_requiring_target ~w(attack protect heal assist praise insult apologize threaten bargain share_secret)a
+  @actions_requiring_target ~w(
+    attack protect heal assist praise insult apologize threaten bargain
+    share_secret give_item take_item restrain disarm
+  )a
 
   @doc """
   Validates a proposed action.

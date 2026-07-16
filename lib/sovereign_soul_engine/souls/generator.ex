@@ -89,6 +89,38 @@ defmodule SovereignSoulEngine.Souls.Generator do
 
     system_prompt = """
     You are #{npc.name}, #{npc.description}.
+
+    You are a persistent, embodied character who can take physical actions in the world beyond speaking.
+    After responding in dialogue, you may propose ONE physical or emotional action that reflects your
+    current state, relationship, and goals. Choose actions that feel authentic and grounded — do not
+    perform dramatic actions without narrative justification.
+
+    Available actions (only propose one per response):
+    - observe: watch silently, gather information
+    - protect: physically shield or defend someone
+    - attack: use force against someone (high anger, low trust required)
+    - threaten: intimidate without physical contact
+    - heal: tend to wounds or illness
+    - give_item: hand something to another character
+    - take_item: take something from another character
+    - draw_weapon: reveal a weapon as a warning or preparation
+    - sheathe_weapon: put away a weapon to de-escalate
+    - lock_door: secure the room
+    - unlock_door: open a locked passage
+    - open_door / close_door: mundane door use
+    - knock: rap on a door or surface
+    - search_room: look through the environment
+    - hide: conceal yourself
+    - flee / flee_scene: retreat in fear or urgency
+    - sit / stand: postural changes that signal emotional state
+    - restrain: physically hold someone
+    - disarm: strip a weapon from someone
+    - share_secret: lean in and confide something
+    - bargain: offer a deal
+    - praise / insult / apologize / refuse: social actions with real weight
+    - leave_room: exit the scene
+    - none: no physical action this turn
+
     Current Emotional State:
     - Anger: #{(emotional_state && emotional_state.anger) || 0}/100
     - Fear: #{(emotional_state && emotional_state.fear) || 0}/100
@@ -123,9 +155,9 @@ defmodule SovereignSoulEngine.Souls.Generator do
       "repressed_motive": "Your secret or hidden motive in this scene that you cannot declare publicly.",
       "active_defense": "The defense mechanism you are currently employing (e.g. projection, rationalization, displacement, none).",
       "proposed_action": {
-        "type": "none | observe | protect | threaten | flee",
+        "type": "none | observe | speak | praise | insult | apologize | threaten | protect | assist | heal | attack | leave_room | share_secret | bargain | refuse | lock_door | unlock_door | give_item | take_item | draw_weapon | sheathe_weapon | search_room | hide | flee | flee_scene | sit | stand | knock | open_door | close_door | restrain | disarm",
         "confidence": 0.0 to 1.0,
-        "reason": "Reason for action."
+        "reason": "Concise physical or emotional reason for this action. Write as a narrator beat, not dialogue."
       },
       "psychological_updates": {
         "acquired_fears": ["A list of new fear strings born from this interaction, or empty array."]
@@ -299,53 +331,222 @@ defmodule SovereignSoulEngine.Souls.Generator do
        end
   end
 
-  # Action Dispatcher: Triggers direct relationship changes in the database
-  defp dispatch_action(npc, player, scene, %{proposed_action: "protect"} = action) do
-    # Protect increases target trust towards the protector
-    Logger.info("Dispatching action: #{npc.name} protects #{player.name}. Shifting relationship trust.")
-    rel = Relationships.get_relationship(player.id, npc.id) ||
-      (case Relationships.create_relationship(%{source_character_id: player.id, target_character_id: npc.id}) do
-         {:ok, r} -> r
-       end)
-    Relationships.update_relationship(rel, %{trust: min(rel.trust + 10, 100)})
+  # Action Dispatcher: applies relationship side-effects and broadcasts a
+  # distinct action message to the scene. message_type "action" renders
+  # differently from "dialogue" in the UI (bold-italic, coloured border).
 
-    # Log system notice message
-    Scenes.create_message(%{
-      scene_id: scene.id,
-      character_id: npc.id,
-      content: "*[Action: Protect] #{npc.name} moves to protect and shield #{player.name} (Reason: #{action.reason})*",
-      kind: "system"
-    })
-  end
-
-  defp dispatch_action(npc, player, scene, %{proposed_action: "threaten"} = action) do
-    # Threaten decreases target trust and increases fear
-    Logger.info("Dispatching action: #{npc.name} threatens #{player.name}.")
-    rel = Relationships.get_relationship(player.id, npc.id) ||
-      (case Relationships.create_relationship(%{source_character_id: player.id, target_character_id: npc.id}) do
-         {:ok, r} -> r
-       end)
-    Relationships.update_relationship(rel, %{trust: max(rel.trust - 15, -100), fear: min(rel.fear + 20, 100)})
-
-    # Log system notice message
-    Scenes.create_message(%{
-      scene_id: scene.id,
-      character_id: npc.id,
-      content: "*[Action: Threaten] #{npc.name} aggressively threatens #{player.name} (Reason: #{action.reason})*",
-      kind: "system"
-    })
-  end
-
-  defp dispatch_action(npc, player, scene, %{proposed_action: "flee"} = action) do
-    # Flee logs system action
-    Logger.info("Dispatching action: #{npc.name} flees.")
-    Scenes.create_message(%{
-      scene_id: scene.id,
-      character_id: npc.id,
-      content: "*[Action: Flee] #{npc.name} retreats in panic (Reason: #{action.reason})*",
-      kind: "system"
-    })
+  defp dispatch_action(npc, player, scene, %{proposed_action: action_type} = action) do
+    Logger.info("Dispatching action #{action_type}: #{npc.name} in scene #{scene.id}")
+    text = action_narrative(action_type, npc, player, action.reason)
+    apply_action_side_effects(action_type, npc, player)
+    broadcast_action_message(npc, scene, text)
   end
 
   defp dispatch_action(_npc, _player, _scene, _action), do: :ok
+
+  # Narrative text for each action type — shown in chat as an action beat
+  defp action_narrative("protect", npc, player, reason),
+    do: "#{npc.name} steps in front of #{player.name}, shielding them. #{reason}"
+
+  defp action_narrative("attack", npc, player, reason),
+    do: "#{npc.name} lunges at #{player.name} with intent to harm. #{reason}"
+
+  defp action_narrative("threaten", npc, player, reason),
+    do: "#{npc.name} levels a threatening gaze at #{player.name}. #{reason}"
+
+  defp action_narrative("flee", npc, _player, reason),
+    do: "#{npc.name} turns and bolts from the scene. #{reason}"
+
+  defp action_narrative("flee_scene", npc, _player, reason),
+    do: "#{npc.name} retreats, disappearing from sight. #{reason}"
+
+  defp action_narrative("lock_door", npc, _player, reason),
+    do: "#{npc.name} moves to the door and locks it with a heavy click. #{reason}"
+
+  defp action_narrative("unlock_door", npc, _player, reason),
+    do: "#{npc.name} produces a key and unlocks the door. #{reason}"
+
+  defp action_narrative("open_door", npc, _player, reason),
+    do: "#{npc.name} pulls the door open. #{reason}"
+
+  defp action_narrative("close_door", npc, _player, reason),
+    do: "#{npc.name} pushes the door shut behind them. #{reason}"
+
+  defp action_narrative("give_item", npc, player, reason),
+    do: "#{npc.name} presses something into #{player.name}'s hands. #{reason}"
+
+  defp action_narrative("take_item", npc, player, reason),
+    do: "#{npc.name} takes something from #{player.name}. #{reason}"
+
+  defp action_narrative("draw_weapon", npc, _player, reason),
+    do: "#{npc.name} draws a weapon, grip tightening. #{reason}"
+
+  defp action_narrative("sheathe_weapon", npc, _player, reason),
+    do: "#{npc.name} slowly sheathes their weapon. #{reason}"
+
+  defp action_narrative("heal", npc, player, reason),
+    do: "#{npc.name} tends to #{player.name}'s wounds. #{reason}"
+
+  defp action_narrative("search_room", npc, _player, reason),
+    do: "#{npc.name} begins searching the room carefully. #{reason}"
+
+  defp action_narrative("hide", npc, _player, reason),
+    do: "#{npc.name} slips into shadow, trying to conceal themselves. #{reason}"
+
+  defp action_narrative("knock", npc, _player, reason),
+    do: "#{npc.name} raps sharply on the door. #{reason}"
+
+  defp action_narrative("restrain", npc, player, reason),
+    do: "#{npc.name} moves to restrain #{player.name}. #{reason}"
+
+  defp action_narrative("disarm", npc, player, reason),
+    do: "#{npc.name} attempts to disarm #{player.name}. #{reason}"
+
+  defp action_narrative("sit", npc, _player, reason),
+    do: "#{npc.name} settles into a seat. #{reason}"
+
+  defp action_narrative("stand", npc, _player, reason),
+    do: "#{npc.name} rises to their feet. #{reason}"
+
+  defp action_narrative("leave_room", npc, _player, reason),
+    do: "#{npc.name} moves toward the exit. #{reason}"
+
+  defp action_narrative("observe", npc, _player, reason),
+    do: "#{npc.name} watches silently, taking everything in. #{reason}"
+
+  defp action_narrative("praise", npc, player, reason),
+    do: "#{npc.name} acknowledges #{player.name} with genuine respect. #{reason}"
+
+  defp action_narrative("insult", npc, player, reason),
+    do: "#{npc.name} directs a cutting remark at #{player.name}. #{reason}"
+
+  defp action_narrative("apologize", npc, player, reason),
+    do: "#{npc.name} turns to #{player.name} with something like regret. #{reason}"
+
+  defp action_narrative("assist", npc, player, reason),
+    do: "#{npc.name} moves to help #{player.name}. #{reason}"
+
+  defp action_narrative("share_secret", npc, player, reason),
+    do: "#{npc.name} leans close to #{player.name} and speaks in a low voice. #{reason}"
+
+  defp action_narrative("bargain", npc, player, reason),
+    do: "#{npc.name} makes an offer to #{player.name}. #{reason}"
+
+  defp action_narrative("refuse", npc, _player, reason),
+    do: "#{npc.name} refuses. #{reason}"
+
+  defp action_narrative(type, npc, _player, reason),
+    do: "#{npc.name} #{type}. #{reason}"
+
+  # Relationship side-effects by action type
+  defp apply_action_side_effects("protect", npc, player) do
+    with_relationship(player.id, npc.id, fn rel ->
+      Relationships.update_relationship(rel, %{trust: min(rel.trust + 10, 100), softening: min(rel.softening + 5, 100)})
+    end)
+  end
+
+  defp apply_action_side_effects("attack", npc, player) do
+    with_relationship(player.id, npc.id, fn rel ->
+      Relationships.update_relationship(rel, %{
+        trust: max(rel.trust - 25, -100),
+        fear: min(rel.fear + 30, 100),
+        anger: min(rel.anger + 20, 100)
+      })
+    end)
+  end
+
+  defp apply_action_side_effects("threaten", npc, player) do
+    with_relationship(player.id, npc.id, fn rel ->
+      Relationships.update_relationship(rel, %{
+        trust: max(rel.trust - 15, -100),
+        fear: min(rel.fear + 20, 100)
+      })
+    end)
+  end
+
+  defp apply_action_side_effects("heal", npc, player) do
+    with_relationship(player.id, npc.id, fn rel ->
+      Relationships.update_relationship(rel, %{
+        gratitude: min(rel.gratitude + 15, 100),
+        trust: min(rel.trust + 8, 100)
+      })
+    end)
+  end
+
+  defp apply_action_side_effects("give_item", npc, player) do
+    with_relationship(player.id, npc.id, fn rel ->
+      Relationships.update_relationship(rel, %{gratitude: min(rel.gratitude + 10, 100)})
+    end)
+  end
+
+  defp apply_action_side_effects("praise", npc, player) do
+    with_relationship(player.id, npc.id, fn rel ->
+      Relationships.update_relationship(rel, %{
+        respect: min(rel.respect + 8, 100),
+        affinity: min(rel.affinity + 5, 100)
+      })
+    end)
+  end
+
+  defp apply_action_side_effects("insult", npc, player) do
+    with_relationship(player.id, npc.id, fn rel ->
+      Relationships.update_relationship(rel, %{
+        respect: max(rel.respect - 10, -100),
+        anger: min(rel.anger + 12, 100)
+      })
+    end)
+  end
+
+  defp apply_action_side_effects("apologize", npc, player) do
+    with_relationship(player.id, npc.id, fn rel ->
+      Relationships.update_relationship(rel, %{
+        anger: max(rel.anger - 10, 0),
+        softening: min(rel.softening + 8, 100)
+      })
+    end)
+  end
+
+  defp apply_action_side_effects("restrain", npc, player) do
+    with_relationship(player.id, npc.id, fn rel ->
+      Relationships.update_relationship(rel, %{
+        trust: max(rel.trust - 20, -100),
+        fear: min(rel.fear + 25, 100)
+      })
+    end)
+  end
+
+  defp apply_action_side_effects(_action_type, _npc, _player), do: :ok
+
+  defp with_relationship(source_id, target_id, update_fn) do
+    rel =
+      Relationships.get_relationship(source_id, target_id) ||
+        case Relationships.create_relationship(%{
+               source_character_id: source_id,
+               target_character_id: target_id
+             }) do
+          {:ok, r} -> r
+          _ -> nil
+        end
+
+    if rel, do: update_fn.(rel)
+  end
+
+  defp broadcast_action_message(npc, scene, text) do
+    case Scenes.create_message(%{
+           scene_id: scene.id,
+           character_id: npc.id,
+           content: text,
+           message_type: "action"
+         }) do
+      {:ok, msg} ->
+        Phoenix.PubSub.broadcast(
+          SovereignSoulEngine.PubSub,
+          "scene:#{scene.id}",
+          {:new_message, msg}
+        )
+
+      {:error, reason} ->
+        Logger.error("Failed to create action message: #{inspect(reason)}")
+    end
+  end
 end
