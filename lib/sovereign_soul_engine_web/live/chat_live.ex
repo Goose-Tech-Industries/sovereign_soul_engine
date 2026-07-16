@@ -176,6 +176,33 @@ defmodule SovereignSoulEngineWeb.ChatLive do
     |> load_messages_for_selected()
   end
 
+  # Refresh scene participants and character details without touching the message stream.
+  defp refresh_scene_metadata(socket) do
+    player = socket.assigns.player
+    scene = SovereignSoulEngine.Repo.preload(
+      socket.assigns.selected_scene,
+      [participants: :character],
+      force: true
+    )
+
+    npc =
+      if length(scene.participants) == 2 do
+        npc_part = Enum.find(scene.participants, &(&1.character_id != player.id))
+        npc_part.character
+      else
+        nil
+      end
+
+    current_participant_ids = Enum.map(scene.participants, & &1.character_id)
+    invite_candidates = Enum.filter(socket.assigns.npcs, &(&1.id not in current_participant_ids))
+
+    socket
+    |> assign(:selected_scene, scene)
+    |> assign(:selected_npc, npc)
+    |> assign(:invite_candidates, invite_candidates)
+    |> assign_character_details()
+  end
+
   @impl true
   def handle_event("select_character", %{"character_id" => id}, socket) do
     npc = Enum.find(socket.assigns.npcs, &(&1.id == id))
@@ -299,7 +326,10 @@ defmodule SovereignSoulEngineWeb.ChatLive do
       |> Enum.each(fn {npc, index} ->
         delay_ms = index * 4000
 
-        # Player's consequence engine resolve relative to each NPC
+        # Process emotional/relationship consequences of player speaking.
+        # message_content is intentionally omitted — the message was already
+        # written by Scenes.create_message above; passing it here would create
+        # a duplicate DB row for every NPC in the scene.
         ConsequenceEngine.resolve(%{
           character_id: player.id,
           source_character_id: player.id,
@@ -307,7 +337,6 @@ defmodule SovereignSoulEngineWeb.ChatLive do
           scene_id: scene.id,
           event_type: :speak,
           event_intensity: 30,
-          message_content: content,
           correlation_id: correlation_id
         })
 
@@ -445,10 +474,11 @@ defmodule SovereignSoulEngineWeb.ChatLive do
 
   @impl true
   def handle_info({:state_updated, _}, socket) do
-    # Reload selected scene to refresh participants and context details
-    if scene_id = socket.assigns.selected_scene && socket.assigns.selected_scene.id do
-      scene = Scenes.get_scene!(scene_id)
-      {:noreply, select_scene(socket, scene)}
+    # Refresh participants and emotional state without resetting the message stream.
+    # select_scene would reset the stream via load_messages_for_selected, causing
+    # duplicates when messages are already arriving via {:new_message} broadcasts.
+    if socket.assigns.selected_scene do
+      {:noreply, refresh_scene_metadata(socket)}
     else
       {:noreply, socket}
     end
