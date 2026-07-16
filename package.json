@@ -1,0 +1,23 @@
+{
+  "name": "sovereign_soul_engine",
+  "version": "1.0.0",
+  "description": "To start your Phoenix server:",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "lib": "lib",
+    "test": "test"
+  },
+  "scripts": {
+    "test:e2e": "playwright test --config=test/playwright/playwright.config.js",
+    "test:e2e:headed": "playwright test --config=test/playwright/playwright.config.js --headed",
+    "test:e2e:ui": "playwright test --config=test/playwright/playwright.config.js --ui",
+    "test:e2e:report": "playwright show-report --config=test/playwright/playwright.config.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "^1.61.1"
+  }
+}
