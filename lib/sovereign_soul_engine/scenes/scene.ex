@@ -12,6 +12,7 @@ defmodule SovereignSoulEngine.Scenes.Scene do
     field :started_at, :utc_datetime_usec
     field :ended_at, :utc_datetime_usec
     field :metadata, :map, default: %{}
+    field :is_autonomous, :boolean, default: false
 
     has_many :participants, SovereignSoulEngine.Scenes.SceneParticipant
     has_many :messages, SovereignSoulEngine.Scenes.SceneMessage
@@ -25,7 +26,7 @@ defmodule SovereignSoulEngine.Scenes.Scene do
 
   def changeset(scene, attrs) do
     scene
-    |> cast(attrs, [:title, :status, :location, :context, :started_at, :ended_at, :metadata])
+    |> cast(attrs, [:title, :status, :location, :context, :started_at, :ended_at, :metadata, :is_autonomous])
     |> validate_required([:title, :status])
     |> validate_inclusion(:status, @status_values)
   end

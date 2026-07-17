@@ -182,6 +182,15 @@ defmodule SovereignSoulEngine.LLM.ProviderCascade do
 
   defp sanitize_proposed_action(nil), do: nil
 
+  defp sanitize_proposed_action(action) when is_binary(action) do
+    type = String.trim(action)
+    if type == "" || type == "none" do
+      nil
+    else
+      %{type: type, confidence: 1.0, reason: "Inferred from string response"}
+    end
+  end
+
   defp sanitize_proposed_action(%{} = action) when is_map(action) do
     type = sanitize_string(action[:type] || action["type"])
     reason = sanitize_string(action[:reason] || action["reason"])

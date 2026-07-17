@@ -4,7 +4,10 @@ defmodule SovereignSoulEngine.Repo.Migrations.CreateSoulShadows do
   def change do
     create table(:soul_shadows, primary_key: false) do
       add :id, :binary_id, primary_key: true
-      add :character_id, references(:characters, type: :binary_id, on_delete: :delete_all), null: false
+
+      add :character_id, references(:characters, type: :binary_id, on_delete: :delete_all),
+        null: false
+
       add :scene_id, references(:scenes, type: :binary_id, on_delete: :delete_all), null: false
       add :private_monologue, :text
       add :repressed_motive, :text

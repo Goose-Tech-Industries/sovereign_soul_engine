@@ -20,16 +20,20 @@ defmodule SovereignSoulEngine.Memories.Memory do
     field :decay_rate, :float, default: 1.0
     field :is_resolved, :boolean, default: false
     field :metadata, :map, default: %{}
+    field :status, :string, default: "active"
 
     belongs_to :owner_character, SovereignSoulEngine.Characters.Character
     belongs_to :subject_character, SovereignSoulEngine.Characters.Character
     belongs_to :scene, SovereignSoulEngine.Scenes.Scene
     belongs_to :event, SovereignSoulEngine.Scenes.SoulEvent
+    belongs_to :consolidated_into, SovereignSoulEngine.Memories.Memory,
+      foreign_key: :consolidated_into_id, type: :binary_id
 
     timestamps()
   end
 
   @categories ~w(working episodic relationship core wound belief)
+  @statuses ~w(active consolidated archived)
 
   def changeset(memory, attrs) do
     memory
@@ -52,9 +56,12 @@ defmodule SovereignSoulEngine.Memories.Memory do
       :recall_count,
       :decay_rate,
       :is_resolved,
-      :metadata
+      :metadata,
+      :status,
+      :consolidated_into_id
     ])
     |> validate_required([:owner_character_id, :category, :summary, :occurred_at])
     |> validate_inclusion(:category, @categories)
+    |> validate_inclusion(:status, @statuses)
   end
 end

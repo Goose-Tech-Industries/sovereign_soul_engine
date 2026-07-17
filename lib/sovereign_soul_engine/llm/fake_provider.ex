@@ -118,6 +118,31 @@ defmodule SovereignSoulEngine.LLM.FakeProvider do
   defp fixture_response_normal_speech(input) do
     system = input[:system] || input["system"]
 
+    {npc_name, npc_desc} =
+      if is_binary(system) do
+        first_line = system |> String.split("\n", parts: 2) |> List.first() |> String.trim()
+        case Regex.run(~r/^You are ([^,]+),\s*(.*?)\.?$/, first_line) do
+          [_, name, desc] -> {String.trim(name), String.trim(desc)}
+          _ ->
+            case Regex.run(~r/You are ([^,]+)/, first_line) do
+              [_, name] -> {String.trim(name), "a persistent character"}
+              _ -> {"NPC", "a persistent character"}
+            end
+        end
+      else
+        {"NPC", "a persistent character"}
+      end
+
+    location =
+      if is_binary(system) do
+        case Regex.run(~r/-\s*Location:\s*(.*?)$/m, system) do
+          [_, loc] -> String.trim(loc)
+          _ -> "the area"
+        end
+      else
+        "the area"
+      end
+
     if is_nil(system) do
       {:ok,
        %{
@@ -186,9 +211,9 @@ defmodule SovereignSoulEngine.LLM.FakeProvider do
               String.contains?(content_lower, "greetings") ->
             {:ok,
              %{
-               public_speech: "Greetings. I am Vael, former guardian of the hollow bastion.",
+               public_speech: "Greetings. I am #{npc_name}, #{npc_desc}.",
                private_thought:
-                 "A stranger has entered my domain. I must remain cautious but receptive.",
+                 "A stranger has entered my presence in #{location}. I must remain cautious but receptive.",
                tone: "cautious",
                motivation: "Acknowledge the stranger while keeping guard.",
                target_character_id: Ecto.UUID.generate(),
@@ -200,7 +225,7 @@ defmodule SovereignSoulEngine.LLM.FakeProvider do
                memory_candidates: [
                  %{
                    category: "episodic",
-                   summary: "A traveler greeted me in the hollow bastion.",
+                   summary: "A traveler greeted me in #{location}.",
                    importance: 30,
                    emotional_intensity: 20,
                    valence: 0.1,
@@ -251,7 +276,7 @@ defmodule SovereignSoulEngine.LLM.FakeProvider do
             {:ok,
              %{
                public_speech:
-                 "I don't have all the answers for this bastion, traveler. But my soul ledger is active, my mind is clear, and I am listening.",
+                 "I don't have all the answers for this place, traveler. But my soul ledger is active, my mind is clear, and I am listening.",
                private_thought:
                  "They ask questions about their surroundings. I should encourage dialogue while keeping alert.",
                tone: "thoughtful",
@@ -265,7 +290,7 @@ defmodule SovereignSoulEngine.LLM.FakeProvider do
                memory_candidates: [
                  %{
                    category: "episodic",
-                   summary: "Traveler asked a question about the bastion.",
+                   summary: "Traveler asked a question about #{location}.",
                    importance: 25,
                    emotional_intensity: 15,
                    valence: 0.1,
@@ -308,10 +333,10 @@ defmodule SovereignSoulEngine.LLM.FakeProvider do
                }
              }}
 
-          String.contains?(content_lower, "vael") ->
+          String.contains?(content_lower, String.downcase(npc_name)) ->
             {:ok,
              %{
-               public_speech: "Yes, I am Vael. What is it you seek?",
+               public_speech: "Yes, I am #{npc_name}. What is it you seek?",
                private_thought: "They know my name. This means they are not here by accident.",
                tone: "grave",
                motivation: "Inquire about the traveler's purpose.",
@@ -328,7 +353,7 @@ defmodule SovereignSoulEngine.LLM.FakeProvider do
                    importance: 35,
                    emotional_intensity: 25,
                    valence: 0.0,
-                   tags: ["vael", "inquiry"]
+                   tags: [String.downcase(npc_name), "inquiry"]
                  }
                ],
                relationship_signals: %{
@@ -341,10 +366,10 @@ defmodule SovereignSoulEngine.LLM.FakeProvider do
             {:ok,
              %{
                public_speech:
-                 "I hear you, but we must stay alert. The hollow bastion is not safe.",
+                 "I hear you, but we must stay alert. This place is not safe.",
                private_thought: "Their words are vague. I must stay focused on our surroundings.",
                tone: "cautious",
-               motivation: "Redirect focus to bastion safety.",
+               motivation: "Redirect focus to safety.",
                target_character_id: Ecto.UUID.generate(),
                proposed_action: %{
                  type: "observe",
@@ -354,7 +379,7 @@ defmodule SovereignSoulEngine.LLM.FakeProvider do
                memory_candidates: [
                  %{
                    category: "episodic",
-                   summary: "Traveler engaged in general dialogue.",
+                   summary: "Conversing with traveler in #{location}.",
                    importance: 25,
                    emotional_intensity: 15,
                    valence: 0.0,

@@ -28,6 +28,18 @@ defmodule SovereignSoulEngineWeb.Router do
     end
   end
 
+  scope "/acp", SovereignSoulEngineWeb do
+    pipe_through :browser
+
+    live_session :acp do
+      live "/", AcpDashboardLive, :index
+      live "/npcs/new", AcpNpcCreatorLive, :new
+      live "/npcs/:id", AcpCharacterLive, :show
+      live "/npcs/:id/:tab", AcpCharacterLive, :show
+      live "/social", AcpSocialLogLive, :index
+    end
+  end
+
   # Enable LiveDashboard and Swoosh mailbox preview in development
   if Application.compile_env(:sovereign_soul_engine, :dev_routes) do
     import Phoenix.LiveDashboard.Router

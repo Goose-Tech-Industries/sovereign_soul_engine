@@ -18,7 +18,14 @@ defmodule SovereignSoulEngine.Souls.SoulShadow do
 
   def changeset(soul_shadow, attrs) do
     soul_shadow
-    |> cast(attrs, [:character_id, :scene_id, :private_monologue, :repressed_motive, :active_defense, :emotional_drift])
+    |> cast(attrs, [
+      :character_id,
+      :scene_id,
+      :private_monologue,
+      :repressed_motive,
+      :active_defense,
+      :emotional_drift
+    ])
     |> validate_required([:character_id, :scene_id])
   end
 end

@@ -243,13 +243,14 @@ defmodule SovereignSoulEngine.Runtime.SceneServer do
   @impl true
   def handle_info(:tick_npc, state) do
     if state.auto_play do
-      npcs = rehydrate_npcs(state.scene_id)
-             |> Enum.filter(fn npc_id -> Map.get(state.stamina, npc_id, 100) > 0 end)
+      npcs =
+        rehydrate_npcs(state.scene_id)
+        |> Enum.filter(fn npc_id -> Map.get(state.stamina, npc_id, 100) > 0 end)
 
       case npcs do
         [] ->
           broadcast_update(state.scene_id, :auto_play_stopped, %{reason: "exhausted"})
-          
+
           # Log system message
           Scenes.create_message(%{
             scene_id: state.scene_id,
@@ -294,7 +295,7 @@ defmodule SovereignSoulEngine.Runtime.SceneServer do
       |> SovereignSoulEngine.Repo.preload(participants: :character)
       |> Map.get(:participants, [])
       |> Enum.filter(&(&1.character.kind == "npc"))
-      |> Enum.map(&(&1.character_id))
+      |> Enum.map(& &1.character_id)
     rescue
       _ -> []
     end

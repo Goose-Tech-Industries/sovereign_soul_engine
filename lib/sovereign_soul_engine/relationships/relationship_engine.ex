@@ -174,6 +174,7 @@ defmodule SovereignSoulEngine.Relationships.RelationshipEngine do
       personality = Keyword.get(opts, :personality_modifiers, %{})
       existing_wounds = Keyword.get(opts, :existing_wounds, 0)
       repetition_count = Keyword.get(opts, :repetition_count, 0)
+      attachment_style = Keyword.get(opts, :attachment_style, "secure")
 
       intensity_factor = intensity / @default_intensity
       repetition_factor = 1.0 / (1.0 + 0.2 * repetition_count)
@@ -211,6 +212,9 @@ defmodule SovereignSoulEngine.Relationships.RelationshipEngine do
         end)
         |> Map.new()
 
+      # Apply attachment style modifier to trust changes
+      updated = apply_attachment_modifier(updated, dims, attachment_style)
+
       clamped_deltas =
         dims
         |> Enum.map(fn {dim, val} ->
@@ -221,6 +225,77 @@ defmodule SovereignSoulEngine.Relationships.RelationshipEngine do
       {:ok, updated, clamped_deltas}
     end
   end
+
+  @doc """
+  Adjusts relationship trust changes based on the NPC's attachment style.
+
+  - avoidant: cap trust at 65, slow trust growth (×0.6), slight hardening when trust > 55
+  - anxious: trust builds 1.4× faster and collapses 1.4× faster
+  - disorganized: trust and fear can both be high; adds ±10 random variance
+  - secure: no modification
+
+  Takes the proposed updated state, original dims (for delta calculation), and
+  attachment_style string. Returns the adjusted updated state.
+  """
+  @spec attachment_modifier(map(), map(), String.t()) :: map()
+  def attachment_modifier(updated, original_dims, attachment_style) do
+    apply_attachment_modifier(updated, original_dims, attachment_style)
+  end
+
+  defp apply_attachment_modifier(updated, original_dims, "avoidant") do
+    orig_trust = Map.get(original_dims, :trust, 0)
+    new_trust = Map.get(updated, :trust, 0)
+    trust_delta = new_trust - orig_trust
+
+    # Cap trust at 65 max
+    capped_trust = min(new_trust, 65)
+
+    # Slow trust growth by ×0.6 for positive deltas
+    adjusted_trust =
+      if trust_delta > 0 do
+        adjusted = round(orig_trust + trust_delta * 0.6)
+        min(adjusted, 65)
+      else
+        capped_trust
+      end
+
+    # When trust is above 55, add slight hardening
+    updated = Map.put(updated, :trust, adjusted_trust)
+
+    if adjusted_trust > 55 do
+      current_hardening = Map.get(updated, :hardening, 0)
+      {_min_r, max_r} = Map.get(@dimension_ranges, :hardening)
+      Map.put(updated, :hardening, min(current_hardening + 2, max_r))
+    else
+      updated
+    end
+  end
+
+  defp apply_attachment_modifier(updated, original_dims, "anxious") do
+    orig_trust = Map.get(original_dims, :trust, 0)
+    new_trust = Map.get(updated, :trust, 0)
+    trust_delta = new_trust - orig_trust
+
+    adjusted_trust =
+      if trust_delta != 0 do
+        adjusted = round(orig_trust + trust_delta * 1.4)
+        {min_r, max_r} = Map.get(@dimension_ranges, :trust)
+        clamp_value(adjusted, min_r, max_r)
+      else
+        new_trust
+      end
+
+    Map.put(updated, :trust, adjusted_trust)
+  end
+
+  defp apply_attachment_modifier(updated, _original_dims, "disorganized") do
+    variance = :rand.uniform(21) - 11
+    current_trust = Map.get(updated, :trust, 0)
+    {min_r, max_r} = Map.get(@dimension_ranges, :trust)
+    Map.put(updated, :trust, clamp_value(current_trust + variance, min_r, max_r))
+  end
+
+  defp apply_attachment_modifier(updated, _original_dims, _secure), do: updated
 
   defp validate_intensity(opts) do
     intensity = Keyword.get(opts, :intensity, @default_intensity)

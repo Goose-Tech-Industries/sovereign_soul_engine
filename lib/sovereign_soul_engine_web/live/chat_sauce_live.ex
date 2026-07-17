@@ -154,7 +154,10 @@ defmodule SovereignSoulEngineWeb.ChatSauceLive do
                |> assign(:relationships, Relationships.list_relationships())
                |> assign(:success_message, "Relationship created successfully!")
                |> assign(:error_message, nil)
-               |> assign(:new_rel_form, to_form(Relationships.change_relationship(%Relationships.Relationship{})))}
+               |> assign(
+                 :new_rel_form,
+                 to_form(Relationships.change_relationship(%Relationships.Relationship{}))
+               )}
 
             {:error, changeset} ->
               {:noreply,
@@ -172,7 +175,10 @@ defmodule SovereignSoulEngineWeb.ChatSauceLive do
                |> assign(:relationships, Relationships.list_relationships())
                |> assign(:success_message, "Relationship updated successfully!")
                |> assign(:error_message, nil)
-               |> assign(:new_rel_form, to_form(Relationships.change_relationship(%Relationships.Relationship{})))}
+               |> assign(
+                 :new_rel_form,
+                 to_form(Relationships.change_relationship(%Relationships.Relationship{}))
+               )}
 
             {:error, changeset} ->
               {:noreply,
@@ -210,16 +216,19 @@ defmodule SovereignSoulEngineWeb.ChatSauceLive do
     import Ecto.Query
     char = Characters.get_character!(id)
     # Fetch or create SoulProfile
-    profile = SovereignSoulEngine.Souls.get_soul_profile_by_character(char.id) || 
-      (case SovereignSoulEngine.Souls.create_soul_profile(%{character_id: char.id}) do
-         {:ok, p} -> p
-       end)
+    profile =
+      SovereignSoulEngine.Souls.get_soul_profile_by_character(char.id) ||
+        case SovereignSoulEngine.Souls.create_soul_profile(%{character_id: char.id}) do
+          {:ok, p} -> p
+        end
 
-    fears = SovereignSoulEngine.Repo.all(
-      from f in SovereignSoulEngine.Souls.SoulFear,
-        where: f.character_id == ^char.id,
-        order_by: [desc: f.inserted_at]
-    )
+    fears =
+      SovereignSoulEngine.Repo.all(
+        from f in SovereignSoulEngine.Souls.SoulFear,
+          where: f.character_id == ^char.id,
+          order_by: [desc: f.inserted_at]
+      )
+
     {:noreply,
      socket
      |> assign(:editing_character, char)
@@ -240,19 +249,24 @@ defmodule SovereignSoulEngineWeb.ChatSauceLive do
   def handle_event("add_fear", %{"fear_type" => fear_type}, socket) do
     import Ecto.Query
     char = socket.assigns.editing_character
+
     if char && String.trim(fear_type) != "" do
-      {:ok, _fear} = SovereignSoulEngine.Souls.create_soul_fear(%{
-        character_id: char.id,
-        fear_type: String.trim(fear_type),
-        severity: 70,
-        origin: "baked_in",
-        status: "active"
-      })
-      fears = SovereignSoulEngine.Repo.all(
-        from f in SovereignSoulEngine.Souls.SoulFear,
-          where: f.character_id == ^char.id,
-          order_by: [desc: f.inserted_at]
-      )
+      {:ok, _fear} =
+        SovereignSoulEngine.Souls.create_soul_fear(%{
+          character_id: char.id,
+          fear_type: String.trim(fear_type),
+          severity: 70,
+          origin: "baked_in",
+          status: "active"
+        })
+
+      fears =
+        SovereignSoulEngine.Repo.all(
+          from f in SovereignSoulEngine.Souls.SoulFear,
+            where: f.character_id == ^char.id,
+            order_by: [desc: f.inserted_at]
+        )
+
       {:noreply, assign(socket, :editing_character_fears, fears)}
     else
       {:noreply, socket}
@@ -264,12 +278,17 @@ defmodule SovereignSoulEngineWeb.ChatSauceLive do
     import Ecto.Query
     char = socket.assigns.editing_character
     fear = SovereignSoulEngine.Repo.get!(SovereignSoulEngine.Souls.SoulFear, fear_id)
-    {:ok, _} = SovereignSoulEngine.Souls.update_soul_fear(fear, %{status: "resolved", severity: 0})
-    fears = SovereignSoulEngine.Repo.all(
-      from f in SovereignSoulEngine.Souls.SoulFear,
-        where: f.character_id == ^char.id,
-        order_by: [desc: f.inserted_at]
-    )
+
+    {:ok, _} =
+      SovereignSoulEngine.Souls.update_soul_fear(fear, %{status: "resolved", severity: 0})
+
+    fears =
+      SovereignSoulEngine.Repo.all(
+        from f in SovereignSoulEngine.Souls.SoulFear,
+          where: f.character_id == ^char.id,
+          order_by: [desc: f.inserted_at]
+      )
+
     {:noreply, assign(socket, :editing_character_fears, fears)}
   end
 
@@ -297,7 +316,8 @@ defmodule SovereignSoulEngineWeb.ChatSauceLive do
       {:ok, _char} ->
         # Update SoulProfile personality traits
         if profile do
-          {:ok, _} = SovereignSoulEngine.Souls.update_soul_profile(profile, %{personality_traits: traits})
+          {:ok, _} =
+            SovereignSoulEngine.Souls.update_soul_profile(profile, %{personality_traits: traits})
         end
 
         # Broadcast that character context was updated
@@ -312,7 +332,10 @@ defmodule SovereignSoulEngineWeb.ChatSauceLive do
          |> assign(:editing_character, nil)
          |> assign(:editing_character_profile, nil)
          |> assign(:characters, Characters.list_characters())
-         |> assign(:success_message, "Character '#{char.name}' and personality traits updated successfully!")
+         |> assign(
+           :success_message,
+           "Character '#{char.name}' and personality traits updated successfully!"
+         )
          |> assign(:error_message, nil)}
 
       {:error, _changeset} ->
@@ -335,9 +358,14 @@ defmodule SovereignSoulEngineWeb.ChatSauceLive do
           </div>
           <div>
             <h1 class="text-base font-bold tracking-tight text-white flex items-center gap-1.5">
-              Chat Sauce <span class="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">Admin</span>
+              Chat Sauce
+              <span class="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                Admin
+              </span>
             </h1>
-            <p class="text-xs text-slate-400">Control center for character AI & Agent Client Protocol</p>
+            <p class="text-xs text-slate-400">
+              Control center for character AI & Agent Client Protocol
+            </p>
           </div>
         </div>
         <div class="flex items-center gap-3">
@@ -360,11 +388,17 @@ defmodule SovereignSoulEngineWeb.ChatSauceLive do
       <main class="flex-1 max-w-7xl w-full mx-auto p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
         <%!-- Notifications --%>
         <div :if={@success_message || @error_message} class="col-span-1 lg:col-span-3">
-          <div :if={@success_message} class="p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/5 text-emerald-400 text-sm flex items-center gap-2">
+          <div
+            :if={@success_message}
+            class="p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/5 text-emerald-400 text-sm flex items-center gap-2"
+          >
             <.icon name="hero-check-circle" class="size-5 text-emerald-400" />
             {@success_message}
           </div>
-          <div :if={@error_message} class="p-4 rounded-xl border border-red-500/30 bg-red-500/5 text-red-400 text-sm flex items-center gap-2">
+          <div
+            :if={@error_message}
+            class="p-4 rounded-xl border border-red-500/30 bg-red-500/5 text-red-400 text-sm flex items-center gap-2"
+          >
             <.icon name="hero-exclamation-triangle" class="size-5 text-red-400" />
             {@error_message}
           </div>
@@ -377,7 +411,9 @@ defmodule SovereignSoulEngineWeb.ChatSauceLive do
             <div class="flex items-center justify-between">
               <div class="space-y-1">
                 <h2 class="text-lg font-bold text-white">Agent Client Protocol (ACP)</h2>
-                <p class="text-xs text-slate-400">Allows autonomous coding agents to inspect the soul engines and generate characters.</p>
+                <p class="text-xs text-slate-400">
+                  Allows autonomous coding agents to inspect the soul engines and generate characters.
+                </p>
               </div>
               <div class="flex items-center gap-2">
                 <span class={[
@@ -385,7 +421,11 @@ defmodule SovereignSoulEngineWeb.ChatSauceLive do
                   @acp_running? && "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
                   !@acp_running? && "bg-rose-500/10 text-rose-400 border-rose-500/20"
                 ]}>
-                  <span class={["w-2 h-2 rounded-full", @acp_running? && "bg-emerald-400 animate-pulse", !@acp_running? && "bg-rose-400"]} />
+                  <span class={[
+                    "w-2 h-2 rounded-full",
+                    @acp_running? && "bg-emerald-400 animate-pulse",
+                    !@acp_running? && "bg-rose-400"
+                  ]} />
                   {if @acp_running?, do: "Active", else: "Offline"}
                 </span>
               </div>
@@ -429,7 +469,9 @@ defmodule SovereignSoulEngineWeb.ChatSauceLive do
           <%!-- Logs Viewer --%>
           <section class="p-6 rounded-2xl border border-slate-800 bg-slate-900/40 backdrop-blur-sm space-y-4">
             <div class="flex items-center justify-between">
-              <h2 class="text-sm font-bold text-slate-300 uppercase tracking-wider font-mono">ACP Server Logs</h2>
+              <h2 class="text-sm font-bold text-slate-300 uppercase tracking-wider font-mono">
+                ACP Server Logs
+              </h2>
               <button
                 phx-click="refresh_logs"
                 class="btn btn-ghost btn-xs text-slate-400 hover:text-white flex items-center gap-1"
@@ -554,7 +596,9 @@ defmodule SovereignSoulEngineWeb.ChatSauceLive do
                   />
                 </div>
                 <div class="space-y-1">
-                  <label class="text-xs text-slate-400 font-medium">Affinity / Attachment (-100 to 100)</label>
+                  <label class="text-xs text-slate-400 font-medium">
+                    Affinity / Attachment (-100 to 100)
+                  </label>
                   <input
                     type="number"
                     name="relationship[affinity]"
@@ -578,7 +622,9 @@ defmodule SovereignSoulEngineWeb.ChatSauceLive do
 
             <%!-- Existing Relationships List --%>
             <div class="space-y-2.5">
-              <h3 class="text-sm font-bold text-slate-300 uppercase tracking-wider font-mono">Current Relationships</h3>
+              <h3 class="text-sm font-bold text-slate-300 uppercase tracking-wider font-mono">
+                Current Relationships
+              </h3>
               <div class="overflow-x-auto rounded-xl border border-slate-900">
                 <table class="w-full text-sm text-left text-slate-300">
                   <thead class="text-xs text-slate-400 uppercase bg-slate-950/80 font-mono">
@@ -594,14 +640,14 @@ defmodule SovereignSoulEngineWeb.ChatSauceLive do
                   </thead>
                   <tbody class="divide-y divide-slate-800/60 bg-slate-900/10">
                     <%= for rel <- @relationships do %>
-                      <%
-                        src = Enum.find(@characters, &(&1.id == rel.source_character_id))
-                        tgt = Enum.find(@characters, &(&1.id == rel.target_character_id))
-                      %>
+                      <% src = Enum.find(@characters, &(&1.id == rel.source_character_id))
+                      tgt = Enum.find(@characters, &(&1.id == rel.target_character_id)) %>
                       <tr :if={src && tgt} class="hover:bg-slate-900/30">
                         <td class="px-4 py-2.5 font-medium text-slate-200">{src.name}</td>
                         <td class="px-4 py-2.5 font-medium text-slate-200">{tgt.name}</td>
-                        <td class="px-4 py-2.5 text-slate-400 font-mono uppercase text-xs">{rel.relationship_type || "acquaintance"}</td>
+                        <td class="px-4 py-2.5 text-slate-400 font-mono uppercase text-xs">
+                          {rel.relationship_type || "acquaintance"}
+                        </td>
                         <td class="px-4 py-2.5 text-center font-mono">{rel.trust}</td>
                         <td class="px-4 py-2.5 text-center font-mono">{rel.respect}</td>
                         <td class="px-4 py-2.5 text-center font-mono">{rel.affinity}</td>
@@ -678,7 +724,9 @@ defmodule SovereignSoulEngineWeb.ChatSauceLive do
                 <div class="pt-2.5 flex items-center justify-between gap-3 text-sm">
                   <div class="min-w-0 flex-1">
                     <div class="font-semibold text-slate-200 truncate">{char.name}</div>
-                    <div class="text-xs text-slate-500 truncate" title={char.description}>{char.description}</div>
+                    <div class="text-xs text-slate-500 truncate" title={char.description}>
+                      {char.description}
+                    </div>
                   </div>
                   <div class="flex items-center gap-2.5 shrink-0">
                     <button
@@ -702,9 +750,12 @@ defmodule SovereignSoulEngineWeb.ChatSauceLive do
           <%!-- Subconscious Shadow Monitor --%>
           <section class="col-span-1 lg:col-span-3 p-6 rounded-2xl border border-slate-800 bg-slate-900/40 backdrop-blur-sm space-y-4">
             <h2 class="text-base font-bold text-white flex items-center gap-1.5">
-              <.icon name="hero-bolt" class="size-5 text-indigo-400" /> Subconscious Shadow Monitor (Direct Character Minds)
+              <.icon name="hero-bolt" class="size-5 text-indigo-400" />
+              Subconscious Shadow Monitor (Direct Character Minds)
             </h2>
-            <p class="text-xs text-slate-400">Ledger of recent private monologues, repressed motives, and defense mechanisms captured off-chat from LLM response processes.</p>
+            <p class="text-xs text-slate-400">
+              Ledger of recent private monologues, repressed motives, and defense mechanisms captured off-chat from LLM response processes.
+            </p>
 
             <div class="overflow-x-auto rounded-xl border border-slate-900">
               <table class="w-full text-sm text-left text-slate-300">
@@ -722,30 +773,44 @@ defmodule SovereignSoulEngineWeb.ChatSauceLive do
                 <tbody class="divide-y divide-slate-800/60 bg-slate-900/10">
                   <%= for shadow <- @shadows do %>
                     <tr class="hover:bg-slate-900/30 text-xs">
-                      <td class="px-4 py-2.5 text-slate-500 whitespace-nowrap font-mono">{Calendar.strftime(shadow.inserted_at, "%H:%M:%S")}</td>
-                      <td class="px-4 py-2.5 font-bold text-white whitespace-nowrap">{shadow.character && shadow.character.name}</td>
-                      <td class="px-4 py-2.5 text-slate-400 whitespace-nowrap">{shadow.scene && shadow.scene.title}</td>
+                      <td class="px-4 py-2.5 text-slate-500 whitespace-nowrap font-mono">
+                        {Calendar.strftime(shadow.inserted_at, "%H:%M:%S")}
+                      </td>
+                      <td class="px-4 py-2.5 font-bold text-white whitespace-nowrap">
+                        {shadow.character && shadow.character.name}
+                      </td>
+                      <td class="px-4 py-2.5 text-slate-400 whitespace-nowrap">
+                        {shadow.scene && shadow.scene.title}
+                      </td>
                       <td class="px-4 py-2.5">
                         <span class={[
                           "px-2 py-0.5 rounded text-[10px] font-mono uppercase font-bold",
-                          shadow.active_defense == "none" && "bg-slate-800 text-slate-400 border border-slate-700",
-                          shadow.active_defense != "none" && "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20"
+                          shadow.active_defense == "none" &&
+                            "bg-slate-800 text-slate-400 border border-slate-700",
+                          shadow.active_defense != "none" &&
+                            "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20"
                         ]}>
                           {shadow.active_defense}
                         </span>
                       </td>
-                      <td class="px-4 py-2.5 text-slate-200 leading-normal max-w-xs">{shadow.repressed_motive}</td>
-                      <td class="px-4 py-2.5 text-slate-400 italic max-w-sm leading-normal">{shadow.private_monologue}</td>
+                      <td class="px-4 py-2.5 text-slate-200 leading-normal max-w-xs">
+                        {shadow.repressed_motive}
+                      </td>
+                      <td class="px-4 py-2.5 text-slate-400 italic max-w-sm leading-normal">
+                        {shadow.private_monologue}
+                      </td>
                       <td class="px-4 py-2.5 font-mono text-[10px] text-slate-400 whitespace-nowrap">
-                        ANG: {get_in(shadow.emotional_drift || %{}, ["anger"]) || 0} | 
-                        FEAR: {get_in(shadow.emotional_drift || %{}, ["fear"]) || 0} | 
-                        STR: {get_in(shadow.emotional_drift || %{}, ["stress"]) || 0} | 
+                        ANG: {get_in(shadow.emotional_drift || %{}, ["anger"]) || 0} |
+                        FEAR: {get_in(shadow.emotional_drift || %{}, ["fear"]) || 0} |
+                        STR: {get_in(shadow.emotional_drift || %{}, ["stress"]) || 0} |
                         ATT: {get_in(shadow.emotional_drift || %{}, ["attachment"]) || 0}
                       </td>
                     </tr>
                   <% end %>
                   <tr :if={@shadows == []}>
-                    <td colspan="7" class="px-4 py-8 text-center text-slate-500 italic">No subconscious shadows logged yet. Send messages in Sovereign Chat to start logging.</td>
+                    <td colspan="7" class="px-4 py-8 text-center text-slate-500 italic">
+                      No subconscious shadows logged yet. Send messages in Sovereign Chat to start logging.
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -755,11 +820,17 @@ defmodule SovereignSoulEngineWeb.ChatSauceLive do
       </main>
 
       <%!-- Edit Character Modal --%>
-      <div :if={@editing_character} class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div
+        :if={@editing_character}
+        class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      >
         <div class="w-full max-w-lg p-6 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl space-y-6">
           <div class="text-center">
             <h2 class="text-lg font-bold text-white">Edit Character Details & Motives</h2>
-            <p class="text-sm text-slate-400">Modify description or current objectives for {@editing_character && @editing_character.name}</p>
+            <p class="text-sm text-slate-400">
+              Modify description or current objectives for {@editing_character &&
+                @editing_character.name}
+            </p>
           </div>
 
           <.form
@@ -768,7 +839,9 @@ defmodule SovereignSoulEngineWeb.ChatSauceLive do
             class="space-y-4"
           >
             <div class="space-y-1.5 text-sm">
-              <label class="text-xs font-bold text-slate-400 uppercase">Description, Motives, or Context</label>
+              <label class="text-xs font-bold text-slate-400 uppercase">
+                Description, Motives, or Context
+              </label>
               <textarea
                 name="character[description]"
                 rows="6"
@@ -777,7 +850,7 @@ defmodule SovereignSoulEngineWeb.ChatSauceLive do
                 placeholder="Declare their current drives, emotions, or narrative motives..."
               ><%= @editing_character && @editing_character.description %></textarea>
               <p class="text-[10px] text-slate-500 leading-normal">
-                This is fed directly into the character's system prompt (e.g. <code>You are Name, Description</code>). 
+                This is fed directly into the character's system prompt (e.g. <code>You are Name, Description</code>).
                 Update this to alter their active objectives, emotional shifts, or memories of events.
               </p>
             </div>
@@ -785,9 +858,10 @@ defmodule SovereignSoulEngineWeb.ChatSauceLive do
             <%!-- Psychological Conditions / Traits --%>
             <div class="space-y-2 border-t border-slate-800 pt-4">
               <label class="text-xs font-bold text-slate-400 uppercase flex items-center gap-1.5">
-                <.icon name="hero-cpu-chip" class="size-4 text-amber-400" /> Cognitive Conditions & Traits
+                <.icon name="hero-cpu-chip" class="size-4 text-amber-400" />
+                Cognitive Conditions & Traits
               </label>
-              
+
               <div class="grid grid-cols-2 gap-3 text-xs">
                 <%= for {trait_key, label} <- [
                   {"depression", "Depression"},
@@ -811,7 +885,13 @@ defmodule SovereignSoulEngineWeb.ChatSauceLive do
                       type="checkbox"
                       name={"character[traits_#{trait_key}]"}
                       value="true"
-                      checked={get_in((@editing_character_profile && @editing_character_profile.personality_traits) || %{}, [trait_key]) == true}
+                      checked={
+                        get_in(
+                          (@editing_character_profile && @editing_character_profile.personality_traits) ||
+                            %{},
+                          [trait_key]
+                        ) == true
+                      }
                       class="rounded bg-slate-950 border-slate-800 text-amber-500 focus:ring-amber-500/25"
                     />
                     <span>{label}</span>
@@ -842,7 +922,7 @@ defmodule SovereignSoulEngineWeb.ChatSauceLive do
             <label class="text-xs font-bold text-slate-400 uppercase flex items-center gap-1.5">
               <.icon name="hero-fire" class="size-4 text-rose-400" /> Active Fears & Phobias
             </label>
-            
+
             <div class="space-y-2 max-h-40 overflow-y-auto">
               <%= for fear <- @editing_character_fears do %>
                 <div class="flex items-center justify-between p-2 rounded bg-slate-950 border border-slate-800/80 text-xs">
@@ -863,13 +943,18 @@ defmodule SovereignSoulEngineWeb.ChatSauceLive do
                     >
                       Resolve
                     </button>
-                    <span :if={fear.status == "resolved"} class="text-[10px] text-emerald-500 font-semibold px-2 py-1">
+                    <span
+                      :if={fear.status == "resolved"}
+                      class="text-[10px] text-emerald-500 font-semibold px-2 py-1"
+                    >
                       Resolved
                     </span>
                   </div>
                 </div>
               <% end %>
-              <p :if={@editing_character_fears == []} class="text-xs text-slate-500 italic">No fears configured for this character.</p>
+              <p :if={@editing_character_fears == []} class="text-xs text-slate-500 italic">
+                No fears configured for this character.
+              </p>
             </div>
 
             <%!-- Add Fear Form --%>
@@ -897,6 +982,7 @@ defmodule SovereignSoulEngineWeb.ChatSauceLive do
 
   defp load_shadows do
     import Ecto.Query
+
     SovereignSoulEngine.Repo.all(
       from s in SovereignSoulEngine.Souls.SoulShadow,
         order_by: [desc: s.inserted_at],

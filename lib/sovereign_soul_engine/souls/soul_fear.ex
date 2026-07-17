@@ -11,7 +11,9 @@ defmodule SovereignSoulEngine.Souls.SoulFear do
     field :status, :string, default: "active"
 
     belongs_to :character, SovereignSoulEngine.Characters.Character
-    belongs_to :acquired_in_scene, SovereignSoulEngine.Scenes.Scene, foreign_key: :acquired_in_scene_id
+
+    belongs_to :acquired_in_scene, SovereignSoulEngine.Scenes.Scene,
+      foreign_key: :acquired_in_scene_id
 
     timestamps()
   end

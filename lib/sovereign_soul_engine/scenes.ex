@@ -18,6 +18,17 @@ defmodule SovereignSoulEngine.Scenes do
     Repo.all(from s in Scene, where: s.status == "active")
   end
 
+  def list_autonomous_scenes(opts \\ []) do
+    limit = Keyword.get(opts, :limit, 20)
+    Repo.all(
+      from s in Scene,
+        where: s.is_autonomous == true,
+        order_by: [desc: s.inserted_at],
+        limit: ^limit,
+        preload: [participants: :character, messages: []]
+    )
+  end
+
   def get_scene!(id), do: Repo.get!(Scene, id)
   def get_scene(id), do: Repo.get(Scene, id)
 
@@ -69,6 +80,12 @@ defmodule SovereignSoulEngine.Scenes do
     %SceneMessage{}
     |> SceneMessage.changeset(attrs)
     |> Repo.insert()
+  end
+
+  def update_message(%SceneMessage{} = message, attrs) do
+    message
+    |> SceneMessage.changeset(attrs)
+    |> Repo.update()
   end
 
   def change_message(%SceneMessage{} = message, attrs \\ %{}) do

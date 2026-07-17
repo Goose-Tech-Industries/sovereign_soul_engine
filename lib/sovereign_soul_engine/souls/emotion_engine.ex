@@ -6,7 +6,7 @@ defmodule SovereignSoulEngine.Souls.EmotionEngine do
   personality traits, event intensity, repetition, and existing wounds.
   """
 
-  @dimensions ~w(anger fear stress gratitude confidence sadness curiosity attachment)a
+  @dimensions ~w(anger fear stress gratitude confidence sadness curiosity attachment shame guilt)a
 
   @event_types ~w(
     ally_saved_me healed_me attacked_me gave_item trained_me
@@ -21,6 +21,10 @@ defmodule SovereignSoulEngine.Souls.EmotionEngine do
 
   @harmful_events ~w(betrayed_me attacked_me insulted_me threatened_me abandoned_me lied_to_me)a
 
+  # Events that trigger shame (I am bad) or guilt (I did bad)
+  @shame_events ~w(betrayed_me abandoned_me)a
+  @guilt_events ~w(insulted_me attacked_me lied_to_me threatened_me)a
+
   @delta_rules %{
     ally_saved_me: %{
       fear: -5,
@@ -28,7 +32,9 @@ defmodule SovereignSoulEngine.Souls.EmotionEngine do
       gratitude: 12,
       confidence: 8,
       sadness: -5,
-      attachment: 10
+      attachment: 10,
+      guilt: -3,
+      shame: -2
     },
     healed_me: %{fear: -3, stress: -5, gratitude: 10, sadness: -5, attachment: 8, confidence: 3},
     attacked_me: %{
@@ -38,10 +44,11 @@ defmodule SovereignSoulEngine.Souls.EmotionEngine do
       gratitude: -5,
       confidence: -10,
       sadness: 5,
-      attachment: -5
+      attachment: -5,
+      shame: 8
     },
     gave_item: %{gratitude: 8, curiosity: 5, stress: -3},
-    trained_me: %{confidence: 10, gratitude: 8, curiosity: 5, stress: -3},
+    trained_me: %{confidence: 10, gratitude: 8, curiosity: 5, stress: -3, shame: -5},
     betrayed_me: %{
       anger: 25,
       fear: 10,
@@ -49,22 +56,39 @@ defmodule SovereignSoulEngine.Souls.EmotionEngine do
       sadness: 20,
       gratitude: -10,
       confidence: -15,
-      attachment: -10
+      attachment: -10,
+      shame: 15
     },
-    insulted_me: %{anger: 15, sadness: 10, stress: 10, confidence: -5},
-    praised_me: %{confidence: 10, gratitude: 5, sadness: -5, stress: -3, anger: -3},
-    apologized_to_me: %{anger: -10, sadness: -5, gratitude: 5, stress: -5},
-    threatened_me: %{fear: 20, anger: 10, stress: 15, confidence: -10},
-    protected_me: %{fear: -10, gratitude: 15, attachment: 10, confidence: 5, stress: -5},
+    insulted_me: %{anger: 15, sadness: 10, stress: 10, confidence: -5, shame: 10},
+    praised_me: %{
+      confidence: 10,
+      gratitude: 5,
+      sadness: -5,
+      stress: -3,
+      anger: -3,
+      shame: -8,
+      guilt: -5
+    },
+    apologized_to_me: %{anger: -10, sadness: -5, gratitude: 5, stress: -5, guilt: 8},
+    threatened_me: %{fear: 20, anger: 10, stress: 15, confidence: -10, shame: 5},
+    protected_me: %{
+      fear: -10,
+      gratitude: 15,
+      attachment: 10,
+      confidence: 5,
+      stress: -5,
+      shame: -5
+    },
     abandoned_me: %{
       sadness: 20,
       anger: 15,
       fear: 10,
       confidence: -10,
-      attachment: -10
+      attachment: -10,
+      shame: 20
     },
-    shared_secret: %{gratitude: 5, attachment: 10, curiosity: 5},
-    lied_to_me: %{anger: 10, sadness: 5, confidence: -5, gratitude: -5}
+    shared_secret: %{gratitude: 5, attachment: 10, curiosity: 5, guilt: 3},
+    lied_to_me: %{anger: 10, sadness: 5, confidence: -5, gratitude: -5, guilt: 15}
   }
 
   @doc """
@@ -161,5 +185,120 @@ defmodule SovereignSoulEngine.Souls.EmotionEngine do
         Map.put_new(acc, dim, 0)
       end)
     end)
+  end
+
+  @doc """
+  Moves each dimension in current_state 1-3 points toward the corresponding
+  value in mood_baseline. Simulates mood settling over time.
+
+  mood_baseline is a map of dimension => integer target value.
+  Dimensions not in mood_baseline are left unchanged.
+
+  Returns updated state map.
+  """
+  @spec drift_toward_baseline(current_state :: map(), mood_baseline :: map()) :: map()
+  def drift_toward_baseline(current_state, mood_baseline) when is_map(mood_baseline) do
+    dims = ensure_dimensions(current_state)
+
+    Enum.reduce(dims, dims, fn {dim, current_val}, acc ->
+      case Map.fetch(mood_baseline, dim) do
+        {:ok, target} when is_integer(target) ->
+          diff = target - current_val
+
+          drift =
+            cond do
+              diff == 0 -> 0
+              abs(diff) <= 1 -> diff
+              abs(diff) <= 5 -> if diff > 0, do: 1, else: -1
+              abs(diff) <= 20 -> if diff > 0, do: 2, else: -2
+              true -> if diff > 0, do: 3, else: -3
+            end
+
+          Map.put(acc, dim, clamp(current_val + drift))
+
+        _ ->
+          acc
+      end
+    end)
+  end
+
+  @doc """
+  If rumination_intensity > 50, adds a stress spike and returns a context hint.
+  Takes the current state map and the rumination_intensity integer.
+
+  Returns `{updated_state, rumination_context_string | nil}`.
+  """
+  @spec apply_rumination(current_state :: map(), rumination_intensity :: integer()) ::
+          {map(), String.t() | nil}
+  def apply_rumination(current_state, rumination_intensity)
+      when is_integer(rumination_intensity) do
+    if rumination_intensity > 50 do
+      stress_spike = div(rumination_intensity, 10)
+      dims = ensure_dimensions(current_state)
+      current_stress = Map.get(dims, :stress, 0)
+      updated = Map.put(dims, :stress, clamp(current_stress + stress_spike))
+
+      context =
+        "RUMINATION ACTIVE (intensity #{rumination_intensity}): Background stress elevated."
+
+      {updated, context}
+    else
+      {ensure_dimensions(current_state), nil}
+    end
+  end
+
+  defp clamp(val), do: min(max(val, @min_val), @max_val)
+
+  # Expose dimension list for tests / external callers
+  def dimensions, do: @dimensions
+  def shame_events, do: @shame_events
+  def guilt_events, do: @guilt_events
+
+  @doc """
+  Applies somatic (physical state) modifiers to an emotion delta map.
+  Takes current emotional state map and somatic_state struct.
+  Returns a delta map to be merged with other deltas.
+  """
+  def apply_somatic_modifiers(_emotional_state, nil), do: %{}
+
+  def apply_somatic_modifiers(_emotional_state, somatic) do
+    deltas = %{}
+
+    deltas =
+      cond do
+        somatic.hunger > 80 ->
+          Map.merge(deltas, %{anger: 10, stress: 8, confidence: -5})
+        somatic.hunger > 60 ->
+          Map.merge(deltas, %{anger: 5, stress: 3})
+        true -> deltas
+      end
+
+    deltas =
+      cond do
+        somatic.pain > 80 ->
+          Map.merge(deltas, %{stress: 15, confidence: -10})
+        somatic.pain > 50 ->
+          Map.merge(deltas, %{stress: 8, anger: 5, sadness: 3})
+        true -> deltas
+      end
+
+    deltas =
+      cond do
+        somatic.fatigue > 80 ->
+          current_negatives = %{anger: 5, fear: 5, stress: 5, sadness: 5, shame: 5, guilt: 5}
+          Map.merge(deltas, Map.merge(current_negatives, %{confidence: -15}))
+        somatic.fatigue > 60 ->
+          Map.merge(deltas, %{confidence: -5, sadness: 3, stress: 5})
+        true -> deltas
+      end
+
+    deltas =
+      if somatic.illness_severity > 50 do
+        Map.merge(deltas, %{fear: 5, stress: 8, sadness: 5})
+      else
+        deltas
+      end
+
+    deltas
   end
 end

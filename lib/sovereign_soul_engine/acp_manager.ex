@@ -9,6 +9,7 @@ defmodule SovereignSoulEngine.AcpManager do
       {:ok, socket} ->
         :gen_tcp.close(socket)
         true
+
       _ ->
         false
     end
@@ -21,11 +22,14 @@ defmodule SovereignSoulEngine.AcpManager do
 
       # Start in background using a Task running System.cmd
       Task.start(fn ->
-        System.cmd("opencode", ["acp", "--hostname", "0.0.0.0", "--port", to_string(@port), "--print-logs"],
+        System.cmd(
+          "opencode",
+          ["acp", "--hostname", "0.0.0.0", "--port", to_string(@port), "--print-logs"],
           into: File.stream!(@log_path, [:write, :utf8]),
           cd: "/root"
         )
       end)
+
       # Wait a short moment to allow startup
       :timer.sleep(1000)
       running?()

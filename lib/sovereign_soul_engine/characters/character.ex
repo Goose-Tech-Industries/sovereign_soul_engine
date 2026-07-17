@@ -22,7 +22,7 @@ defmodule SovereignSoulEngine.Characters.Character do
     |> cast(attrs, [:name, :slug, :kind, :description, :status, :metadata])
     |> validate_required([:name, :slug, :kind])
     |> validate_inclusion(:kind, @kind_values)
-    |> validate_inclusion(:status, ~w(active inactive archived))
+    |> validate_inclusion(:status, ~w(active inactive archived dead))
     |> unique_constraint(:slug)
   end
 end

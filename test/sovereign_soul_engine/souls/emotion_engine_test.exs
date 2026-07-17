@@ -352,7 +352,8 @@ defmodule SovereignSoulEngine.Souls.EmotionEngineTest do
     test "all dimension keys present in output" do
       {:ok, updated, deltas} = EmotionEngine.process_event(@default_state, :ally_saved_me)
 
-      expected = ~w(anger fear stress gratitude confidence sadness curiosity attachment)a
+      expected =
+        ~w(anger fear stress gratitude confidence sadness curiosity attachment shame guilt)a
 
       Enum.each(expected, fn dim ->
         assert Map.has_key?(updated, dim)
@@ -372,7 +373,8 @@ defmodule SovereignSoulEngine.Souls.EmotionEngineTest do
       {:ok, updated, deltas} = EmotionEngine.process_event(@default_state, :betrayed_me)
 
       Enum.each(updated, fn {dim, val} ->
-        assert val == @default_state[dim] + deltas[dim]
+        original_val = Map.get(@default_state, dim, 0)
+        assert val == original_val + deltas[dim]
       end)
     end
   end

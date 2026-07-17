@@ -66,6 +66,7 @@ defmodule SovereignSoulEngine.Actions.ActionPolicy do
     capabilities = Keyword.get(opts, :character_capabilities, [])
     emotional_state = Keyword.get(opts, :emotional_state, %{})
     relationship_state = Keyword.get(opts, :relationship_state, %{})
+    moral_lines = Keyword.get(opts, :moral_lines, [])
 
     cond do
       is_nil(proposed) ->
@@ -82,8 +83,51 @@ defmodule SovereignSoulEngine.Actions.ActionPolicy do
           scene_ids,
           capabilities,
           emotional_state,
-          relationship_state
+          relationship_state,
+          moral_lines
         )
+    end
+  end
+
+  @doc """
+  Checks whether a proposed action violates any moral line.
+  Returns `{:rejected, reason}` if blocked, else `nil`.
+
+  moral_lines is a list of structs or maps with keys:
+    - :action_types_blocked or "action_types_blocked" — list of action type strings
+    - :will_refuse_when_violated or "will_refuse_when_violated" — boolean
+    - :principle or "principle" — string description
+  """
+  @spec check_moral_line(atom(), list()) :: {:rejected, String.t()} | nil
+  def check_moral_line(_action, []), do: nil
+
+  def check_moral_line(action, moral_lines) do
+    action_str = Atom.to_string(action)
+
+    violated =
+      Enum.find(moral_lines, fn ml ->
+        blocked = Map.get(ml, :action_types_blocked) || Map.get(ml, "action_types_blocked") || []
+
+        refuses =
+          case Map.fetch(ml, :will_refuse_when_violated) do
+            {:ok, val} ->
+              val
+
+            :error ->
+              case Map.fetch(ml, "will_refuse_when_violated") do
+                {:ok, val} -> val
+                :error -> true
+              end
+          end
+
+        refuses and action_str in blocked
+      end)
+
+    if violated do
+      principle =
+        Map.get(violated, :principle) || Map.get(violated, "principle") || "a moral line"
+
+      {:rejected, "Action #{action} violates moral line: #{principle}"}
     end
   end
 
@@ -94,7 +138,8 @@ defmodule SovereignSoulEngine.Actions.ActionPolicy do
          scene_ids,
          capabilities,
          emotional_state,
-         relationship_state
+         relationship_state,
+         moral_lines
        ) do
     checks = [
       fn -> check_always_permitted(action) end,
@@ -103,7 +148,8 @@ defmodule SovereignSoulEngine.Actions.ActionPolicy do
       fn -> check_target_in_scene(target_id, scene_ids) end,
       fn -> check_capability(action, capabilities) end,
       fn -> check_fear_refusal(action, emotional_state) end,
-      fn -> check_protection_override(action, emotional_state, relationship_state) end
+      fn -> check_protection_override(action, emotional_state, relationship_state) end,
+      fn -> check_moral_line(action, moral_lines) end
     ]
 
     result =

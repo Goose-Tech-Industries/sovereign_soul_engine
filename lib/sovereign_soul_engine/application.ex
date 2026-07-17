@@ -15,6 +15,8 @@ defmodule SovereignSoulEngine.Application do
       {Phoenix.PubSub, name: SovereignSoulEngine.PubSub},
       SovereignSoulEngine.Runtime.NPCRegistry,
       SovereignSoulEngine.Runtime.NPCSupervisor,
+      SovereignSoulEngine.Memories.MemoryMerger,
+      SovereignSoulEngine.Social.NPCScheduler,
       # Start to serve requests, typically the last entry
       SovereignSoulEngineWeb.Endpoint
     ]
