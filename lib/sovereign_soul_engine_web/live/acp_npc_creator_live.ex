@@ -590,7 +590,7 @@ defmodule SovereignSoulEngineWeb.AcpNpcCreatorLive do
         })
       end
 
-      {:noreply, push_navigate(socket, to: ~p"/acp/npcs/#{character.id}")}
+      {:noreply, push_navigate(socket, to: ~p"/sse/acp/npcs/#{character.id}")}
     else
       {:error, changeset} ->
         errors = Ecto.Changeset.traverse_errors(changeset, fn {msg, opts} ->
@@ -629,9 +629,9 @@ defmodule SovereignSoulEngineWeb.AcpNpcCreatorLive do
       <nav class="border-b border-gray-800 bg-gray-900 px-6 py-3 flex items-center gap-6">
         <span class="text-amber-400 font-bold text-sm tracking-wide">SOVEREIGN SOUL ENGINE — ACP</span>
         <div class="flex items-center gap-4 ml-4">
-          <.link navigate={~p"/acp"} class="text-sm text-gray-400 hover:text-gray-200 transition-colors">Dashboard</.link>
-          <.link navigate={~p"/acp/npcs/new"} class="text-sm text-amber-400 font-semibold border-b border-amber-400 pb-0.5">New NPC</.link>
-          <.link navigate={~p"/acp/social"} class="text-sm text-gray-400 hover:text-gray-200 transition-colors">Social Log</.link>
+          <.link navigate={~p"/sse/acp"} class="text-sm text-gray-400 hover:text-gray-200 transition-colors">Dashboard</.link>
+          <.link navigate={~p"/sse/acp/npcs/new"} class="text-sm text-amber-400 font-semibold border-b border-amber-400 pb-0.5">New NPC</.link>
+          <.link navigate={~p"/sse/acp/social"} class="text-sm text-gray-400 hover:text-gray-200 transition-colors">Social Log</.link>
         </div>
       </nav>
 

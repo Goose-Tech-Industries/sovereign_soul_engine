@@ -115,13 +115,13 @@ defmodule SovereignSoulEngineWeb.AcpDashboardLive do
       <nav class="border-b border-gray-800 bg-gray-900 px-6 py-3 flex items-center gap-6">
         <span class="text-amber-400 font-bold text-sm tracking-wide">SOVEREIGN SOUL ENGINE — ACP</span>
         <div class="flex items-center gap-4 ml-4">
-          <.link navigate={~p"/acp"} class="text-sm text-amber-400 font-semibold border-b border-amber-400 pb-0.5">
+          <.link navigate={~p"/sse/acp"} class="text-sm text-amber-400 font-semibold border-b border-amber-400 pb-0.5">
             Dashboard
           </.link>
-          <.link navigate={~p"/acp/npcs/new"} class="text-sm text-gray-400 hover:text-gray-200 transition-colors">
+          <.link navigate={~p"/sse/acp/npcs/new"} class="text-sm text-gray-400 hover:text-gray-200 transition-colors">
             New NPC
           </.link>
-          <.link navigate={~p"/acp/social"} class="text-sm text-gray-400 hover:text-gray-200 transition-colors">
+          <.link navigate={~p"/sse/acp/social"} class="text-sm text-gray-400 hover:text-gray-200 transition-colors">
             Social Log
           </.link>
         </div>
@@ -134,7 +134,7 @@ defmodule SovereignSoulEngineWeb.AcpDashboardLive do
             <p class="text-xs text-gray-500 mt-0.5">{length(@rows)} soul(s) in the engine</p>
           </div>
           <.link
-            navigate={~p"/acp/npcs/new"}
+            navigate={~p"/sse/acp/npcs/new"}
             class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 text-sm font-semibold hover:bg-amber-500/20 transition-colors"
           >
             <.icon name="hero-plus" class="size-4" /> New NPC
@@ -159,7 +159,7 @@ defmodule SovereignSoulEngineWeb.AcpDashboardLive do
                 <tr class="hover:bg-gray-800/30 transition-colors group">
                   <%!-- Name --%>
                   <td class="px-4 py-3">
-                    <.link navigate={~p"/acp/npcs/#{row.character.id}"} class="font-semibold text-gray-100 hover:text-amber-300 transition-colors">
+                    <.link navigate={~p"/sse/acp/npcs/#{row.character.id}"} class="font-semibold text-gray-100 hover:text-amber-300 transition-colors">
                       {row.character.name}
                     </.link>
                     <div class="text-[10px] text-gray-600 font-mono">{row.character.slug}</div>
@@ -223,7 +223,7 @@ defmodule SovereignSoulEngineWeb.AcpDashboardLive do
                   <td class="px-4 py-3 text-right">
                     <div class="flex items-center justify-end gap-2">
                       <.link
-                        navigate={~p"/acp/npcs/#{row.character.id}"}
+                        navigate={~p"/sse/acp/npcs/#{row.character.id}"}
                         class="text-xs px-2.5 py-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 transition-colors"
                       >
                         Open
@@ -265,7 +265,7 @@ defmodule SovereignSoulEngineWeb.AcpDashboardLive do
           <div :if={@rows == []} class="py-16 text-center text-gray-600">
             <.icon name="hero-user-group" class="size-10 mx-auto mb-3 opacity-40" />
             <p class="text-sm">No characters in the engine yet.</p>
-            <.link navigate={~p"/acp/npcs/new"} class="text-amber-400 text-sm hover:underline mt-1 inline-block">
+            <.link navigate={~p"/sse/acp/npcs/new"} class="text-amber-400 text-sm hover:underline mt-1 inline-block">
               Create the first NPC
             </.link>
           </div>

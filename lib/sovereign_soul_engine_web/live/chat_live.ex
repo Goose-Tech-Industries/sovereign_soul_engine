@@ -608,6 +608,12 @@ defmodule SovereignSoulEngineWeb.ChatLive do
               >
                 <.icon name="hero-wrench-screwdriver" class="size-3.5" /> Sauce
               </.link>
+              <.link
+                navigate={~p"/sse/acp"}
+                class="btn btn-ghost btn-xs text-purple-400 font-semibold flex items-center gap-1"
+              >
+                <.icon name="hero-cpu-chip" class="size-3.5" /> ACP
+              </.link>
               <button
                 phx-click="start_new_group"
                 class="btn btn-ghost btn-xs text-primary font-semibold flex items-center gap-1"

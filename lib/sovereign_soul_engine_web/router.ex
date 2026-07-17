@@ -28,7 +28,7 @@ defmodule SovereignSoulEngineWeb.Router do
     end
   end
 
-  scope "/acp", SovereignSoulEngineWeb do
+  scope "/sse/acp", SovereignSoulEngineWeb do
     pipe_through :browser
 
     live_session :acp do

@@ -118,13 +118,13 @@ defmodule SovereignSoulEngineWeb.AcpSocialLogLive do
         <div class="flex items-center gap-6">
           <span class="text-amber-400 font-bold text-sm tracking-wide">SOVEREIGN SOUL ENGINE — ACP</span>
           <div class="flex items-center gap-4 ml-4">
-            <.link navigate={~p"/acp"} class="text-sm text-gray-400 hover:text-gray-200 transition-colors">
+            <.link navigate={~p"/sse/acp"} class="text-sm text-gray-400 hover:text-gray-200 transition-colors">
               Dashboard
             </.link>
-            <.link navigate={~p"/acp/npcs/new"} class="text-sm text-gray-400 hover:text-gray-200 transition-colors">
+            <.link navigate={~p"/sse/acp/npcs/new"} class="text-sm text-gray-400 hover:text-gray-200 transition-colors">
               New NPC
             </.link>
-            <.link navigate={~p"/acp/social"} class="text-sm text-amber-400 font-semibold border-b border-amber-400 pb-0.5">
+            <.link navigate={~p"/sse/acp/social"} class="text-sm text-amber-400 font-semibold border-b border-amber-400 pb-0.5">
               Social Log
             </.link>
           </div>
@@ -150,7 +150,7 @@ defmodule SovereignSoulEngineWeb.AcpSocialLogLive do
             <% else %>
               <%= for scene <- @scenes do %>
                 <button
-                  phx-click={JS.patch(~p"/acp/social?id=#{scene.id}")}
+                  phx-click={JS.patch(~p"/sse/acp/social?id=#{scene.id}")}
                   class={["w-full p-4 text-left transition-colors hover:bg-gray-800/20 flex flex-col gap-1.5",
                     @selected_scene && @selected_scene.id == scene.id && "bg-gray-800/40 border-l-2 border-amber-400"
                   ]}

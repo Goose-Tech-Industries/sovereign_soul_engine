@@ -352,9 +352,9 @@ defmodule SovereignSoulEngineWeb.AcpCharacterLive do
       <nav class="border-b border-gray-800 bg-gray-900 px-6 py-3 flex items-center gap-6">
         <span class="text-amber-400 font-bold text-sm tracking-wide">SOVEREIGN SOUL ENGINE — ACP</span>
         <div class="flex items-center gap-4 ml-4">
-          <.link navigate={~p"/acp"} class="text-sm text-gray-400 hover:text-gray-200 transition-colors">Dashboard</.link>
-          <.link navigate={~p"/acp/npcs/new"} class="text-sm text-gray-400 hover:text-gray-200 transition-colors">New NPC</.link>
-          <.link navigate={~p"/acp/social"} class="text-sm text-gray-400 hover:text-gray-200 transition-colors">Social Log</.link>
+          <.link navigate={~p"/sse/acp"} class="text-sm text-gray-400 hover:text-gray-200 transition-colors">Dashboard</.link>
+          <.link navigate={~p"/sse/acp/npcs/new"} class="text-sm text-gray-400 hover:text-gray-200 transition-colors">New NPC</.link>
+          <.link navigate={~p"/sse/acp/social"} class="text-sm text-gray-400 hover:text-gray-200 transition-colors">Social Log</.link>
         </div>
       </nav>
 
@@ -375,7 +375,7 @@ defmodule SovereignSoulEngineWeb.AcpCharacterLive do
           </div>
           <p class="text-xs text-gray-500 mt-0.5">{@character.description}</p>
         </div>
-        <.link navigate={~p"/acp"} class="text-xs text-gray-600 hover:text-gray-400 transition-colors">
+        <.link navigate={~p"/sse/acp"} class="text-xs text-gray-600 hover:text-gray-400 transition-colors">
           <.icon name="hero-arrow-left" class="size-4 inline" /> Back
         </.link>
       </div>
@@ -384,7 +384,7 @@ defmodule SovereignSoulEngineWeb.AcpCharacterLive do
       <div class="border-b border-gray-800 bg-gray-900/30 px-6 flex gap-1">
         <%= for tab <- @tabs do %>
           <.link
-            navigate={~p"/acp/npcs/#{@character.id}/#{tab}"}
+            navigate={~p"/sse/acp/npcs/#{@character.id}/#{tab}"}
             class={[
               "px-4 py-3 text-xs font-semibold border-b-2 transition-colors",
               @tab == tab && "border-amber-400 text-amber-300",
