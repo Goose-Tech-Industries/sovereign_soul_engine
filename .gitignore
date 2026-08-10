@@ -35,3 +35,7 @@ sovereign_soul_engine-*.tar
 npm-debug.log
 /assets/node_modules/
 
+# Local secrets — never commit real API keys/passwords.
+.env
+.env.*
+
