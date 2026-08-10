@@ -93,7 +93,7 @@ defmodule SovereignSoulEngine.LLM.FakeProvider do
   end
 
   @impl true
-  def respond(input) do
+  def respond(input, _opts \\ []) do
     pid = Process.whereis(__MODULE__)
     state = if pid, do: Agent.get(pid, & &1), else: default_state()
 

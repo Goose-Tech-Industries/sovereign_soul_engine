@@ -12,6 +12,29 @@ defmodule SovereignSoulEngineWeb.Router do
 
   pipeline :api do
     plug :accepts, ["json"]
+    plug SovereignSoulEngineWeb.Plugs.ApiAuth
+    plug SovereignSoulEngineWeb.Plugs.RateLimit
+  end
+
+  # Scoped under /sse to match every other route in this app (see
+  # endpoint.ex's `socket "/sse/live"` and `Plug.Static at: "/sse"`) —
+  # nginx passes the full request URI through unchanged for this app,
+  # unlike carnage_v2 which strips its prefix.
+  scope "/sse/api", SovereignSoulEngineWeb.Api do
+    pipe_through :api
+
+    get "/characters", CharacterController, :index
+    get "/characters/:id/intent", CharacterController, :intent
+
+    post "/npc_chat", NpcChatController, :send_message
+    get "/npc_chat/history", NpcChatController, :history
+    get "/npc_chat/relationship", NpcChatController, :relationship
+
+    post "/ambient_chat/message", AmbientChatController, :message
+    post "/ambient_chat/npc_reply", AmbientChatController, :npc_reply
+
+    get "/npc_actions/pending", NpcActionsController, :pending
+    post "/npc_actions/:id/consume", NpcActionsController, :consume
   end
 
   scope "/sse", SovereignSoulEngineWeb do

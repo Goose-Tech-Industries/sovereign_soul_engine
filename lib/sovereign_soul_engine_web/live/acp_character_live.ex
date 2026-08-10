@@ -3,9 +3,11 @@ defmodule SovereignSoulEngineWeb.AcpCharacterLive do
 
   alias SovereignSoulEngine.Characters
   alias SovereignSoulEngine.Souls
+  alias SovereignSoulEngine.Souls.TraitCatalog
   alias SovereignSoulEngine.Memories
   alias SovereignSoulEngine.TheoryOfMind
   alias SovereignSoulEngine.Scenes
+  alias SovereignSoulEngine.Relationships
 
   @tabs ~w(vitals timeline memory beliefs arcs goals social theory_of_mind)
   @default_tab "vitals"
@@ -23,6 +25,11 @@ defmodule SovereignSoulEngineWeb.AcpCharacterLive do
       socket
       |> assign(:id, id)
       |> assign(:tab, tab)
+      # The template's tab nav does `for tab <- @tabs` inside ~H — that's
+      # assigns[:tabs], NOT the @tabs module attribute above, which HEEx
+      # has no visibility into. Never assigned, so every load of this page
+      # crashed with a KeyError.
+      |> assign(:tabs, @tabs)
       |> assign(:tom_draft_fact, "")
       |> assign(:tom_draft_certainty, 70)
       |> assign(:tom_draft_assumption, true)
@@ -66,7 +73,27 @@ defmodule SovereignSoulEngineWeb.AcpCharacterLive do
     |> assign(:cog_score, cog_score)
     |> assign(:cog_stressors, cog_stressors)
     |> assign(:page_title, "#{character.name} — ACP")
+    # Edit drafts for the vitals tab — reset from the freshly-loaded structs
+    # every time character data reloads (after a save, or a PubSub
+    # emotion_updated push), so the form always reflects real DB state
+    # rather than silently going stale.
+    |> assign(:emotional_draft, emotional && emotional_draft_from(emotional))
+    |> assign(:soul_draft, soul && soul_draft_from(soul))
     |> load_tab_data(socket.assigns[:tab] || @default_tab, id)
+  end
+
+  defp emotional_draft_from(emotional) do
+    Map.new(emotion_fields(), fn {_label, key, _color} -> {Atom.to_string(key), Map.get(emotional, key) || 0} end)
+  end
+
+  defp soul_draft_from(soul) do
+    %{
+      "attachment_style" => soul.attachment_style,
+      "humor_style" => soul.humor_style,
+      "emotional_susceptibility" => soul.emotional_susceptibility,
+      "speech_style" => soul.speech_style || "",
+      "personality_traits" => soul.personality_traits || %{}
+    }
   end
 
   defp load_tab_data(socket, "vitals", _id), do: socket
@@ -178,7 +205,22 @@ defmodule SovereignSoulEngineWeb.AcpCharacterLive do
         Enum.any?(scene.participants, &(&1.character_id == id))
       end)
 
-    assign(socket, :char_scenes, char_scenes) |> assign(:expanded_scene_ids, MapSet.new())
+    relationships =
+      id
+      |> Relationships.list_relationships_for_source()
+      |> Enum.map(fn rel -> {rel, Characters.get_character!(rel.target_character_id)} end)
+
+    existing_target_ids = Enum.map(relationships, fn {rel, _target} -> rel.target_character_id end)
+
+    relationship_candidates =
+      Characters.list_characters()
+      |> Enum.reject(&(&1.id == id or &1.id in existing_target_ids))
+
+    socket
+    |> assign(:char_scenes, char_scenes)
+    |> assign(:expanded_scene_ids, MapSet.new())
+    |> assign(:relationships, relationships)
+    |> assign(:relationship_candidates, relationship_candidates)
   end
 
   defp load_tab_data(socket, "theory_of_mind", id) do
@@ -243,6 +285,189 @@ defmodule SovereignSoulEngineWeb.AcpCharacterLive do
       {:noreply, socket}
     else
       {:noreply, assign(socket, :tom_save_result, :error)}
+    end
+  end
+
+  # Events — Vitals tab (Emotional State + Soul Profile edit forms)
+  @impl true
+  def handle_event("update_emotional_draft", params, socket) do
+    fields = ~w(anger fear stress gratitude confidence sadness curiosity attachment shame guilt)
+    draft = Map.merge(socket.assigns.emotional_draft, Map.take(params, fields))
+    {:noreply, assign(socket, :emotional_draft, draft)}
+  end
+
+  @impl true
+  def handle_event("save_emotional_state", _params, socket) do
+    case Souls.update_emotional_state(socket.assigns.emotional, socket.assigns.emotional_draft) do
+      {:ok, _} ->
+        {:noreply, socket |> put_flash(:info, "Emotional state saved.") |> load_character_data(socket.assigns.id)}
+
+      {:error, _changeset} ->
+        {:noreply, put_flash(socket, :error, "Couldn't save emotional state.")}
+    end
+  end
+
+  @impl true
+  def handle_event("update_soul_draft", params, socket) do
+    fields = ~w(attachment_style humor_style emotional_susceptibility speech_style)
+    draft = Map.merge(socket.assigns.soul_draft, Map.take(params, fields))
+    {:noreply, assign(socket, :soul_draft, draft)}
+  end
+
+  @impl true
+  def handle_event("toggle_soul_trait", %{"trait" => trait}, socket) do
+    traits = socket.assigns.soul_draft["personality_traits"] || %{}
+    updated_traits = Map.update(traits, trait, true, &(!&1))
+    draft = Map.put(socket.assigns.soul_draft, "personality_traits", updated_traits)
+    {:noreply, assign(socket, :soul_draft, draft)}
+  end
+
+  @impl true
+  def handle_event("save_soul_profile", _params, socket) do
+    case Souls.update_soul_profile(socket.assigns.soul, socket.assigns.soul_draft) do
+      {:ok, _} ->
+        {:noreply, socket |> put_flash(:info, "Soul profile saved.") |> load_character_data(socket.assigns.id)}
+
+      {:error, _changeset} ->
+        {:noreply, put_flash(socket, :error, "Couldn't save soul profile.")}
+    end
+  end
+
+  # Events — Goals tab (edit existing + add new)
+  @impl true
+  def handle_event("save_goal", %{"goal_id" => goal_id} = params, socket) do
+    goal = Enum.find(socket.assigns.active_goals, &(&1.id == goal_id))
+    blocker = params["blocker"] |> to_string() |> String.trim()
+
+    attrs = %{
+      "current_step" => params["current_step"],
+      "blocker" => if(blocker == "", do: nil, else: blocker),
+      "priority" => params["priority"],
+      "status" => params["status"]
+    }
+
+    case goal && Souls.update_goal(goal, attrs) do
+      {:ok, _} ->
+        {:noreply, socket |> put_flash(:info, "Goal updated.") |> load_character_data(socket.assigns.id)}
+
+      _ ->
+        {:noreply, put_flash(socket, :error, "Couldn't update goal.")}
+    end
+  end
+
+  @impl true
+  def handle_event("add_goal", %{"goal" => goal_text} = params, socket) do
+    if String.trim(goal_text) != "" do
+      attrs = %{
+        character_id: socket.assigns.id,
+        goal: goal_text,
+        current_step: params["current_step"],
+        priority: params["priority"] || 50
+      }
+
+      case Souls.create_goal(attrs) do
+        {:ok, _} ->
+          {:noreply, socket |> put_flash(:info, "Goal added.") |> load_character_data(socket.assigns.id)}
+
+        {:error, _} ->
+          {:noreply, put_flash(socket, :error, "Couldn't add goal.")}
+      end
+    else
+      {:noreply, socket}
+    end
+  end
+
+  # Events — Arcs tab (grief arcs: edit existing + add new)
+  @impl true
+  def handle_event("save_grief_arc", %{"arc_id" => arc_id} = params, socket) do
+    arc = Enum.find(socket.assigns.grief_arcs, &(&1.id == arc_id))
+    attrs = Map.take(params, ["stage", "intensity"])
+
+    case arc && Souls.update_grief_arc(arc, attrs) do
+      {:ok, _} ->
+        {:noreply, socket |> put_flash(:info, "Grief arc updated.") |> load_character_data(socket.assigns.id)}
+
+      _ ->
+        {:noreply, put_flash(socket, :error, "Couldn't update grief arc.")}
+    end
+  end
+
+  @impl true
+  def handle_event("add_grief_arc", %{"subject" => subject} = params, socket) do
+    if String.trim(subject) != "" do
+      attrs = %{
+        character_id: socket.assigns.id,
+        subject: subject,
+        loss_type: params["loss_type"],
+        stage: params["stage"] || "denial",
+        intensity: params["intensity"] || 70,
+        triggered_at: DateTime.utc_now()
+      }
+
+      case Souls.create_grief_arc(attrs) do
+        {:ok, _} ->
+          {:noreply, socket |> put_flash(:info, "Grief arc added.") |> load_character_data(socket.assigns.id)}
+
+        {:error, _} ->
+          {:noreply, put_flash(socket, :error, "Couldn't add grief arc.")}
+      end
+    else
+      {:noreply, socket}
+    end
+  end
+
+  # Events — Social tab (relationship authoring: edit existing outbound + add new)
+  @impl true
+  def handle_event("save_relationship", %{"relationship_id" => rel_id} = params, socket) do
+    rel =
+      Enum.find_value(socket.assigns.relationships, fn {rel, _target} -> rel.id == rel_id && rel end)
+
+    dimensions = ~w(affinity trust respect fear anger gratitude debt softening hardening wound)
+
+    attrs =
+      params
+      |> Map.take(["relationship_type", "lock_version" | dimensions])
+
+    try do
+      case rel && Relationships.update_relationship(rel, attrs) do
+        {:ok, _} ->
+          {:noreply, socket |> put_flash(:info, "Relationship updated.") |> load_character_data(socket.assigns.id)}
+
+        _ ->
+          {:noreply, put_flash(socket, :error, "Couldn't update relationship.")}
+      end
+    rescue
+      # optimistic_lock on Relationship raises this directly from Repo.update
+      # rather than returning {:error, changeset} — it's a runtime row-count
+      # check, not a changeset validation, so it can't be caught by a case.
+      Ecto.StaleEntryError ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "Someone else changed this relationship first — reloaded with the latest values.")
+         |> load_character_data(socket.assigns.id)}
+    end
+  end
+
+  @impl true
+  def handle_event("add_relationship", %{"target_id" => target_id} = params, socket) do
+    if target_id not in [nil, ""] do
+      attrs = %{
+        source_character_id: socket.assigns.id,
+        target_character_id: target_id,
+        relationship_type: params["relationship_type"] || "acquaintance",
+        affinity: params["affinity"] || 0,
+        trust: params["trust"] || 0
+      }
+
+      case Relationships.create_relationship(attrs) do
+        {:ok, _} ->
+          {:noreply, socket |> put_flash(:info, "Relationship added.") |> load_character_data(socket.assigns.id)}
+
+        {:error, _} ->
+          {:noreply, put_flash(socket, :error, "Couldn't add relationship.")}
+      end
+    else
+      {:noreply, socket}
     end
   end
 
@@ -400,26 +625,36 @@ defmodule SovereignSoulEngineWeb.AcpCharacterLive do
         <%!-- TAB: Vitals --%>
         <div :if={@tab == "vitals"}>
           <div class="grid grid-cols-3 gap-4 mb-6">
-            <%!-- Emotional State --%>
+            <%!-- Emotional State — editable --%>
             <div class="p-4 rounded-xl border border-gray-800 bg-gray-900">
               <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">Emotional State</h3>
-              <div class="space-y-2">
-                <%= for {label, key, color} <- emotion_fields() do %>
-                  <div>
-                    <div class="flex justify-between text-xs mb-0.5">
-                      <span class="text-gray-400">{label}</span>
-                      <span class="text-gray-300 font-mono">{if @emotional, do: Map.get(@emotional, key) || 0, else: 0}</span>
-                    </div>
-                    <div class="h-1.5 w-full rounded-full bg-gray-800 overflow-hidden">
-                      <div
-                        class="h-full rounded-full transition-all duration-500"
-                        style={"width: #{if @emotional, do: Map.get(@emotional, key) || 0, else: 0}%; background-color: #{color}"}
-                      >
+              <%= if @emotional do %>
+                <form phx-change="update_emotional_draft" phx-submit="save_emotional_state" class="space-y-2.5">
+                  <%= for {label, key, color} <- emotion_fields() do %>
+                    <% key_str = Atom.to_string(key) %>
+                    <div>
+                      <div class="flex justify-between text-xs mb-0.5">
+                        <span class="text-gray-400">{label}</span>
+                        <span class="text-gray-300 font-mono">{Map.get(@emotional_draft, key_str, 0)}</span>
                       </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        name={key_str}
+                        value={Map.get(@emotional_draft, key_str, 0)}
+                        style={"accent-color: #{color}"}
+                        class="w-full"
+                      />
                     </div>
-                  </div>
-                <% end %>
-              </div>
+                  <% end %>
+                  <button type="submit" class="mt-1 w-full text-xs px-3 py-1.5 rounded bg-blue-500/20 border border-blue-500/30 text-blue-400 hover:bg-blue-500/30 transition-colors">
+                    Save Emotional State
+                  </button>
+                </form>
+              <% else %>
+                <p class="text-xs text-gray-600 italic">No emotional state yet</p>
+              <% end %>
             </div>
 
             <%!-- Somatic State --%>
@@ -478,7 +713,7 @@ defmodule SovereignSoulEngineWeb.AcpCharacterLive do
             </div>
           </div>
 
-          <%!-- Social Stamina --%>
+          <%!-- Social Stamina — simulation-owned, read-only (NpcScheduler drifts this every tick) --%>
           <%= if @soul do %>
             <div class="p-4 rounded-xl border border-gray-800 bg-gray-900 mb-4">
               <div class="flex items-center justify-between mb-2">
@@ -494,16 +729,70 @@ defmodule SovereignSoulEngineWeb.AcpCharacterLive do
               </div>
               <div class="text-[10px] text-gray-600">Regen: +{@soul.stamina_regen_rate}/hr</div>
             </div>
-            <div class="flex gap-3">
-              <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                {String.capitalize(@soul.attachment_style || "—")} Attachment
-              </span>
-              <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gray-800 text-gray-400 border border-gray-700">
-                Humor: {String.capitalize(@soul.humor_style || "none")}
-              </span>
-              <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gray-800 text-gray-400 border border-gray-700">
-                Susceptibility: {@soul.emotional_susceptibility}%
-              </span>
+
+            <%!-- Soul Profile identity — editable --%>
+            <div class="p-4 rounded-xl border border-gray-800 bg-gray-900">
+              <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">Soul Profile</h3>
+              <form phx-change="update_soul_draft" phx-submit="save_soul_profile" class="space-y-3">
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-[10px] text-gray-500 mb-1 uppercase tracking-wide">Attachment Style</label>
+                    <select name="attachment_style" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-gray-100 focus:outline-none focus:border-blue-500">
+                      <%= for style <- ~w(secure anxious avoidant disorganized) do %>
+                        <option value={style} selected={@soul_draft["attachment_style"] == style}>{String.capitalize(style)}</option>
+                      <% end %>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-[10px] text-gray-500 mb-1 uppercase tracking-wide">Humor Style</label>
+                    <select name="humor_style" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-gray-100 focus:outline-none focus:border-blue-500">
+                      <%= for style <- ~w(none dry sarcastic warm dark absurdist) do %>
+                        <option value={style} selected={@soul_draft["humor_style"] == style}>{String.capitalize(style)}</option>
+                      <% end %>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <div class="flex justify-between text-[10px] text-gray-500 mb-1 uppercase tracking-wide">
+                    <span>Emotional Susceptibility</span>
+                    <span class="font-mono normal-case">{@soul_draft["emotional_susceptibility"]}%</span>
+                  </div>
+                  <input type="range" min="0" max="100" name="emotional_susceptibility" value={@soul_draft["emotional_susceptibility"]} class="w-full accent-blue-500" />
+                </div>
+
+                <div>
+                  <label class="block text-[10px] text-gray-500 mb-1 uppercase tracking-wide">Speech Style</label>
+                  <textarea name="speech_style" rows="2" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-gray-100 focus:outline-none focus:border-blue-500">{@soul_draft["speech_style"]}</textarea>
+                </div>
+
+                <div>
+                  <label class="block text-[10px] text-gray-500 mb-1.5 uppercase tracking-wide">Behavioral Tendencies</label>
+                  <div class="grid grid-cols-3 gap-1.5">
+                    <%= for %{key: trait, label: label, blurb: blurb} <- TraitCatalog.all() do %>
+                      <% active = Map.get(@soul_draft["personality_traits"] || %{}, trait, false) %>
+                      <button
+                        type="button"
+                        phx-click="toggle_soul_trait"
+                        phx-value-trait={trait}
+                        title={blurb}
+                        class={[
+                          "flex items-center gap-1.5 px-2 py-1.5 rounded-lg border text-[11px] text-left transition-all",
+                          active && "bg-purple-500/20 border-purple-500/40 text-purple-300",
+                          !active && "bg-gray-800/60 border-gray-700/60 text-gray-500 hover:text-gray-300"
+                        ]}
+                      >
+                        <div class={"w-1.5 h-1.5 rounded-full shrink-0 #{if active, do: "bg-purple-400", else: "bg-gray-600"}"}></div>
+                        {label}
+                      </button>
+                    <% end %>
+                  </div>
+                </div>
+
+                <button type="submit" class="w-full text-xs px-3 py-1.5 rounded bg-blue-500/20 border border-blue-500/30 text-blue-400 hover:bg-blue-500/30 transition-colors">
+                  Save Soul Profile
+                </button>
+              </form>
             </div>
           <% end %>
         </div>
@@ -692,9 +981,41 @@ defmodule SovereignSoulEngineWeb.AcpCharacterLive do
                       <div class="h-full rounded-full bg-indigo-500" style={"width: #{arc.intensity}%"}></div>
                     </div>
                     <div class="text-[10px] text-gray-600 mt-1">intensity: {arc.intensity} | triggered: {format_dt(arc.triggered_at)}</div>
+
+                    <details class="mt-2">
+                      <summary class="text-[10px] text-gray-600 uppercase tracking-wide cursor-pointer hover:text-gray-400 transition-colors">Edit</summary>
+                      <form phx-submit="save_grief_arc" class="mt-2 grid grid-cols-2 gap-2">
+                        <input type="hidden" name="arc_id" value={arc.id} />
+                        <select name="stage" class="col-span-2 bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-gray-100 focus:outline-none focus:border-indigo-500">
+                          <%= for s <- grief_stages() do %>
+                            <option value={s} selected={arc.stage == s}>{String.capitalize(s)}</option>
+                          <% end %>
+                        </select>
+                        <input type="number" name="intensity" min="0" max="100" value={arc.intensity}
+                          class="col-span-2 bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-gray-100 focus:outline-none focus:border-indigo-500" />
+                        <button type="submit" class="col-span-2 text-xs px-3 py-1.5 rounded bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/30 transition-colors">
+                          Save
+                        </button>
+                      </form>
+                    </details>
                   </div>
                 <% end %>
               </div>
+
+              <form phx-submit="add_grief_arc" class="mt-4 p-3 rounded-lg border border-gray-800 bg-gray-900/50 grid grid-cols-2 gap-2">
+                <input type="text" name="subject" placeholder="Subject (who/what was lost)" required
+                  class="col-span-2 bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-gray-100 focus:outline-none focus:border-indigo-500" />
+                <select name="loss_type" class="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-gray-100 focus:outline-none focus:border-indigo-500">
+                  <%= for lt <- ~w(person role belief home ability) do %>
+                    <option value={lt}>{String.capitalize(lt)}</option>
+                  <% end %>
+                </select>
+                <input type="number" name="intensity" min="0" max="100" value="70"
+                  class="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-gray-100 focus:outline-none focus:border-indigo-500" />
+                <button type="submit" class="col-span-2 text-xs px-3 py-1.5 rounded bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/30 transition-colors">
+                  + Add Grief Arc
+                </button>
+              </form>
             </div>
 
             <%!-- Forgiveness Arcs --%>
@@ -758,9 +1079,42 @@ defmodule SovereignSoulEngineWeb.AcpCharacterLive do
                       <span class="font-bold">Blocked:</span> {goal.blocker}
                     </div>
                   <% end %>
+
+                  <details class="mt-3">
+                    <summary class="text-[10px] text-gray-600 uppercase tracking-wide cursor-pointer hover:text-gray-400 transition-colors">Edit</summary>
+                    <form phx-submit="save_goal" class="mt-2 grid grid-cols-2 gap-2">
+                      <input type="hidden" name="goal_id" value={goal.id} />
+                      <input type="text" name="current_step" value={goal.current_step} placeholder="Current step"
+                        class="col-span-2 bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-gray-100 focus:outline-none focus:border-blue-500" />
+                      <input type="text" name="blocker" value={goal.blocker} placeholder="Blocker (blank = none)"
+                        class="col-span-2 bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-gray-100 focus:outline-none focus:border-blue-500" />
+                      <input type="number" name="priority" min="0" max="100" value={goal.priority}
+                        class="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-gray-100 focus:outline-none focus:border-blue-500" />
+                      <select name="status" class="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-gray-100 focus:outline-none focus:border-blue-500">
+                        <%= for s <- ~w(active paused achieved abandoned) do %>
+                          <option value={s} selected={goal.status == s}>{String.capitalize(s)}</option>
+                        <% end %>
+                      </select>
+                      <button type="submit" class="col-span-2 text-xs px-3 py-1.5 rounded bg-blue-500/20 border border-blue-500/30 text-blue-400 hover:bg-blue-500/30 transition-colors">
+                        Save
+                      </button>
+                    </form>
+                  </details>
                 </div>
               <% end %>
             </div>
+
+            <form phx-submit="add_goal" class="mt-3 p-3 rounded-lg border border-gray-800 bg-gray-900/50 grid grid-cols-2 gap-2">
+              <input type="text" name="goal" placeholder="New goal" required
+                class="col-span-2 bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-gray-100 focus:outline-none focus:border-blue-500" />
+              <input type="text" name="current_step" placeholder="Current step (optional)"
+                class="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-gray-100 focus:outline-none focus:border-blue-500" />
+              <input type="number" name="priority" min="0" max="100" value="50"
+                class="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-gray-100 focus:outline-none focus:border-blue-500" />
+              <button type="submit" class="col-span-2 text-xs px-3 py-1.5 rounded bg-blue-500/20 border border-blue-500/30 text-blue-400 hover:bg-blue-500/30 transition-colors">
+                + Add Goal
+              </button>
+            </form>
           </div>
 
           <%!-- Desires --%>
@@ -803,6 +1157,82 @@ defmodule SovereignSoulEngineWeb.AcpCharacterLive do
 
         <%!-- TAB: Social --%>
         <div :if={@tab == "social"}>
+          <h2 class="text-sm font-bold text-gray-300 mb-4">Relationships</h2>
+          <div :if={Map.get(assigns, :relationships, []) == []} class="text-xs text-gray-600 italic mb-4">No outbound relationships recorded</div>
+          <div class="space-y-3 mb-4">
+            <%= for {rel, target} <- Map.get(assigns, :relationships, []) do %>
+              <div class="p-4 rounded-xl border border-gray-800 bg-gray-900">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-sm font-semibold text-gray-100">{target.name}</span>
+                  <span class="text-[10px] px-2 py-0.5 rounded bg-gray-800 text-gray-400 border border-gray-700">{rel.relationship_type}</span>
+                </div>
+                <div class="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-gray-500 mb-1">
+                  <span>Affinity {rel.affinity}</span>
+                  <span>Trust {rel.trust}</span>
+                  <span>Respect {rel.respect}</span>
+                  <span>Fear {rel.fear}</span>
+                  <span>Anger {rel.anger}</span>
+                </div>
+
+                <details class="mt-2">
+                  <summary class="text-[10px] text-gray-600 uppercase tracking-wide cursor-pointer hover:text-gray-400 transition-colors">Edit</summary>
+                  <form phx-submit="save_relationship" class="mt-2 space-y-2">
+                    <input type="hidden" name="relationship_id" value={rel.id} />
+                    <input type="hidden" name="lock_version" value={rel.lock_version} />
+                    <select name="relationship_type" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-gray-100 focus:outline-none focus:border-cyan-500">
+                      <%= for t <- ~w(acquaintance friend rival ally enemy family romantic mentor) do %>
+                        <option value={t} selected={rel.relationship_type == t}>{String.capitalize(t)}</option>
+                      <% end %>
+                    </select>
+                    <div class="grid grid-cols-5 gap-1.5">
+                      <%= for {label, key} <- [{"Affin.", :affinity}, {"Trust", :trust}, {"Resp.", :respect}, {"Fear", :fear}, {"Anger", :anger}, {"Grat.", :gratitude}, {"Debt", :debt}, {"Soft.", :softening}, {"Hard.", :hardening}, {"Wound", :wound}] do %>
+                        <div>
+                          <label class="block text-[9px] text-gray-500 mb-0.5">{label}</label>
+                          <input
+                            type="number"
+                            min="-100"
+                            max="100"
+                            name={Atom.to_string(key)}
+                            value={Map.get(rel, key)}
+                            class="w-full bg-gray-800 border border-gray-700 rounded px-1 py-1 text-[11px] text-gray-100 focus:outline-none focus:border-cyan-500"
+                          />
+                        </div>
+                      <% end %>
+                    </div>
+                    <button type="submit" class="w-full text-xs px-3 py-1.5 rounded bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/30 transition-colors">
+                      Save
+                    </button>
+                  </form>
+                </details>
+              </div>
+            <% end %>
+          </div>
+
+          <%= if Map.get(assigns, :relationship_candidates, []) != [] do %>
+            <form phx-submit="add_relationship" class="mb-6 p-3 rounded-lg border border-gray-800 bg-gray-900/50 space-y-2">
+              <select name="target_id" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-gray-100 focus:outline-none focus:border-cyan-500">
+                <option value="">Relationship with…</option>
+                <%= for c <- @relationship_candidates do %>
+                  <option value={c.id}>{c.name}</option>
+                <% end %>
+              </select>
+              <select name="relationship_type" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-gray-100 focus:outline-none focus:border-cyan-500">
+                <%= for t <- ~w(acquaintance friend rival ally enemy family romantic mentor) do %>
+                  <option value={t}>{String.capitalize(t)}</option>
+                <% end %>
+              </select>
+              <div class="grid grid-cols-2 gap-2">
+                <input type="number" name="affinity" min="-100" max="100" value="0" placeholder="Initial affinity"
+                  class="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-gray-100 focus:outline-none focus:border-cyan-500" />
+                <input type="number" name="trust" min="-100" max="100" value="0" placeholder="Initial trust"
+                  class="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-gray-100 focus:outline-none focus:border-cyan-500" />
+              </div>
+              <button type="submit" class="w-full text-xs px-3 py-1.5 rounded bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/30 transition-colors">
+                + Add Relationship
+              </button>
+            </form>
+          <% end %>
+
           <h2 class="text-sm font-bold text-gray-300 mb-4">Autonomous Conversations</h2>
           <div :if={!is_map_key(assigns, :char_scenes) or @char_scenes == []} class="text-center py-12 text-gray-600">
             <.icon name="hero-chat-bubble-left-right" class="size-8 mx-auto mb-2 opacity-40" />

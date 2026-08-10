@@ -3,6 +3,8 @@ defmodule SovereignSoulEngineWeb.AcpNpcCreatorLive do
 
   alias SovereignSoulEngine.Characters
   alias SovereignSoulEngine.Souls
+  alias SovereignSoulEngine.Souls.TraitCatalog
+  alias SovereignSoulEngine.TheoryOfMind
 
   @total_steps 7
 
@@ -12,6 +14,10 @@ defmodule SovereignSoulEngineWeb.AcpNpcCreatorLive do
       socket
       |> assign(:page_title, "New NPC — ACP")
       |> assign(:step, 1)
+      # Same bug class as AcpCharacterLive's :tabs — @total_steps below is a
+      # module attribute, invisible to ~H templates, which read @name as
+      # assigns[:name] always. Never assigned, so this page 500'd on load.
+      |> assign(:total_steps, @total_steps)
       |> assign(:errors, [])
       # Step 1 — Identity
       |> assign(:name, "")
@@ -24,18 +30,7 @@ defmodule SovereignSoulEngineWeb.AcpNpcCreatorLive do
       |> assign(:humor_style, "none")
       |> assign(:emotional_susceptibility, 50)
       |> assign(:speech_style, "")
-      |> assign(:personality_traits, %{
-        "depression" => false,
-        "bipolar" => false,
-        "ocd" => false,
-        "splitting" => false,
-        "adhd" => false,
-        "narcissism" => false,
-        "impostor" => false,
-        "codependency" => false,
-        "addiction" => false,
-        "hypochondria" => false
-      })
+      |> assign(:personality_traits, TraitCatalog.default_map())
       # Step 3 — Soul
       |> assign(:core_values, [])
       |> assign(:core_value_input, "")
@@ -69,7 +64,10 @@ defmodule SovereignSoulEngineWeb.AcpNpcCreatorLive do
       |> assign(:forgiveness_arcs, [])
       |> assign(:forgiveness_draft, %{"wound_description" => "", "stage" => "fresh", "direction" => "neutral", "intensity" => 80})
       |> assign(:tom_entries, [])
-      |> assign(:tom_draft, %{"known_fact" => "", "certainty" => 70, "is_assumption" => true})
+      |> assign(:tom_draft, %{"known_fact" => "", "certainty" => 70, "is_assumption" => true, "subject_id" => nil})
+      # For the ToM subject picker — the new NPC doesn't exist yet, so no
+      # self-exclusion needed like AcpCharacterLive's version has.
+      |> assign(:all_characters, Characters.list_characters())
       # Step 7 — Physical & Social
       |> assign(:social_stamina, 80)
       |> assign(:stamina_regen_rate, 10)
@@ -413,7 +411,7 @@ defmodule SovereignSoulEngineWeb.AcpNpcCreatorLive do
   def handle_event("update_tom_draft", params, socket) do
     draft =
       socket.assigns.tom_draft
-      |> Map.merge(Map.take(params, ["known_fact"]))
+      |> Map.merge(Map.take(params, ["known_fact", "subject_id"]))
       |> Map.put("certainty", parse_int(params["certainty"], socket.assigns.tom_draft["certainty"]))
       |> Map.put("is_assumption", Map.get(params, "is_assumption", "true") == "true")
     {:noreply, assign(socket, :tom_draft, draft)}
@@ -421,9 +419,16 @@ defmodule SovereignSoulEngineWeb.AcpNpcCreatorLive do
 
   @impl true
   def handle_event("add_tom_entry", _params, socket) do
-    if String.trim(socket.assigns.tom_draft["known_fact"] || "") != "" do
-      entries = socket.assigns.tom_entries ++ [socket.assigns.tom_draft]
-      socket = socket |> assign(:tom_entries, entries) |> assign(:tom_draft, %{"known_fact" => "", "certainty" => 70, "is_assumption" => true})
+    draft = socket.assigns.tom_draft
+
+    if String.trim(draft["known_fact"] || "") != "" and draft["subject_id"] not in [nil, ""] do
+      entries = socket.assigns.tom_entries ++ [draft]
+
+      socket =
+        socket
+        |> assign(:tom_entries, entries)
+        |> assign(:tom_draft, %{"known_fact" => "", "certainty" => 70, "is_assumption" => true, "subject_id" => nil})
+
       {:noreply, socket}
     else
       {:noreply, socket}
@@ -590,6 +595,16 @@ defmodule SovereignSoulEngineWeb.AcpNpcCreatorLive do
         })
       end
 
+      # Seed theory-of-mind entries — previously collected in tom_entries
+      # but never persisted here at all, a dead draft the wizard silently
+      # discarded.
+      for t <- a.tom_entries, t["subject_id"] not in [nil, ""] do
+        TheoryOfMind.upsert_knowledge(character.id, t["subject_id"], t["known_fact"],
+          certainty: t["certainty"],
+          is_assumption: t["is_assumption"]
+        )
+      end
+
       {:noreply, push_navigate(socket, to: ~p"/sse/acp/npcs/#{character.id}")}
     else
       {:error, changeset} ->
@@ -752,20 +767,24 @@ defmodule SovereignSoulEngineWeb.AcpNpcCreatorLive do
             </form>
 
             <div class="mt-5">
-              <label class="block text-xs text-gray-400 mb-2 font-semibold uppercase tracking-wide">Personality Flags</label>
+              <label class="block text-xs text-gray-400 mb-2 font-semibold uppercase tracking-wide">Behavioral Tendencies</label>
+              <p class="text-[10px] text-gray-500 mb-2">These shape how the character acts, not a diagnosis of them.</p>
               <div class="grid grid-cols-2 gap-2">
-                <%= for {trait, active} <- @personality_traits do %>
+                <%= for %{key: trait, label: label, blurb: blurb} <- TraitCatalog.all() do %>
+                  <% active = Map.get(@personality_traits, trait, false) %>
                   <button
+                    type="button"
                     phx-click="toggle_trait"
                     phx-value-trait={trait}
+                    title={blurb}
                     class={[
-                      "flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-all",
+                      "flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-all text-left",
                       active && "bg-purple-500/20 border-purple-500/40 text-purple-300",
                       !active && "bg-gray-800/60 border-gray-700/60 text-gray-500 hover:text-gray-300"
                     ]}
                   >
-                    <div class={"w-2 h-2 rounded-full #{if active, do: "bg-purple-400", else: "bg-gray-600"}"}></div>
-                    {String.capitalize(trait)}
+                    <div class={"w-2 h-2 rounded-full shrink-0 #{if active, do: "bg-purple-400", else: "bg-gray-600"}"}></div>
+                    {label}
                   </button>
                 <% end %>
               </div>
@@ -1094,9 +1113,12 @@ defmodule SovereignSoulEngineWeb.AcpNpcCreatorLive do
           <%!-- Theory of Mind --%>
           <div class="p-5 rounded-xl border border-gray-800 bg-gray-900">
             <h3 class="text-sm font-bold text-cyan-400 mb-3">Theory of Mind Seed Entries</h3>
-            <p class="text-[10px] text-gray-500 mb-3">What does this NPC already believe about the player character?</p>
+            <p class="text-[10px] text-gray-500 mb-3">What does this NPC already believe about someone else — another character, or a player once they show up in play?</p>
             <%= for {entry, idx} <- Enum.with_index(@tom_entries) do %>
               <div class="flex items-center gap-2 mb-2 p-2 bg-gray-800/60 rounded-lg">
+                <span class="text-[10px] text-cyan-500 shrink-0">
+                  {Enum.find_value(@all_characters, "?", &(&1.id == entry["subject_id"] && &1.name))}:
+                </span>
                 <div class="flex-1 text-xs text-gray-300 truncate">{entry["known_fact"]}</div>
                 <span class="text-[10px] text-gray-500">{entry["certainty"]}%</span>
                 <button phx-click="remove_tom_entry" phx-value-index={idx} class="text-gray-600 hover:text-red-400">
@@ -1105,7 +1127,13 @@ defmodule SovereignSoulEngineWeb.AcpNpcCreatorLive do
               </div>
             <% end %>
             <form phx-change="update_tom_draft" class="space-y-2">
-              <input type="text" name="known_fact" value={@tom_draft["known_fact"]} placeholder="Known fact about the player"
+              <select name="subject_id" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 focus:outline-none focus:border-cyan-500">
+                <option value="" selected={@tom_draft["subject_id"] in [nil, ""]}>Who is this about?</option>
+                <%= for c <- @all_characters do %>
+                  <option value={c.id} selected={@tom_draft["subject_id"] == c.id}>{c.name}</option>
+                <% end %>
+              </select>
+              <input type="text" name="known_fact" value={@tom_draft["known_fact"]} placeholder="Known fact about them"
                 class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 focus:outline-none focus:border-cyan-500"/>
               <div class="flex items-center gap-3">
                 <input type="range" min="0" max="100" name="certainty" value={@tom_draft["certainty"]} class="flex-1 accent-cyan-500"/>

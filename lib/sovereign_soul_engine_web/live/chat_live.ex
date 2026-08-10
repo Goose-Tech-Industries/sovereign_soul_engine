@@ -40,6 +40,24 @@ defmodule SovereignSoulEngineWeb.ChatLive do
   end
 
   @impl true
+  def handle_params(%{"character_id" => id}, _uri, socket) do
+    case Enum.find(socket.assigns.npcs, &(&1.id == id)) do
+      nil ->
+        {:noreply, socket}
+
+      npc ->
+        scene = Scenes.find_or_create_direct_scene(socket.assigns.player, npc)
+
+        socket =
+          socket
+          |> assign(:creating_group?, false)
+          |> load_scenes()
+          |> select_scene(scene)
+
+        {:noreply, socket}
+    end
+  end
+
   def handle_params(_params, _uri, socket) do
     {:noreply, socket}
   end
@@ -101,7 +119,7 @@ defmodule SovereignSoulEngineWeb.ChatLive do
         vael = Enum.find(socket.assigns.npcs, &(&1.slug == "vael"))
 
         if vael do
-          scene = find_or_create_scene(socket.assigns.player, vael)
+          scene = Scenes.find_or_create_direct_scene(socket.assigns.player, vael)
 
           socket
           |> load_scenes()
@@ -219,7 +237,7 @@ defmodule SovereignSoulEngineWeb.ChatLive do
   @impl true
   def handle_event("select_character", %{"character_id" => id}, socket) do
     npc = Enum.find(socket.assigns.npcs, &(&1.id == id))
-    scene = find_or_create_scene(socket.assigns.player, npc)
+    scene = Scenes.find_or_create_direct_scene(socket.assigns.player, npc)
 
     socket =
       socket
@@ -527,35 +545,6 @@ defmodule SovereignSoulEngineWeb.ChatLive do
 
   @impl true
   def handle_info(_msg, socket), do: {:noreply, socket}
-
-  defp find_or_create_scene(player, npc) do
-    SovereignSoulEngine.Repo.one(
-      from s in SovereignSoulEngine.Scenes.Scene,
-        join: p1 in SovereignSoulEngine.Scenes.SceneParticipant,
-        on: p1.scene_id == s.id and p1.character_id == ^player.id,
-        join: p2 in SovereignSoulEngine.Scenes.SceneParticipant,
-        on: p2.scene_id == s.id and p2.character_id == ^npc.id,
-        where: s.status == "active",
-        order_by: [desc: s.inserted_at],
-        limit: 1
-    ) || create_direct_scene(player, npc)
-  end
-
-  defp create_direct_scene(player, npc) do
-    {:ok, scene} =
-      Scenes.create_scene(%{
-        title: "#{player.name} & #{npc.name}",
-        status: "active",
-        location: "Direct Chat",
-        context: %{},
-        started_at: DateTime.utc_now()
-      })
-
-    Scenes.add_participant(%{scene_id: scene.id, character_id: player.id})
-    Scenes.add_participant(%{scene_id: scene.id, character_id: npc.id})
-
-    scene
-  end
 
   defp assign_character_details(socket) do
     npc = socket.assigns.selected_npc

@@ -35,6 +35,9 @@ defmodule SovereignSoulEngine.Memories.Memory do
   @categories ~w(working episodic relationship core wound belief)
   @statuses ~w(active consolidated archived)
 
+  @doc "The exact set of valid memory categories — the LLM boundary (Generator) validates against this before ever building a changeset."
+  def categories, do: @categories
+
   def changeset(memory, attrs) do
     memory
     |> cast(attrs, [

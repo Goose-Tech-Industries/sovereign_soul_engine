@@ -52,6 +52,78 @@ defmodule SovereignSoulEngine.Scenes do
     Scene.changeset(scene, attrs)
   end
 
+  @doc "Read-only — the active 1:1 scene between two characters, or nil. Never creates (a GET shouldn't have side effects)."
+  def find_direct_scene(character_a, character_b) do
+    Repo.one(
+      from s in Scene,
+        join: p1 in SceneParticipant,
+        on: p1.scene_id == s.id and p1.character_id == ^character_a.id,
+        join: p2 in SceneParticipant,
+        on: p2.scene_id == s.id and p2.character_id == ^character_b.id,
+        where: s.status == "active",
+        order_by: [desc: s.inserted_at],
+        limit: 1
+    )
+  end
+
+  @doc """
+  The active 1:1 scene between two characters, creating one on first
+  contact. Extracted from ChatLive (was private there) so any caller —
+  the dev chat UI or an external API like npc_chat — shares one
+  find-or-create path instead of two copies drifting apart.
+  """
+  def find_or_create_direct_scene(character_a, character_b) do
+    find_direct_scene(character_a, character_b) || create_direct_scene(character_a, character_b)
+  end
+
+  defp create_direct_scene(character_a, character_b) do
+    {:ok, scene} =
+      create_scene(%{
+        title: "#{character_a.name} & #{character_b.name}",
+        status: "active",
+        location: "Direct Chat",
+        context: %{},
+        started_at: DateTime.utc_now()
+      })
+
+    add_participant(%{scene_id: scene.id, character_id: character_a.id})
+    add_participant(%{scene_id: scene.id, character_id: character_b.id})
+
+    scene
+  end
+
+  @doc "Read-only lookup for a shared/group scene by its external identity, or nil."
+  def find_group_scene(external_source, group_key) do
+    Repo.get_by(Scene, external_source: external_source, external_id: group_key)
+  end
+
+  @doc """
+  The shared scene for an external group identity (e.g. a physical tile),
+  creating one on first contact. Unlike a direct scene, this has no fixed
+  participant list — any number of external players and NPCs can post
+  into it (participants aren't required for Generator.generate/3 since the
+  caller always passes an explicit player_id).
+  """
+  def find_or_create_group_scene(external_source, group_key) do
+    find_group_scene(external_source, group_key) || insert_group_scene(external_source, group_key)
+  end
+
+  defp insert_group_scene(external_source, group_key) do
+    %Scene{}
+    |> Scene.changeset(%{
+      title: "Ambient: #{group_key}",
+      status: "active",
+      location: "Ambient",
+      context: %{},
+      started_at: DateTime.utc_now(),
+      external_source: external_source,
+      external_id: group_key
+    })
+    |> Repo.insert(on_conflict: :nothing, conflict_target: [:external_source, :external_id])
+
+    find_group_scene(external_source, group_key)
+  end
+
   # Scene Participants
 
   def list_participants(scene_id) do

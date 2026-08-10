@@ -17,7 +17,7 @@ defmodule SovereignSoulEngine.LLM.GeminiProvider do
 
   @impl true
   def health do
-    if api_key() do
+    if api_key([]) do
       {:ok, %{status: "configured", model: @default_model}}
     else
       {:error, "GEMINI_API_KEY not configured"}
@@ -25,8 +25,8 @@ defmodule SovereignSoulEngine.LLM.GeminiProvider do
   end
 
   @impl true
-  def respond(input) do
-    with {:ok, key} <- require_api_key(),
+  def respond(input, opts \\ []) do
+    with {:ok, key} <- require_api_key(opts),
          {:ok, body} <- build_request_body(input),
          {:ok, response} <- send_request(key, body),
          {:ok, parsed} <- parse_response(response) do
@@ -174,14 +174,14 @@ defmodule SovereignSoulEngine.LLM.GeminiProvider do
 
   # ── Configuration ────────────────────────────────────────────
 
-  defp require_api_key do
-    case api_key() do
+  defp require_api_key(opts) do
+    case api_key(opts) do
       nil -> {:error, "GEMINI_API_KEY not configured"}
       key -> {:ok, key}
     end
   end
 
-  defp api_key do
-    System.get_env("GEMINI_API_KEY")
+  defp api_key(opts) do
+    opts[:api_key] || System.get_env("GEMINI_API_KEY")
   end
 end

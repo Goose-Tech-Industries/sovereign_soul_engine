@@ -78,14 +78,19 @@ defmodule SovereignSoulEngine.Memories.MemoryRetrieval do
         :recency_halflife_days
       ])
 
+    # Map.get/2 (not m[:key]) throughout — memories arrive as real
+    # %Memory{} Ecto structs here (see Memories.list_relevant_memories_for_character),
+    # and structs don't implement the Access behaviour bracket syntax
+    # requires. This crashed the very first time this path got exercised
+    # outside the dev-harness "Goose" flow with non-empty context tags.
     memories
     |> Enum.filter(fn m -> not unresolved_only or not Map.get(m, :is_resolved, false) end)
-    |> Enum.filter(fn m -> is_nil(subject_id) or m[:subject_character_id] == subject_id end)
+    |> Enum.filter(fn m -> is_nil(subject_id) or Map.get(m, :subject_character_id) == subject_id end)
     |> Enum.filter(fn m ->
-      is_nil(categories) or normalize_category(m[:category]) in categories
+      is_nil(categories) or normalize_category(Map.get(m, :category)) in categories
     end)
     |> Enum.filter(fn m ->
-      is_nil(tags) or has_any_tag?(m[:tags], tags)
+      is_nil(tags) or has_any_tag?(Map.get(m, :tags), tags)
     end)
     |> Enum.filter(fn m -> Map.get(m, :importance, 0) >= min_importance end)
     |> MemoryScoring.rank(scoring_opts)
@@ -101,7 +106,7 @@ defmodule SovereignSoulEngine.Memories.MemoryRetrieval do
 
   defp group_by_category(results) do
     results
-    |> Enum.group_by(fn m -> to_string(m[:category]) end)
+    |> Enum.group_by(fn m -> to_string(Map.get(m, :category)) end)
     |> Enum.map(fn {cat, mems} -> {cat, length(mems)} end)
     |> Map.new()
   end

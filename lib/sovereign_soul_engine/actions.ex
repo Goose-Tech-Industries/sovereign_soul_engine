@@ -28,6 +28,16 @@ defmodule SovereignSoulEngine.Actions do
     )
   end
 
+  def list_pending_action_intents_for_character(character_id, action_types) do
+    Repo.all(
+      from a in ActionIntent,
+        where:
+          a.character_id == ^character_id and a.proposed_action in ^action_types and
+            a.validation_status == "pending",
+        order_by: [asc: :inserted_at]
+    )
+  end
+
   def create_action_intent(attrs \\ %{}) do
     %ActionIntent{}
     |> ActionIntent.changeset(attrs)

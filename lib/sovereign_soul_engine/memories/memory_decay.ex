@@ -43,9 +43,9 @@ defmodule SovereignSoulEngine.Memories.MemoryDecay do
     now = Keyword.get(opts, :now, DateTime.utc_now())
     importance = Map.get(memory, :importance, 1)
     decay_rate = Map.get(memory, :decay_rate, 1.0)
-    category = normalize_category(memory[:category])
+    category = normalize_category(Map.get(memory, :category))
     recall_count = Map.get(memory, :recall_count, 0)
-    last_recall = memory[:last_recalled_at] || memory[:occurred_at] || now
+    last_recall = Map.get(memory, :last_recalled_at) || Map.get(memory, :occurred_at) || now
 
     category_resistance = Map.get(@category_decay_resistance, category, 1.0)
 

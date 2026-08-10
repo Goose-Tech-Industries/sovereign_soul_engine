@@ -28,7 +28,7 @@ defmodule SovereignSoulEngine.Memories.MemoryConsolidation do
   """
   @spec evaluate(map(), keyword()) :: [{:promote, atom(), String.t()}]
   def evaluate(memory, opts \\ []) do
-    category = normalize_category(memory[:category])
+    category = normalize_category(Map.get(memory, :category))
     importance = Map.get(memory, :importance, 1)
     emotional_intensity = Map.get(memory, :emotional_intensity, 0)
     recall_count = Map.get(memory, :recall_count, 0)
@@ -74,10 +74,9 @@ defmodule SovereignSoulEngine.Memories.MemoryConsolidation do
   """
   @spec contradictory?(map(), map()) :: boolean()
   def contradictory?(memory_a, memory_b) do
-    same_event? =
-      not is_nil(memory_a[:event_id]) and
-        memory_a[:event_id] == memory_b[:event_id] and
-        memory_a[:event_id] != nil
+    event_a = Map.get(memory_a, :event_id)
+    event_b = Map.get(memory_b, :event_id)
+    same_event? = not is_nil(event_a) and event_a == event_b
 
     va = Map.get(memory_a, :valence, 0.0)
     vb = Map.get(memory_b, :valence, 0.0)

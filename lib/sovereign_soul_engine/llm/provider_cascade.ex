@@ -30,7 +30,13 @@ defmodule SovereignSoulEngine.LLM.ProviderCascade do
 
   @default_timeout_ms 30_000
 
+  @provider_by_name Map.new(@default_providers, &{&1.provider_name(), &1})
+
   # ── Public API ───────────────────────────────────────────────
+
+  @doc "Looks up a provider module by its `provider_name/0` (e.g. \"anthropic\") — used to resolve a tenant's BYOK choice."
+  @spec provider_by_name(String.t()) :: module() | nil
+  def provider_by_name(name), do: Map.get(@provider_by_name, name)
 
   @doc """
   Sends an LLM request through the cascade of providers.
@@ -41,13 +47,37 @@ defmodule SovereignSoulEngine.LLM.ProviderCascade do
   Options:
     - `:providers` — list of provider modules (defaults to the full cascade)
     - `:timeout_ms` — per-provider timeout in ms (default: 30_000)
+    - `:tenant` — a `Tenants.Tenant` struct. If it has BYOK configured, the
+      request goes ONLY to that tenant's own provider/key — never the
+      operator's cascade, and never falls back to it on failure. A tenant's
+      broken BYOK key should fail loudly for them to fix, not silently
+      spend the operator's money on the fallback.
   """
   @spec respond(map(), keyword()) :: {:ok, Provider.provider_response()} | {:error, String.t()}
   def respond(input, opts \\ []) do
-    providers = Keyword.get(opts, :providers, configured_providers())
     timeout_ms = Keyword.get(opts, :timeout_ms, @default_timeout_ms)
 
-    try_providers(providers, input, timeout_ms)
+    case byok_provider(opts[:tenant]) do
+      {:ok, provider_module, api_key} ->
+        respond_via_provider(provider_module, input, timeout_ms, api_key: api_key)
+
+      :not_configured ->
+        providers = Keyword.get(opts, :providers, configured_providers())
+        try_providers(providers, input, timeout_ms)
+    end
+  end
+
+  defp byok_provider(nil), do: :not_configured
+  defp byok_provider(tenant), do: SovereignSoulEngine.Tenants.resolve_byok(tenant)
+
+  # Single-provider path for BYOK — deliberately not `try_providers/3`,
+  # which cascades to other providers on failure. A tenant's BYOK failure
+  # must surface to them, not silently spend the operator's own key.
+  defp respond_via_provider(provider_module, input, timeout_ms, provider_opts) do
+    case call_provider(provider_module, input, timeout_ms, provider_opts) do
+      {:ok, raw} -> validate_and_sanitize(raw)
+      {:error, reason} -> {:error, reason}
+    end
   end
 
   @doc """
@@ -82,7 +112,7 @@ defmodule SovereignSoulEngine.LLM.ProviderCascade do
     provider_name = provider.provider_name()
     Logger.debug("LLM cascade: trying #{provider_name}")
 
-    case call_provider(provider, input, timeout_ms) do
+    case call_provider(provider, input, timeout_ms, []) do
       {:ok, raw} ->
         case validate_and_sanitize(raw) do
           {:ok, sanitized} ->
@@ -103,8 +133,8 @@ defmodule SovereignSoulEngine.LLM.ProviderCascade do
     end
   end
 
-  defp call_provider(provider, input, timeout_ms) do
-    task = Task.async(fn -> provider.respond(input) end)
+  defp call_provider(provider, input, timeout_ms, provider_opts) do
+    task = Task.async(fn -> provider.respond(input, provider_opts) end)
 
     case Task.yield(task, timeout_ms) || Task.shutdown(task) do
       {:ok, result} ->
@@ -135,7 +165,34 @@ defmodule SovereignSoulEngine.LLM.ProviderCascade do
       memory_candidates:
         sanitize_memory_candidates(raw[:memory_candidates] || raw["memory_candidates"]),
       relationship_signals:
-        sanitize_relationship_signals(raw[:relationship_signals] || raw["relationship_signals"])
+        sanitize_relationship_signals(raw[:relationship_signals] || raw["relationship_signals"]),
+      # Everything below here was previously discarded entirely — Generator's
+      # prompt asks the LLM for all of it, but this function only ever
+      # returned the 8 keys above, so every consumer of these fields in
+      # Generator always saw nil. They have real, correct consumer logic
+      # already; the bug was purely here.
+      updated_description:
+        sanitize_nullable_string(raw[:updated_description] || raw["updated_description"]),
+      repressed_motive: sanitize_nullable_string(raw[:repressed_motive] || raw["repressed_motive"]),
+      active_defense: sanitize_nullable_string(raw[:active_defense] || raw["active_defense"]),
+      physical_tell: sanitize_nullable_string(raw[:physical_tell] || raw["physical_tell"]),
+      shame_or_guilt: sanitize_nullable_string(raw[:shame_or_guilt] || raw["shame_or_guilt"]),
+      # No consumer logic exists for this one yet (unlike everything else
+      # here) — whitelisted so it round-trips instead of being silently
+      # dropped, ready for whenever that gets built.
+      moral_tension: sanitize_nullable_string(raw[:moral_tension] || raw["moral_tension"]),
+      conversation_state: sanitize_nullable_string(raw[:conversation_state] || raw["conversation_state"]),
+      rumination_update:
+        sanitize_rumination_update(raw[:rumination_update] || raw["rumination_update"]),
+      belief_challenge: sanitize_belief_challenge(raw[:belief_challenge] || raw["belief_challenge"]),
+      desire_update: sanitize_desire_update(raw[:desire_update] || raw["desire_update"]),
+      psychological_updates:
+        sanitize_psychological_updates(raw[:psychological_updates] || raw["psychological_updates"]),
+      knowledge_update: sanitize_knowledge_update(raw[:knowledge_update] || raw["knowledge_update"]),
+      goal_update: sanitize_goal_update(raw[:goal_update] || raw["goal_update"]),
+      grief_response: sanitize_grief_response(raw[:grief_response] || raw["grief_response"]),
+      forgiveness_signal:
+        sanitize_forgiveness_signal(raw[:forgiveness_signal] || raw["forgiveness_signal"])
     }
 
     missing =
@@ -167,6 +224,18 @@ defmodule SovereignSoulEngine.LLM.ProviderCascade do
   defp sanitize_string(nil), do: ""
   defp sanitize_string(str) when is_binary(str), do: String.slice(str, 0, @max_string_length)
   defp sanitize_string(_), do: ""
+
+  # Unlike sanitize_string/1, preserves nil rather than collapsing it to "" —
+  # every one of Generator's consumers for the fields below distinguishes
+  # "no update" (nil) from "explicit empty" via `||` chains and `if x, do:`
+  # guards. Collapsing nil to "" here would silently break that distinction
+  # for currently-correct code, not just leave it dead.
+  defp sanitize_nullable_string(nil), do: nil
+  defp sanitize_nullable_string(str) when is_binary(str), do: String.slice(str, 0, @max_string_length)
+  defp sanitize_nullable_string(_), do: nil
+
+  defp sanitize_boolean(val) when is_boolean(val), do: val
+  defp sanitize_boolean(_), do: true
 
   defp sanitize_target(nil), do: nil
 
@@ -258,6 +327,107 @@ defmodule SovereignSoulEngine.LLM.ProviderCascade do
   end
 
   defp sanitize_relationship_signals(_), do: nil
+
+  defp sanitize_rumination_update(nil), do: nil
+
+  defp sanitize_rumination_update(%{} = m) do
+    %{
+      subject: sanitize_nullable_string(m[:subject] || m["subject"]),
+      intensity:
+        (m[:intensity] || m["intensity"] || 0)
+        |> sanitize_integer()
+        |> clamp(0, 100)
+    }
+  end
+
+  defp sanitize_rumination_update(_), do: nil
+
+  defp sanitize_belief_challenge(nil), do: nil
+
+  defp sanitize_belief_challenge(%{} = m) do
+    %{
+      belief: sanitize_nullable_string(m[:belief] || m["belief"]),
+      direction: sanitize_nullable_string(m[:direction] || m["direction"]),
+      conviction_delta: sanitize_integer(m[:conviction_delta] || m["conviction_delta"] || 0)
+    }
+  end
+
+  defp sanitize_belief_challenge(_), do: nil
+
+  defp sanitize_desire_update(nil), do: nil
+
+  defp sanitize_desire_update(%{} = m) do
+    %{
+      desire: sanitize_nullable_string(m[:desire] || m["desire"]),
+      urgency_delta: sanitize_integer(m[:urgency_delta] || m["urgency_delta"] || 0)
+    }
+  end
+
+  defp sanitize_desire_update(_), do: nil
+
+  # acquired_fears always comes back as a real list (never nil) — Generator
+  # reads `psych_updates[:acquired_fears] || ... || []` directly off this
+  # value with no nil-guard on the outer map, matching that expectation.
+  defp sanitize_psychological_updates(nil), do: %{acquired_fears: []}
+
+  defp sanitize_psychological_updates(%{} = m) do
+    %{acquired_fears: sanitize_tags(m[:acquired_fears] || m["acquired_fears"])}
+  end
+
+  defp sanitize_psychological_updates(_), do: %{acquired_fears: []}
+
+  defp sanitize_knowledge_update(nil), do: nil
+
+  defp sanitize_knowledge_update(%{} = m) do
+    %{
+      target_character: sanitize_nullable_string(m[:target_character] || m["target_character"]),
+      fact: sanitize_nullable_string(m[:fact] || m["fact"]),
+      certainty:
+        (m[:certainty] || m["certainty"] || 70)
+        |> sanitize_integer()
+        |> clamp(0, 100),
+      is_assumption: sanitize_boolean(m[:is_assumption] || m["is_assumption"])
+    }
+  end
+
+  defp sanitize_knowledge_update(_), do: nil
+
+  defp sanitize_goal_update(nil), do: nil
+
+  defp sanitize_goal_update(%{} = m) do
+    %{
+      goal: sanitize_nullable_string(m[:goal] || m["goal"]),
+      new_step: sanitize_nullable_string(m[:new_step] || m["new_step"]),
+      blocker: sanitize_nullable_string(m[:blocker] || m["blocker"]),
+      status: sanitize_nullable_string(m[:status] || m["status"])
+    }
+  end
+
+  defp sanitize_goal_update(_), do: nil
+
+  defp sanitize_grief_response(nil), do: nil
+
+  defp sanitize_grief_response(%{} = m) do
+    %{
+      subject: sanitize_nullable_string(m[:subject] || m["subject"]),
+      stage_shift: sanitize_nullable_string(m[:stage_shift] || m["stage_shift"]),
+      intensity_delta: sanitize_integer(m[:intensity_delta] || m["intensity_delta"] || 0)
+    }
+  end
+
+  defp sanitize_grief_response(_), do: nil
+
+  defp sanitize_forgiveness_signal(nil), do: nil
+
+  defp sanitize_forgiveness_signal(%{} = m) do
+    %{
+      wound: sanitize_nullable_string(m[:wound] || m["wound"]),
+      direction_shift: sanitize_nullable_string(m[:direction_shift] || m["direction_shift"]),
+      stage_shift: sanitize_nullable_string(m[:stage_shift] || m["stage_shift"])
+    }
+  end
+
+  defp sanitize_forgiveness_signal(_), do: nil
 
   defp sanitize_integer(nil), do: 0
   defp sanitize_integer(val) when is_integer(val), do: val

@@ -295,7 +295,13 @@ defmodule SovereignSoulEngine.Social.NPCScheduler do
   end
 
   defp advance_goals(npcs) do
-    two_hours_ago = DateTime.add(DateTime.utc_now(), -2 * 3600, :second)
+    # CharacterGoal uses timestamps() with no :type option, so updated_at
+    # is a NaiveDateTime — comparing it with DateTime.compare/2 (which
+    # requires both args to be actual DateTimes) crashed this every tick
+    # with a FunctionClauseError, before the scheduler ever reached the
+    # actual conversation-selection step below. NaiveDateTime.compare/2
+    # matches the field's real type.
+    two_hours_ago = NaiveDateTime.add(NaiveDateTime.utc_now(), -2 * 3600, :second)
 
     Enum.each(npcs, fn npc ->
       active_goals = Souls.list_active_goals_for_character(npc.id)
@@ -304,7 +310,7 @@ defmodule SovereignSoulEngine.Social.NPCScheduler do
       goal_to_advance =
         Enum.find(active_goals, fn g ->
           g.blocker == nil and
-            DateTime.compare(g.updated_at, two_hours_ago) == :lt
+            NaiveDateTime.compare(g.updated_at, two_hours_ago) == :lt
         end)
 
       if goal_to_advance do

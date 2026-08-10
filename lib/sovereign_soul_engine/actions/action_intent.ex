@@ -23,10 +23,16 @@ defmodule SovereignSoulEngine.Actions.ActionIntent do
   end
 
   @action_types ~w(
-    observe speak praise insult apologize threaten
+    none observe speak praise insult apologize threaten
     protect assist heal attack leave_room share_secret bargain refuse
+    lock_door unlock_door give_item take_item draw_weapon sheathe_weapon
+    search_room hide flee flee_scene sit stand knock open_door close_door
+    restrain disarm join_player leave_player
   )
   @validation_statuses ~w(pending approved rejected transformed)
+
+  @doc "The exact set of valid action types — the LLM boundary (Generator) validates against this before ever building a changeset."
+  def action_types, do: @action_types
 
   def changeset(intent, attrs) do
     intent

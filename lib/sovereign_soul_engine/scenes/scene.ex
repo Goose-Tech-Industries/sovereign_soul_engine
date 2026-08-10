@@ -13,6 +13,12 @@ defmodule SovereignSoulEngine.Scenes.Scene do
     field :ended_at, :utc_datetime_usec
     field :metadata, :map, default: %{}
     field :is_autonomous, :boolean, default: false
+    # Identifies a shared/group scene owned by an external caller — e.g.
+    # Twisted Paradox's "region:1:tile:13:13" for ambient tile chat, where
+    # many players and NPCs share one conversation instead of the 1:1
+    # direct-scene model. Mirrors Character's external_source/external_id.
+    field :external_source, :string
+    field :external_id, :string
 
     has_many :participants, SovereignSoulEngine.Scenes.SceneParticipant
     has_many :messages, SovereignSoulEngine.Scenes.SceneMessage
@@ -26,8 +32,9 @@ defmodule SovereignSoulEngine.Scenes.Scene do
 
   def changeset(scene, attrs) do
     scene
-    |> cast(attrs, [:title, :status, :location, :context, :started_at, :ended_at, :metadata, :is_autonomous])
+    |> cast(attrs, [:title, :status, :location, :context, :started_at, :ended_at, :metadata, :is_autonomous, :external_source, :external_id])
     |> validate_required([:title, :status])
     |> validate_inclusion(:status, @status_values)
+    |> unique_constraint([:external_source, :external_id])
   end
 end

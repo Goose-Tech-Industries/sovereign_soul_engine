@@ -157,6 +157,31 @@ defmodule SovereignSoulEngine.Souls do
     |> Repo.update()
   end
 
+  @doc """
+  Deterministic relevance gate for ambient/group chat — would this NPC
+  even notice a message not addressed to them directly? An NPC is
+  "interested" if their name is mentioned, or the message touches one of
+  their configured trigger topics. No LLM call, no cost, defaults to
+  false: a shop NPC standing nearby shouldn't chime in on every line
+  two players exchange, only when something actually concerns them.
+  """
+  def interested_in_message?(%SovereignSoulEngine.Characters.Character{} = npc, message) do
+    lower_message = String.downcase(message)
+
+    name_mentioned? =
+      npc.name
+      |> String.split(~r/\s+/, trim: true)
+      |> Enum.filter(&(String.length(&1) > 2))
+      |> Enum.any?(&String.contains?(lower_message, String.downcase(&1)))
+
+    trigger_matched? =
+      npc.id
+      |> list_triggers_for_character()
+      |> Enum.any?(&String.contains?(lower_message, String.downcase(&1.topic)))
+
+    name_mentioned? or trigger_matched?
+  end
+
   # Soul Desires
 
   def list_desires_for_character(character_id) do

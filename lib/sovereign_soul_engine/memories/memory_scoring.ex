@@ -58,7 +58,7 @@ defmodule SovereignSoulEngine.Memories.MemoryScoring do
 
     importance = value(memory, :importance, 1)
     emotional_intensity = value(memory, :emotional_intensity, 0)
-    category = normalize_category(memory[:category])
+    category = normalize_category(value(memory, :category, nil))
     decay_rate = value(memory, :decay_rate, 1.0)
     recall_count = value(memory, :recall_count, 0)
     resolved? = value(memory, :is_resolved, false)
@@ -67,7 +67,7 @@ defmodule SovereignSoulEngine.Memories.MemoryScoring do
     category_weight = Map.get(@category_weights, category, 1.0)
 
     # Recency: days elapsed since last_recall or occurrence
-    last_time = memory[:last_recalled_at] || memory[:occurred_at] || now
+    last_time = value(memory, :last_recalled_at, nil) || value(memory, :occurred_at, nil) || now
     days_elapsed = days_between(last_time, now)
     recency_factor = :math.pow(2.0, -days_elapsed / recency_halflife)
 

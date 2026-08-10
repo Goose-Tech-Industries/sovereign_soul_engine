@@ -8,13 +8,14 @@ defmodule SovereignSoulEngine.Souls.Generator do
   alias SovereignSoulEngine.{Characters, Scenes, Relationships, Souls, Memories}
   alias SovereignSoulEngine.LLM.ProviderCascade
   alias SovereignSoulEngine.Souls.ConsequenceEngine
-  alias SovereignSoulEngine.Memories.MemoryMerger
+  alias SovereignSoulEngine.Memories.{Memory, MemoryMerger}
+  alias SovereignSoulEngine.Actions.ActionIntent
   alias SovereignSoulEngine.TheoryOfMind
   alias SovereignSoulEngine.Souls.{EmotionalContagion, CognitiveLoad}
 
   require Logger
 
-  def generate(npc_id, scene_id, player_id \\ nil) do
+  def generate(npc_id, scene_id, player_id \\ nil, tenant \\ nil) do
     npc = Characters.get_character!(npc_id)
     scene = Scenes.get_scene!(scene_id)
 
@@ -64,7 +65,28 @@ defmodule SovereignSoulEngine.Souls.Generator do
     triggers = Souls.list_triggers_for_character(npc.id)
     desires = Souls.list_desires_for_character(npc.id)
     moral_lines = Souls.list_moral_lines_for_character(npc.id)
-    secrets = Souls.list_high_risk_secrets_for_character(npc.id)
+    # Backstory/secrets reveal gated by how much this player has earned
+    # so far — the PLAYER's own tracked trust/affinity toward this
+    # character, not an idealized "does the NPC trust me back" (that
+    # direction is never populated for ordinary 1:1 chat — ConsequenceEngine
+    # explicitly skips relationship processing for event_type: :speak,
+    # only apply_action_side_effects/3 ever writes a row, always
+    # source=player/target=npc). Using the real, populated data rather
+    # than a direction that would silently always read as a stranger.
+    trust_with_player =
+      if player.id, do: Relationships.get_relationship(player.id, npc.id), else: nil
+
+    player_trust = (trust_with_player && trust_with_player.trust) || 0
+
+    secrets =
+      Souls.list_high_risk_secrets_for_character(npc.id)
+      |> Enum.filter(fn s ->
+        case s.risk_level do
+          "critical" -> player_trust >= 70
+          "high" -> player_trust >= 40
+          _ -> true
+        end
+      end)
 
     # Extract context tags from active triggers + last player message keywords
     context_tags = extract_context_tags(triggers, history_messages, player.id)
@@ -78,6 +100,19 @@ defmodule SovereignSoulEngine.Souls.Generator do
     forgiveness_arcs = Souls.list_active_forgiveness_arcs_for_character(npc.id)
     knowledge_about_player = if player.id, do: TheoryOfMind.list_knowledge_about(npc.id, player.id), else: []
     player_knowledge_about_npc = if player.id, do: TheoryOfMind.list_knowledge_about(player.id, npc.id), else: []
+
+    # What this character knows about people OTHER than whoever they're
+    # talking to right now — previously never fed into the prompt at all,
+    # so an NPC had no material to bring up a third party even though they
+    # could already "hear" each other via scene history. This is the gossip
+    # mechanism: material to share + an interlocutor who can hear it +
+    # knowledge_update supporting an arbitrary target_character (see
+    # process_knowledge_update/4) is the whole system, no separate field
+    # needed. Capped at 5, highest-certainty first, to bound prompt growth.
+    third_party_knowledge =
+      TheoryOfMind.list_what_knower_knows(npc.id)
+      |> Enum.reject(&(&1.subject_character_id == player.id))
+      |> Enum.take(5)
 
     fears_prompt =
       if fears == [] do
@@ -393,6 +428,24 @@ defmodule SovereignSoulEngine.Souls.Generator do
         ""
       end
 
+    gossip_material_prompt =
+      if third_party_knowledge != [] do
+        lines =
+          Enum.map_join(third_party_knowledge, "\n", fn k ->
+            subject = Enum.find(characters, &(&1.id == k.subject_character_id))
+            subject_name = if subject, do: subject.name, else: "someone"
+            "- About #{subject_name}: #{k.known_fact} (your certainty: #{k.certainty}/100)"
+          end)
+
+        """
+
+        WHAT YOU KNOW ABOUT OTHERS (not #{player.name}):
+        #{lines}
+        """
+      else
+        ""
+      end
+
     rumination_prompt =
       if emotional_state && (emotional_state.rumination_intensity || 0) > 30 do
         subject = emotional_state.rumination_subject || "unknown"
@@ -435,6 +488,16 @@ defmodule SovereignSoulEngine.Souls.Generator do
     - bargain: offer a deal
     - praise / insult / apologize / refuse: social actions with real weight
     - leave_room: exit the scene
+    - join_player: genuinely switch sides and join the player as an ally/companion —
+      only propose this when it's truly earned (e.g. mid-combat mercy after real harm
+      was shown restraint from, a compelling and sustained persuasion, or an already
+      strong bond), never casually or on a first meeting. This is a major, hard-to-reverse
+      commitment for the character, not a small social action.
+    - leave_player: if you are currently this player's companion/ally, genuinely walk
+      away and end that bond — only propose this when it's truly earned the other
+      direction (repeated mistreatment, betrayal, sustained neglect, or a value you
+      won't compromise on being violated), never casually or over one bad moment.
+      Equally major and hard-to-reverse as join_player, just the mirror of it.
     - none: no physical action this turn
 
     Current Emotional State:
@@ -477,7 +540,7 @@ defmodule SovereignSoulEngine.Souls.Generator do
     Secrets You Carry (do NOT reveal these unless the scene demands it):
     #{secrets_prompt}
     #{trigger_spikes_prompt}
-    #{somatic_prompt}#{if cognitive_load_prompt, do: cognitive_load_prompt <> "\n", else: ""}#{if intrusive_thought, do: "INTRUSIVE THOUGHT: " <> intrusive_thought <> "\n", else: ""}#{if humor_context, do: humor_context <> "\n", else: ""}#{if contagion_note, do: "EMOTIONAL CONTAGION: " <> contagion_note <> "\n", else: ""}#{theory_of_mind_prompt}#{goals_prompt}#{grief_prompt}#{forgiveness_prompt}
+    #{somatic_prompt}#{if cognitive_load_prompt, do: cognitive_load_prompt <> "\n", else: ""}#{if intrusive_thought, do: "INTRUSIVE THOUGHT: " <> intrusive_thought <> "\n", else: ""}#{if humor_context, do: humor_context <> "\n", else: ""}#{if contagion_note, do: "EMOTIONAL CONTAGION: " <> contagion_note <> "\n", else: ""}#{theory_of_mind_prompt}#{gossip_material_prompt}#{goals_prompt}#{grief_prompt}#{forgiveness_prompt}
     ═══════════════════════════════════════════
 
     Current Scenario / Backdrop:
@@ -519,7 +582,7 @@ defmodule SovereignSoulEngine.Souls.Generator do
       "moral_tension": "If a moral line was under pressure this interaction, describe it briefly. Otherwise null.",
       "conversation_state": "continuing | winding_down | concluded — your honest read of where this conversation stands. Use 'concluded' when you feel the exchange has reached a natural end, there is nothing left to say right now, or you are done engaging. Use 'winding_down' for a closing beat that still needs one last response. Use 'continuing' if the conversation is ongoing.",
       "proposed_action": {
-        "type": "none | observe | speak | praise | insult | apologize | threaten | protect | assist | heal | attack | leave_room | share_secret | bargain | refuse | lock_door | unlock_door | give_item | take_item | draw_weapon | sheathe_weapon | search_room | hide | flee | flee_scene | sit | stand | knock | open_door | close_door | restrain | disarm",
+        "type": "none | observe | speak | praise | insult | apologize | threaten | protect | assist | heal | attack | leave_room | share_secret | bargain | refuse | lock_door | unlock_door | give_item | take_item | draw_weapon | sheathe_weapon | search_room | hide | flee | flee_scene | sit | stand | knock | open_door | close_door | restrain | disarm | join_player | leave_player",
         "confidence": 0.0,
         "reason": "Concise physical or emotional reason for this action. Write as a narrator beat, not dialogue."
       },
@@ -538,8 +601,8 @@ defmodule SovereignSoulEngine.Souls.Generator do
         }
       ],
       "knowledge_update": {
-        "target_character": "character_name or null",
-        "fact": "what you learned about their knowledge state, or null",
+        "target_character": "Name of the character this fact is about — the person you're talking to, OR (if contextually relevant) a third party you already know something about and choose to bring up. If you're sharing something you only know secondhand (gossip, rumor, something someone else told you) rather than something you witnessed directly, report it with LOWER certainty than your own and set is_assumption to true — you are not a reliable source for it.",
+        "fact": "what you learned, confirmed, or shared, or null",
         "certainty": 70,
         "is_assumption": true
       },
@@ -562,10 +625,13 @@ defmodule SovereignSoulEngine.Souls.Generator do
     }
     """
 
-    case ProviderCascade.respond(%{
-           system: system_prompt,
-           messages: llm_messages
-         }) do
+    case ProviderCascade.respond(
+           %{
+             system: system_prompt,
+             messages: llm_messages
+           },
+           tenant: tenant
+         ) do
       {:ok, response} ->
         correlation_id = Ecto.UUID.generate()
         action_res = response[:proposed_action] || response["proposed_action"]
@@ -573,7 +639,7 @@ defmodule SovereignSoulEngine.Souls.Generator do
         action_resolution =
           if action_res && (action_res[:type] || action_res["type"]) do
             %{
-              proposed_action: action_res[:type] || action_res["type"],
+              proposed_action: normalize_enum(action_res[:type] || action_res["type"], ActionIntent.action_types(), "none", "proposed_action"),
               confidence: action_res[:confidence] || action_res["confidence"] || 0.0,
               reason: action_res[:reason] || action_res["reason"] || ""
             }
@@ -587,7 +653,7 @@ defmodule SovereignSoulEngine.Souls.Generator do
             mc = List.first(mcs) || %{}
 
             %{
-              category: mc[:category] || mc["category"] || "episodic",
+              category: normalize_enum(mc[:category] || mc["category"] || "episodic", Memory.categories(), "episodic", "memory category"),
               summary: mc[:summary] || mc["summary"] || "interaction",
               details: mc[:details] || mc["details"] || "",
               importance: mc[:importance] || mc["importance"] || 50,
@@ -606,7 +672,7 @@ defmodule SovereignSoulEngine.Souls.Generator do
                scene_id: scene.id,
                event_type: :speak,
                event_intensity: 10,
-               message_content: response[:public_speech] || response["public_speech"] || "...",
+               message_content: first_non_blank([response[:public_speech], response["public_speech"], "..."]),
                private_thought:
                  response[:private_thought] || response["private_thought"] || "...",
                action_resolution: action_resolution,
@@ -764,14 +830,34 @@ defmodule SovereignSoulEngine.Souls.Generator do
             # Schedule background consolidation for minor memory clusters
             MemoryMerger.consolidate_async(npc.id)
 
-            # Stamp conversation_state into message metadata so callers (e.g. NPCConversation)
-            # can detect when an NPC considers the exchange finished.
+            # Stamp conversation_state/physical_tell/proposed_action into message
+            # metadata so callers (e.g. NPCConversation, the 1:1 chat API) can see
+            # them — every turn, not just on wind-down. proposed_action was
+            # already dispatched above (relationship side-effects, scene
+            # broadcast) — this is purely so the HTTP caller (twisted_paradox)
+            # can also see what the NPC decided, e.g. to detect "join_player".
             conv_state = response[:conversation_state] || response["conversation_state"] || "continuing"
 
+            metadata_updates =
+              %{}
+              |> maybe_put_metadata(
+                "conversation_state",
+                conv_state in ["winding_down", "concluded"] && conv_state
+              )
+              |> maybe_put_metadata(
+                "physical_tell",
+                physical_tell && String.trim(to_string(physical_tell)) != "" &&
+                  String.trim(to_string(physical_tell))
+              )
+              |> maybe_put_metadata(
+                "proposed_action",
+                action_resolution && action_resolution.proposed_action
+              )
+
             final_message =
-              if conv_state in ["winding_down", "concluded"] do
+              if map_size(metadata_updates) > 0 do
                 case Scenes.update_message(result.scene_message, %{
-                  metadata: Map.put(result.scene_message.metadata || %{}, "conversation_state", conv_state)
+                  metadata: Map.merge(result.scene_message.metadata || %{}, metadata_updates)
                 }) do
                   {:ok, updated_msg} -> updated_msg
                   _ -> result.scene_message
@@ -797,9 +883,20 @@ defmodule SovereignSoulEngine.Souls.Generator do
 
             {:ok, final_message}
 
-          {:error, reason} ->
-            Logger.error("Consequence resolution failed: #{inspect(reason)}")
-            {:error, reason}
+          # Ecto.Multi.new() |> Repo.transaction() fails as a 4-tuple —
+          # {:error, reason} here would never match it, so any failed step
+          # (bad enum, constraint violation, etc.) crashed the whole request
+          # with a raw CaseClauseError instead of degrading gracefully. This
+          # is exactly what happened when the LLM proposed a memory
+          # category outside Memory.categories/0 — normalize_enum/4 above
+          # closes off the known cause, but this clause is the backstop for
+          # anything else that can fail inside that transaction.
+          {:error, failed_step, failed_value, _changes_so_far} ->
+            Logger.error(
+              "Consequence resolution failed at step #{inspect(failed_step)}: #{inspect(failed_value)}"
+            )
+
+            {:error, {failed_step, failed_value}}
         end
 
       {:error, reason} ->
@@ -827,6 +924,22 @@ defmodule SovereignSoulEngine.Souls.Generator do
       end
 
     (trigger_topics ++ keyword_tags) |> Enum.uniq()
+  end
+
+  # The LLM is only ever loosely steered toward these enums via prose in the
+  # prompt (or, for memory categories, not steered at all) — it can and does
+  # invent plausible-but-invalid values ("semantic" for a category, "none"
+  # having been missing from the action enum entirely until it wasn't).
+  # Validating here, at the LLM boundary, means a bad value degrades to a
+  # safe default instead of failing the Ecto.Multi transaction and voiding
+  # the player's entire reply along with it.
+  defp normalize_enum(value, valid_values, default, field_label) do
+    if value in valid_values do
+      value
+    else
+      Logger.warning("LLM proposed invalid #{field_label} #{inspect(value)}; defaulting to #{inspect(default)}")
+      default
+    end
   end
 
   defp get_player_id(scene_id) do
@@ -944,6 +1057,12 @@ defmodule SovereignSoulEngine.Souls.Generator do
   defp action_narrative("refuse", npc, _player, reason),
     do: "#{npc.name} refuses. #{reason}"
 
+  defp action_narrative("join_player", npc, player, reason),
+    do: "#{npc.name} makes their choice — they're with #{player.name} now. #{reason}"
+
+  defp action_narrative("leave_player", npc, player, reason),
+    do: "#{npc.name} makes their choice — they're done traveling with #{player.name}. #{reason}"
+
   defp action_narrative(type, npc, _player, reason),
     do: "#{npc.name} #{type}. #{reason}"
 
@@ -1027,6 +1146,38 @@ defmodule SovereignSoulEngine.Souls.Generator do
     end)
   end
 
+  defp apply_action_side_effects("join_player", npc, player) do
+    with_relationship(player.id, npc.id, fn rel ->
+      Relationships.update_relationship(rel, %{
+        trust: min(rel.trust + 40, 100),
+        gratitude: min(rel.gratitude + 30, 100),
+        affinity: min(rel.affinity + 40, 100),
+        anger: max(rel.anger - 30, 0),
+        fear: max(rel.fear - 30, 0),
+        relationship_type: "ally"
+      })
+    end)
+  end
+
+  # Mirror of join_player — same row, same magnitude on the dimensions
+  # that made them join in the first place, inverted. Gratitude only
+  # halves rather than zeroing out (having once been recruited/trusted
+  # doesn't fully un-happen just because it ended), and relationship_type
+  # lands on a distinct "estranged" rather than resetting to the default
+  # "acquaintance" a total stranger would have — this pair has real
+  # history now, even if it soured.
+  defp apply_action_side_effects("leave_player", npc, player) do
+    with_relationship(player.id, npc.id, fn rel ->
+      Relationships.update_relationship(rel, %{
+        trust: max(rel.trust - 40, -100),
+        gratitude: max(round(rel.gratitude / 2), 0),
+        affinity: max(rel.affinity - 40, -100),
+        anger: min(rel.anger + 20, 100),
+        relationship_type: "estranged"
+      })
+    end)
+  end
+
   defp apply_action_side_effects(_action_type, _npc, _player), do: :ok
 
   defp with_relationship(source_id, target_id, update_fn) do
@@ -1063,6 +1214,10 @@ defmodule SovereignSoulEngine.Souls.Generator do
   end
 
   # ── New LLM response processors ─────────────────────────────────────────────
+
+  defp maybe_put_metadata(map, _key, false), do: map
+  defp maybe_put_metadata(map, _key, nil), do: map
+  defp maybe_put_metadata(map, key, value), do: Map.put(map, key, value)
 
   defp process_shame_guilt(nil, _), do: nil
 
@@ -1174,11 +1329,14 @@ defmodule SovereignSoulEngine.Souls.Generator do
         new_urgency = min(max((matching.urgency || 50) + urgency_delta, 0), 100)
         Souls.update_desire(matching, %{urgency: new_urgency})
       else
-        # Create new desire — default domain to "knowledge" if unknown
+        # Create new desire — "connection" is the more broadly-applicable
+        # default of the 7 valid domains for an interpersonal social sim;
+        # "knowledge" made little sense for e.g. a newly-emerged desire for
+        # safety or revenge.
         Souls.create_desire(%{
           character_id: character_id,
           desire: to_string(desire_text),
-          domain: "knowledge",
+          domain: "connection",
           urgency: min(max(50 + urgency_delta, 0), 100),
           status: "active"
         })
@@ -1242,13 +1400,26 @@ defmodule SovereignSoulEngine.Souls.Generator do
 
   defp process_knowledge_update(nil, _npc_id, _player_id, _characters), do: :ok
 
-  defp process_knowledge_update(upd, npc_id, player_id, _characters) when is_map(upd) do
+  defp process_knowledge_update(upd, npc_id, player_id, characters) when is_map(upd) do
     fact = upd[:fact] || upd["fact"]
     certainty = upd[:certainty] || upd["certainty"] || 70
-    is_assumption = upd[:is_assumption] || upd["is_assumption"] || true
+    # was `upd[:is_assumption] || upd["is_assumption"] || true` — in Elixir
+    # that always evaluates to true (false || false || true == true), so an
+    # LLM-returned `is_assumption: false` was silently overwritten. Explicit
+    # boolean check instead.
+    raw_is_assumption = upd[:is_assumption] || upd["is_assumption"]
+    is_assumption = if is_boolean(raw_is_assumption), do: raw_is_assumption, else: true
 
     if fact && fact not in [nil, "", "null"] do
-      TheoryOfMind.upsert_knowledge(npc_id, player_id, to_string(fact),
+      # target_character lets this be about anyone the speaker knows
+      # something about, not just whoever they're currently talking to —
+      # this is the whole mechanism gossip rides on: NPC A tells NPC B
+      # something A believes about NPC C, and it lands here as B's own
+      # knowledge about C, not about A or B.
+      subject_id =
+        resolve_target_character_id(upd[:target_character] || upd["target_character"], characters, player_id)
+
+      TheoryOfMind.upsert_knowledge(npc_id, subject_id, to_string(fact),
         certainty: certainty,
         is_assumption: is_assumption
       )
@@ -1258,6 +1429,28 @@ defmodule SovereignSoulEngine.Souls.Generator do
   end
 
   defp process_knowledge_update(_, _, _, _), do: :ok
+
+  # Case-insensitive exact-name match against the scene's known characters —
+  # same matching idiom already used by process_belief_challenge/2,
+  # process_goal_update/2, etc. elsewhere in this file. Falls back to
+  # player_id (the pre-fix default) when target_character is nil/blank/
+  # unmatched, so this is purely additive — existing "knowledge about
+  # whoever I'm talking to" behavior is unchanged when the LLM doesn't
+  # name a third party.
+  defp resolve_target_character_id(name, characters, player_id) when is_binary(name) do
+    normalized = name |> String.trim() |> String.downcase()
+
+    if normalized in ["", "null"] do
+      player_id
+    else
+      case Enum.find(characters, fn c -> String.downcase(c.name) == normalized end) do
+        %{id: id} -> id
+        nil -> player_id
+      end
+    end
+  end
+
+  defp resolve_target_character_id(_name, _characters, player_id), do: player_id
 
   defp process_goal_update(nil, _active_goals), do: :ok
 
@@ -1360,4 +1553,15 @@ defmodule SovereignSoulEngine.Souls.Generator do
   end
 
   defp process_forgiveness_signal(_, _), do: :ok
+
+  # ConsequenceEngine.resolve/1 silently skips creating a :scene_message
+  # when message_content is nil/blank (unless is_nil(content) or content
+  # == "" in maybe_create_scene_message/3) — but every call site here
+  # unconditionally reads result.scene_message afterward, which crashes
+  # with a KeyError if the LLM ever returns an empty (not nil)
+  # public_speech. Guaranteeing a non-blank fallback here, at the source,
+  # is the fix — not defending every downstream result.scene_message read.
+  defp first_non_blank(values) do
+    Enum.find(values, "...", fn v -> is_binary(v) and String.trim(v) != "" end)
+  end
 end
