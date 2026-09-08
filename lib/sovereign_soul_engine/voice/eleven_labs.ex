@@ -182,9 +182,20 @@ defmodule SovereignSoulEngine.Voice.ElevenLabs do
   end
 
   defp get_api_key(opts) do
-    opts[:api_key] ||
-      System.get_env("ELEVENLABS_API_KEY") ||
-      read_env_file("ELEVENLABS_API_KEY")
+    case opts[:api_key] do
+      key when is_binary(key) and byte_size(key) > 0 ->
+        key
+
+      # Explicit `api_key: nil` (or empty string) disables the ambient env/.env
+      # lookup so callers — and tests — can deterministically force an
+      # "unconfigured" state without touching the environment.
+      _ ->
+        if Keyword.has_key?(opts, :api_key) do
+          nil
+        else
+          System.get_env("ELEVENLABS_API_KEY") || read_env_file("ELEVENLABS_API_KEY")
+        end
+    end
   end
 
   defp read_env_file(key) do
