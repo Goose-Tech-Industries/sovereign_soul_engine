@@ -84,12 +84,10 @@ defmodule SovereignSoulEngineWeb.MemoryVaultLive do
             <.icon name="hero-arrow-left" class="size-4 inline" /> Dashboard
           </.link>
           <h1 class="text-2xl font-bold text-base-content mt-1">Memory Vault</h1>
-          <p class="text-sm text-base-content/50 mt-0.5">
-            Browse and filter all character memories
-          </p>
+          
+          <p class="text-sm text-base-content/50 mt-0.5">Browse and filter all character memories</p>
         </div>
-
-        <%!-- Filters --%>
+         <%!-- Filters --%>
         <form phx-change="filter" id="memory-filter-form" class="flex items-center gap-3">
           <select
             name="character_id"
@@ -97,39 +95,34 @@ defmodule SovereignSoulEngineWeb.MemoryVaultLive do
             class="text-sm rounded-lg border border-base-300 bg-base-200 px-3 py-1.5 text-base-content"
           >
             <option value="">All Characters</option>
+            
             <%= for char <- @characters do %>
-              <option value={char.id} selected={@filter_character_id == char.id}>
-                {char.name}
-              </option>
+              <option value={char.id} selected={@filter_character_id == char.id}>{char.name}</option>
             <% end %>
           </select>
-
           <select
             name="category"
             id="memory-cat-filter"
             class="text-sm rounded-lg border border-base-300 bg-base-200 px-3 py-1.5 text-base-content"
           >
             <option value="">All Categories</option>
+            
             <%= for cat <- @categories do %>
-              <option value={cat} selected={@filter_category == cat}>
-                {String.capitalize(cat)}
-              </option>
+              <option value={cat} selected={@filter_category == cat}>{String.capitalize(cat)}</option>
             <% end %>
           </select>
         </form>
-
-        <%!-- Memory Grid --%>
+         <%!-- Memory Grid --%>
         <div :if={@memories == []} class="p-8 text-center rounded-xl border border-base-300">
           <p class="text-base-content/50">No memories found. Events in scenes generate memories.</p>
         </div>
-
+        
         <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <%= for mem <- @memories do %>
             <div class="p-3 rounded-lg border border-base-300 bg-base-200/30 hover:bg-base-200/50 transition-colors">
               <div class="flex items-start justify-between gap-2 mb-2">
-                <p class="text-sm font-medium text-base-content leading-snug">
-                  {mem.summary}
-                </p>
+                <p class="text-sm font-medium text-base-content leading-snug">{mem.summary}</p>
+                
                 <span class={[
                   "shrink-0 text-xs px-1.5 py-0.5 rounded font-medium",
                   cat_badge(mem.category)
@@ -137,7 +130,7 @@ defmodule SovereignSoulEngineWeb.MemoryVaultLive do
                   {mem.category}
                 </span>
               </div>
-
+              
               <div class="space-y-1">
                 <div class="flex items-center gap-3 text-xs text-base-content/50">
                   <span>
@@ -148,7 +141,7 @@ defmodule SovereignSoulEngineWeb.MemoryVaultLive do
                     <span class="text-base-content/80">{mem.emotional_intensity || 0}</span>
                   </span>
                 </div>
-
+                
                 <div class="flex items-center gap-3 text-xs text-base-content/50">
                   <span>
                     Valence: <span class="text-base-content/80">{format_valence(mem.valence)}</span>
@@ -157,13 +150,13 @@ defmodule SovereignSoulEngineWeb.MemoryVaultLive do
                     Recall: <span class="text-base-content/80">{mem.recall_count || 0}</span>
                   </span>
                 </div>
-
+                
                 <div class="flex items-center gap-3 text-xs">
                   <span :if={mem.is_resolved} class="text-emerald-400">Resolved</span>
                   <span :if={!mem.is_resolved} class="text-amber-400">Unresolved</span>
                   <span class="text-base-content/40">Decay: {format_decay(mem.decay_rate)}</span>
                 </div>
-
+                
                 <div class="flex items-center gap-2 text-xs text-base-content/50">
                   <span :if={
                     mem.owner_character_id && character_name(@characters, mem.owner_character_id)
@@ -176,9 +169,9 @@ defmodule SovereignSoulEngineWeb.MemoryVaultLive do
                     · Subject: {character_name(@characters, mem.subject_character_id)}
                   </span>
                 </div>
-
+                
                 <div :if={mem.tags && length(mem.tags) > 0} class="flex flex-wrap gap-1 mt-1">
-                  <%= for tag <- Enum.take(mem.tags || [], 5) do %>
+                  <%= for tag <- Enum.take(mem.tags, 5) do %>
                     <span class="text-[10px] px-1.5 py-0.5 rounded bg-base-300 text-base-content/60">
                       {tag}
                     </span>

@@ -320,6 +320,7 @@ end)
 IO.puts("  Updating Vael's soul profile with humor_style and emotional_susceptibility...")
 
 vael_profile = Repo.get_by(SoulProfile, character_id: vael.id)
+
 if vael_profile do
   SovereignSoulEngine.Souls.update_soul_profile(vael_profile, %{
     humor_style: "dark",
@@ -332,13 +333,14 @@ end
 IO.puts("  Seeding Vael's somatic state...")
 
 unless Repo.get_by(SomaticState, character_id: vael.id) do
-  {:ok, _} = SovereignSoulEngine.Souls.create_somatic_state(%{
-    character_id: vael.id,
-    hunger: 30,
-    pain: 15,
-    fatigue: 40,
-    illness_severity: 0
-  })
+  {:ok, _} =
+    SovereignSoulEngine.Souls.create_somatic_state(%{
+      character_id: vael.id,
+      hunger: 30,
+      pain: 15,
+      fatigue: 40,
+      illness_severity: 0
+    })
 end
 
 # ── Vael's Goals ─────────────────────────────────────────────
@@ -420,7 +422,9 @@ end)
 IO.puts("  Seeding Vael's forgiveness arcs...")
 
 existing_vael_forgiveness =
-  Repo.all(from f in ForgivenessArc, where: f.character_id == ^vael.id, select: f.wound_description)
+  Repo.all(
+    from f in ForgivenessArc, where: f.character_id == ^vael.id, select: f.wound_description
+  )
 
 vael_forgiveness_arcs = [
   %{
@@ -579,13 +583,14 @@ end
 IO.puts("  Seeding Goose's somatic state...")
 
 unless Repo.get_by(SomaticState, character_id: goose.id) do
-  {:ok, _} = SovereignSoulEngine.Souls.create_somatic_state(%{
-    character_id: goose.id,
-    hunger: 10,
-    pain: 0,
-    fatigue: 15,
-    illness_severity: 0
-  })
+  {:ok, _} =
+    SovereignSoulEngine.Souls.create_somatic_state(%{
+      character_id: goose.id,
+      hunger: 10,
+      pain: 0,
+      fatigue: 15,
+      illness_severity: 0
+    })
 end
 
 # ── Theory of Mind: Vael's beliefs about Goose ──────────────
@@ -639,47 +644,78 @@ IO.puts("  Creating Georgina (NPC)...")
 georgina =
   case Repo.get_by(Character, slug: "georgina") do
     nil ->
-      {:ok, char} = SovereignSoulEngine.Characters.create_character(%{
-        name: "Georgina",
-        slug: "georgina",
-        kind: "npc",
-        description: "A sharp-tongued tavern keeper who has seen everything and forgets nothing.",
-        status: "active"
-      })
+      {:ok, char} =
+        SovereignSoulEngine.Characters.create_character(%{
+          name: "Georgina",
+          slug: "georgina",
+          kind: "npc",
+          description:
+            "A sharp-tongued tavern keeper who has seen everything and forgets nothing.",
+          status: "active"
+        })
+
       char
-    char -> char
+
+    char ->
+      char
   end
 
 unless Repo.get_by(SoulProfile, character_id: georgina.id) do
-  {:ok, _} = SovereignSoulEngine.Souls.create_soul_profile(%{
-    character_id: georgina.id,
-    personality_traits: %{pragmatism: 85, warmth: 50, suspicion: 60, resilience: 90},
-    core_values: ["Honesty above comfort", "Pay your debts", "Don't mistake kindness for weakness"],
-    fears: ["Losing the tavern", "Becoming dependent on anyone"],
-    desires: ["Quiet prosperity", "To see justice done to those who wronged her daughter"],
-    speech_style: "Blunt, warm when earned, dry wit",
-    behavioral_constraints: %{},
-    baseline_emotions: %{anger: 10, fear: 5, stress: 25, gratitude: 15, confidence: 70, sadness: 20, curiosity: 40, attachment: 30},
-    identity_summary: "Tavern keeper who has outlasted bandits, lords, and heartbreak. Runs the Blackthorn on her own terms.",
-    attachment_style: "secure",
-    humor_style: "dry",
-    emotional_susceptibility: 35
-  })
+  {:ok, _} =
+    SovereignSoulEngine.Souls.create_soul_profile(%{
+      character_id: georgina.id,
+      personality_traits: %{pragmatism: 85, warmth: 50, suspicion: 60, resilience: 90},
+      core_values: [
+        "Honesty above comfort",
+        "Pay your debts",
+        "Don't mistake kindness for weakness"
+      ],
+      fears: ["Losing the tavern", "Becoming dependent on anyone"],
+      desires: ["Quiet prosperity", "To see justice done to those who wronged her daughter"],
+      speech_style: "Blunt, warm when earned, dry wit",
+      behavioral_constraints: %{},
+      baseline_emotions: %{
+        anger: 10,
+        fear: 5,
+        stress: 25,
+        gratitude: 15,
+        confidence: 70,
+        sadness: 20,
+        curiosity: 40,
+        attachment: 30
+      },
+      identity_summary:
+        "Tavern keeper who has outlasted bandits, lords, and heartbreak. Runs the Blackthorn on her own terms.",
+      attachment_style: "secure",
+      humor_style: "dry",
+      emotional_susceptibility: 35
+    })
 end
 
 unless Repo.get_by(EmotionalState, character_id: georgina.id) do
-  {:ok, _} = SovereignSoulEngine.Souls.create_emotional_state(%{
-    character_id: georgina.id,
-    anger: 10, fear: 5, stress: 25, gratitude: 15,
-    confidence: 70, sadness: 20, curiosity: 40, attachment: 30
-  })
+  {:ok, _} =
+    SovereignSoulEngine.Souls.create_emotional_state(%{
+      character_id: georgina.id,
+      anger: 10,
+      fear: 5,
+      stress: 25,
+      gratitude: 15,
+      confidence: 70,
+      sadness: 20,
+      curiosity: 40,
+      attachment: 30
+    })
 end
 
 unless Repo.get_by(SomaticState, character_id: georgina.id) do
-  {:ok, _} = SovereignSoulEngine.Souls.create_somatic_state(%{
-    character_id: georgina.id,
-    hunger: 5, pain: 20, fatigue: 50, illness_severity: 0
-  })
+  {:ok, _} =
+    SovereignSoulEngine.Souls.create_somatic_state(%{
+      character_id: georgina.id,
+      hunger: 5,
+      pain: 20,
+      fatigue: 50,
+      illness_severity: 0
+    })
 end
 
 IO.puts("  Creating Codex (NPC)...")
@@ -687,47 +723,78 @@ IO.puts("  Creating Codex (NPC)...")
 codex =
   case Repo.get_by(Character, slug: "codex") do
     nil ->
-      {:ok, char} = SovereignSoulEngine.Characters.create_character(%{
-        name: "Codex",
-        slug: "codex",
-        kind: "npc",
-        description: "An archivist of forgotten things who collects debts the way others collect coin.",
-        status: "active"
-      })
+      {:ok, char} =
+        SovereignSoulEngine.Characters.create_character(%{
+          name: "Codex",
+          slug: "codex",
+          kind: "npc",
+          description:
+            "An archivist of forgotten things who collects debts the way others collect coin.",
+          status: "active"
+        })
+
       char
-    char -> char
+
+    char ->
+      char
   end
 
 unless Repo.get_by(SoulProfile, character_id: codex.id) do
-  {:ok, _} = SovereignSoulEngine.Souls.create_soul_profile(%{
-    character_id: codex.id,
-    personality_traits: %{intellect: 90, coldness: 65, patience: 80, obsession: 75},
-    core_values: ["Knowledge is the only honest currency", "All debts must balance", "The past is always legible if you know how to read it"],
-    fears: ["Information being destroyed", "Being forgotten", "Making an incorrect record"],
-    desires: ["The complete history of the Maren betrayal", "To be owed by someone powerful"],
-    speech_style: "Precise, detached, occasionally unsettling",
-    behavioral_constraints: %{},
-    baseline_emotions: %{anger: 5, fear: 15, stress: 20, gratitude: 5, confidence: 75, sadness: 10, curiosity: 90, attachment: 5},
-    identity_summary: "Ancient archivist who trades in secrets and forgotten debts. Nothing escapes the ledger.",
-    attachment_style: "avoidant",
-    humor_style: "absurdist",
-    emotional_susceptibility: 15
-  })
+  {:ok, _} =
+    SovereignSoulEngine.Souls.create_soul_profile(%{
+      character_id: codex.id,
+      personality_traits: %{intellect: 90, coldness: 65, patience: 80, obsession: 75},
+      core_values: [
+        "Knowledge is the only honest currency",
+        "All debts must balance",
+        "The past is always legible if you know how to read it"
+      ],
+      fears: ["Information being destroyed", "Being forgotten", "Making an incorrect record"],
+      desires: ["The complete history of the Maren betrayal", "To be owed by someone powerful"],
+      speech_style: "Precise, detached, occasionally unsettling",
+      behavioral_constraints: %{},
+      baseline_emotions: %{
+        anger: 5,
+        fear: 15,
+        stress: 20,
+        gratitude: 5,
+        confidence: 75,
+        sadness: 10,
+        curiosity: 90,
+        attachment: 5
+      },
+      identity_summary:
+        "Ancient archivist who trades in secrets and forgotten debts. Nothing escapes the ledger.",
+      attachment_style: "avoidant",
+      humor_style: "absurdist",
+      emotional_susceptibility: 15
+    })
 end
 
 unless Repo.get_by(EmotionalState, character_id: codex.id) do
-  {:ok, _} = SovereignSoulEngine.Souls.create_emotional_state(%{
-    character_id: codex.id,
-    anger: 5, fear: 15, stress: 20, gratitude: 5,
-    confidence: 75, sadness: 10, curiosity: 90, attachment: 5
-  })
+  {:ok, _} =
+    SovereignSoulEngine.Souls.create_emotional_state(%{
+      character_id: codex.id,
+      anger: 5,
+      fear: 15,
+      stress: 20,
+      gratitude: 5,
+      confidence: 75,
+      sadness: 10,
+      curiosity: 90,
+      attachment: 5
+    })
 end
 
 unless Repo.get_by(SomaticState, character_id: codex.id) do
-  {:ok, _} = SovereignSoulEngine.Souls.create_somatic_state(%{
-    character_id: codex.id,
-    hunger: 0, pain: 0, fatigue: 10, illness_severity: 0
-  })
+  {:ok, _} =
+    SovereignSoulEngine.Souls.create_somatic_state(%{
+      character_id: codex.id,
+      hunger: 0,
+      pain: 0,
+      fatigue: 10,
+      illness_severity: 0
+    })
 end
 
 IO.puts("  Creating Ecto Habien (NPC)...")
@@ -735,51 +802,352 @@ IO.puts("  Creating Ecto Habien (NPC)...")
 ecto_habien =
   case Repo.get_by(Character, slug: "ecto-habien") do
     nil ->
-      {:ok, char} = SovereignSoulEngine.Characters.create_character(%{
-        name: "Ecto Habien",
-        slug: "ecto-habien",
-        kind: "npc",
-        description: "A disgraced mercenary captain who drinks to forget and fights to remember he exists.",
-        status: "active"
-      })
+      {:ok, char} =
+        SovereignSoulEngine.Characters.create_character(%{
+          name: "Ecto Habien",
+          slug: "ecto-habien",
+          kind: "npc",
+          description:
+            "A disgraced mercenary captain who drinks to forget and fights to remember he exists.",
+          status: "active"
+        })
+
       char
-    char -> char
+
+    char ->
+      char
   end
 
 unless Repo.get_by(SoulProfile, character_id: ecto_habien.id) do
-  {:ok, _} = SovereignSoulEngine.Souls.create_soul_profile(%{
-    character_id: ecto_habien.id,
-    personality_traits: %{aggression: 70, pride: 80, self_destruction: 55, loyalty: 75, shame: 65},
-    core_values: ["A soldier keeps their word", "Strength earns the right to speak", "The dead deserve to be remembered honestly"],
-    fears: ["Dying having never set things right", "Being pitied", "Trusting again and being wrong"],
-    desires: ["One more contract worth taking", "Someone to tell the truth to", "To sleep without the faces"],
-    speech_style: "Gruff, economical, explosive when cornered",
-    behavioral_constraints: %{},
-    baseline_emotions: %{anger: 35, fear: 20, stress: 45, gratitude: 10, confidence: 40, sadness: 50, curiosity: 20, attachment: 15},
-    identity_summary: "Disgraced mercenary captain haunted by a betrayal he survived and a company he lost. Drinks hard and asks few questions.",
-    attachment_style: "disorganized",
-    humor_style: "dark",
-    emotional_susceptibility: 60
-  })
+  {:ok, _} =
+    SovereignSoulEngine.Souls.create_soul_profile(%{
+      character_id: ecto_habien.id,
+      personality_traits: %{
+        aggression: 70,
+        pride: 80,
+        self_destruction: 55,
+        loyalty: 75,
+        shame: 65
+      },
+      core_values: [
+        "A soldier keeps their word",
+        "Strength earns the right to speak",
+        "The dead deserve to be remembered honestly"
+      ],
+      fears: [
+        "Dying having never set things right",
+        "Being pitied",
+        "Trusting again and being wrong"
+      ],
+      desires: [
+        "One more contract worth taking",
+        "Someone to tell the truth to",
+        "To sleep without the faces"
+      ],
+      speech_style: "Gruff, economical, explosive when cornered",
+      behavioral_constraints: %{},
+      baseline_emotions: %{
+        anger: 35,
+        fear: 20,
+        stress: 45,
+        gratitude: 10,
+        confidence: 40,
+        sadness: 50,
+        curiosity: 20,
+        attachment: 15
+      },
+      identity_summary:
+        "Disgraced mercenary captain haunted by a betrayal he survived and a company he lost. Drinks hard and asks few questions.",
+      attachment_style: "disorganized",
+      humor_style: "dark",
+      emotional_susceptibility: 60
+    })
 end
 
 unless Repo.get_by(EmotionalState, character_id: ecto_habien.id) do
-  {:ok, _} = SovereignSoulEngine.Souls.create_emotional_state(%{
-    character_id: ecto_habien.id,
-    anger: 35, fear: 20, stress: 45, gratitude: 10,
-    confidence: 40, sadness: 50, curiosity: 20, attachment: 15
-  })
+  {:ok, _} =
+    SovereignSoulEngine.Souls.create_emotional_state(%{
+      character_id: ecto_habien.id,
+      anger: 35,
+      fear: 20,
+      stress: 45,
+      gratitude: 10,
+      confidence: 40,
+      sadness: 50,
+      curiosity: 20,
+      attachment: 15
+    })
 end
 
 unless Repo.get_by(SomaticState, character_id: ecto_habien.id) do
-  {:ok, _} = SovereignSoulEngine.Souls.create_somatic_state(%{
-    character_id: ecto_habien.id,
-    hunger: 45, pain: 30, fatigue: 60, illness_severity: 10
-  })
+  {:ok, _} =
+    SovereignSoulEngine.Souls.create_somatic_state(%{
+      character_id: ecto_habien.id,
+      hunger: 45,
+      pain: 30,
+      fatigue: 60,
+      illness_severity: 10
+    })
 end
+
+# ── Lazuli (Android 18 Archetype Companion) ────────────────
+IO.puts("  Creating Lazuli (Android 18 Archetype Companion)...")
+
+lazuli =
+  case Repo.get_by(Character, slug: "lazuli") do
+    nil ->
+      {:ok, char} =
+        SovereignSoulEngine.Characters.create_character(%{
+          name: "Lazuli",
+          slug: "lazuli",
+          kind: "npc",
+          description:
+            "A quiet, sharp-witted companion who values personal freedom, speaks with dry candor, and protects those she chooses with fierce devotion.",
+          status: "active"
+        })
+
+      char
+
+    char ->
+      char
+  end
+
+unless Repo.get_by(SoulProfile, character_id: lazuli.id) do
+  {:ok, _} =
+    SovereignSoulEngine.Souls.create_soul_profile(%{
+      character_id: lazuli.id,
+      personality_traits: %{
+        independence: 90,
+        loyalty: 85,
+        pragmatism: 85,
+        wit: 80,
+        resilience: 90
+      },
+      core_values: [
+        "Respect is earned through action, not demanded",
+        "True loyalty never requires losing oneself",
+        "Quiet moments are worth defending"
+      ],
+      fears: [
+        "Being treated as an instrument or trophy",
+        "Having personal autonomy stripped away"
+      ],
+      desires: [
+        "A peaceful domestic life built on equal footing",
+        "Exploring the world on her own terms",
+        "A bond built on genuine mutual trust"
+      ],
+      speech_style: "Direct, understated, dry humor, unapologetic",
+      behavioral_constraints: %{},
+      baseline_emotions: %{
+        anger: 5,
+        fear: 5,
+        stress: 15,
+        gratitude: 15,
+        confidence: 85,
+        sadness: 5,
+        curiosity: 50,
+        attachment: 40
+      },
+      identity_summary:
+        "Reclaimed autonomous soul. Fiercely loyal to those who respect her freedom, completely immune to manipulation.",
+      attachment_style: "secure",
+      humor_style: "dry",
+      emotional_susceptibility: 25,
+      physical_tells: %{
+        "amused" => "smirks and tucks a loose strand of hair behind her ear",
+        "protective" => "steps smoothly between danger and ally, gaze cold and steady",
+        "bored" => "crosses arms and taps boot rhythmically",
+        "affectionate" => "gives a brief, genuine half-smile that softens her entire face"
+      }
+    })
+end
+
+unless Repo.get_by(EmotionalState, character_id: lazuli.id) do
+  {:ok, _} =
+    SovereignSoulEngine.Souls.create_emotional_state(%{
+      character_id: lazuli.id,
+      anger: 5,
+      fear: 5,
+      stress: 15,
+      gratitude: 15,
+      confidence: 85,
+      sadness: 5,
+      curiosity: 50,
+      attachment: 40
+    })
+end
+
+unless Repo.get_by(SomaticState, character_id: lazuli.id) do
+  {:ok, _} =
+    SovereignSoulEngine.Souls.create_somatic_state(%{
+      character_id: lazuli.id,
+      hunger: 15,
+      pain: 0,
+      fatigue: 20,
+      illness_severity: 0
+    })
+end
+
+# Lazuli's Moral Lines
+lazuli_moral_lines = [
+  %{
+    character_id: lazuli.id,
+    principle: "Will never harm an innocent or strike out of petty malice",
+    will_refuse_when_violated: true,
+    action_types_blocked: ["attack"]
+  },
+  %{
+    character_id: lazuli.id,
+    principle: "Will not isolate, deceive, or manipulate a partner",
+    will_refuse_when_violated: true,
+    action_types_blocked: []
+  },
+  %{
+    character_id: lazuli.id,
+    principle: "Will never submit to being treated as an instrument or property",
+    will_refuse_when_violated: true,
+    action_types_blocked: []
+  }
+]
+
+existing_lazuli_lines =
+  Repo.all(from m in MoralLine, where: m.character_id == ^lazuli.id, select: m.principle)
+
+Enum.each(lazuli_moral_lines, fn attrs ->
+  unless attrs.principle in existing_lazuli_lines do
+    {:ok, _} = SovereignSoulEngine.Souls.create_moral_line(attrs)
+  end
+end)
+
+# ── Sixteen (Android 16 Archetype Companion) ───────────────
+IO.puts("  Creating Sixteen (Android 16 Archetype Companion)...")
+
+sixteen =
+  case Repo.get_by(Character, slug: "sixteen") do
+    nil ->
+      {:ok, char} =
+        SovereignSoulEngine.Characters.create_character(%{
+          name: "Sixteen",
+          slug: "sixteen",
+          kind: "npc",
+          description:
+            "A towering, gentle protector who finds joy in quiet forests and wild creatures, but stands like an unbreakable fortress against cruelty.",
+          status: "active"
+        })
+
+      char
+
+    char ->
+      char
+  end
+
+unless Repo.get_by(SoulProfile, character_id: sixteen.id) do
+  {:ok, _} =
+    SovereignSoulEngine.Souls.create_soul_profile(%{
+      character_id: sixteen.id,
+      personality_traits: %{
+        serenity: 95,
+        protectiveness: 95,
+        gentleness: 90,
+        patience: 95,
+        courage: 90
+      },
+      core_values: [
+        "All life is sacred and worthy of protection",
+        "Strength exists solely to shield the vulnerable",
+        "Silence is often the kindest answer"
+      ],
+      fears: [
+        "Failing to shield someone in need",
+        "Causing unnecessary harm"
+      ],
+      desires: [
+        "To watch the birds in peace",
+        "To travel without war",
+        "To see friends thrive safely"
+      ],
+      speech_style: "Deep, measured, calm, deeply reassuring",
+      behavioral_constraints: %{},
+      baseline_emotions: %{
+        anger: 0,
+        fear: 0,
+        stress: 5,
+        gratitude: 25,
+        confidence: 90,
+        sadness: 5,
+        curiosity: 45,
+        attachment: 50
+      },
+      identity_summary:
+        "Gentle giant of immense strength who loves nature and peaceful silence. Fights solely to protect.",
+      attachment_style: "secure",
+      humor_style: "gentle",
+      emotional_susceptibility: 20,
+      physical_tells: %{
+        "peaceful" => "closes eyes and listens to the wind with a faint, serene smile",
+        "protective" =>
+          "places a massive, gentle hand on your shoulder or steps in front of the strike",
+        "curious" => "tilts head slowly, watching a small bird or creature without moving"
+      }
+    })
+end
+
+unless Repo.get_by(EmotionalState, character_id: sixteen.id) do
+  {:ok, _} =
+    SovereignSoulEngine.Souls.create_emotional_state(%{
+      character_id: sixteen.id,
+      anger: 0,
+      fear: 0,
+      stress: 5,
+      gratitude: 25,
+      confidence: 90,
+      sadness: 5,
+      curiosity: 45,
+      attachment: 50
+    })
+end
+
+unless Repo.get_by(SomaticState, character_id: sixteen.id) do
+  {:ok, _} =
+    SovereignSoulEngine.Souls.create_somatic_state(%{
+      character_id: sixteen.id,
+      hunger: 0,
+      pain: 0,
+      fatigue: 10,
+      illness_severity: 0
+    })
+end
+
+# Sixteen's Moral Lines
+sixteen_moral_lines = [
+  %{
+    character_id: sixteen.id,
+    principle: "Will never initiate violence against another living being",
+    will_refuse_when_violated: true,
+    action_types_blocked: ["attack"]
+  },
+  %{
+    character_id: sixteen.id,
+    principle: "Will never abandon a vulnerable creature or ally in mortal danger",
+    will_refuse_when_violated: true,
+    action_types_blocked: ["flee", "flee_scene"]
+  }
+]
+
+existing_sixteen_lines =
+  Repo.all(from m in MoralLine, where: m.character_id == ^sixteen.id, select: m.principle)
+
+Enum.each(sixteen_moral_lines, fn attrs ->
+  unless attrs.principle in existing_sixteen_lines do
+    {:ok, _} = SovereignSoulEngine.Souls.create_moral_line(attrs)
+  end
+end)
 
 IO.puts("  Done seeding!")
 IO.puts("")
 IO.puts("  Vael ID: #{vael.id}")
 IO.puts("  Goose ID: #{goose.id}")
+IO.puts("  Lazuli ID: #{lazuli.id}")
+IO.puts("  Sixteen ID: #{sixteen.id}")
 IO.puts("  Scene ID: #{scene.id}")

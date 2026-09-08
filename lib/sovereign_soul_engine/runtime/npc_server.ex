@@ -14,11 +14,14 @@ defmodule SovereignSoulEngine.Runtime.NPCServer do
 
   alias SovereignSoulEngine.Characters
   alias SovereignSoulEngine.Souls
+  alias SovereignSoulEngine.Scenes
   alias SovereignSoulEngine.Runtime.NPCRegistry
 
   require Logger
 
   @idle_timeout_ms :timer.minutes(5)
+  @ambient_pulse_ms :timer.seconds(45)
+  @ambient_silence_threshold_seconds 60
 
   # ── Client API ──────────────────────────────────────────────
 
@@ -121,6 +124,7 @@ defmodule SovereignSoulEngine.Runtime.NPCServer do
 
     NPCRegistry.register_npc(character_id, self())
     schedule_idle_check(idle_timeout)
+    schedule_ambient_pulse()
     {:ok, registered_state}
   end
 
@@ -166,6 +170,13 @@ defmodule SovereignSoulEngine.Runtime.NPCServer do
     new_immediate = Map.merge(state.immediate_state, updates)
     new_state = %{state | immediate_state: new_immediate}
     {:reply, :ok, new_state}
+  end
+
+  @impl true
+  def handle_info(:ambient_pulse, state) do
+    new_state = maybe_emit_ambient_presence(state)
+    schedule_ambient_pulse()
+    {:noreply, new_state}
   end
 
   @impl true
@@ -242,5 +253,99 @@ defmodule SovereignSoulEngine.Runtime.NPCServer do
     Souls.get_emotional_state_by_character(character_id)
   rescue
     _ -> nil
+  end
+
+  defp safe_get_somatic_state(character_id) do
+    Souls.get_somatic_state_by_character(character_id)
+  rescue
+    _ -> nil
+  end
+
+  defp schedule_ambient_pulse do
+    Process.send_after(self(), :ambient_pulse, @ambient_pulse_ms)
+  end
+
+  defp maybe_emit_ambient_presence(%{scene_id: scene_id, character_id: character_id} = state)
+       when not is_nil(scene_id) do
+    messages = Scenes.list_messages(scene_id)
+    last_msg = List.last(messages)
+    now = DateTime.utc_now()
+
+    should_emit =
+      case last_msg do
+        nil ->
+          true
+
+        msg ->
+          seconds_since = DateTime.diff(now, msg.inserted_at, :second)
+
+          seconds_since >= @ambient_silence_threshold_seconds and
+            (msg.character_id != character_id or msg.message_type != "action")
+      end
+
+    if should_emit do
+      emit_ambient_beat(character_id, scene_id)
+    end
+
+    state
+  rescue
+    e ->
+      Logger.debug(
+        "Ambient presence skipped for character_id=#{inspect(character_id)}: #{inspect(e)}"
+      )
+
+      state
+  end
+
+  defp maybe_emit_ambient_presence(state), do: state
+
+  defp emit_ambient_beat(character_id, scene_id) do
+    profile = safe_get_soul_profile(character_id)
+    somatic = safe_get_somatic_state(character_id)
+    char = safe_get_character(character_id)
+    name = (char && char.name) || "Companion"
+
+    beat = pick_ambient_beat(profile, somatic, name)
+
+    case Scenes.create_message(%{
+           scene_id: scene_id,
+           character_id: character_id,
+           content: beat,
+           message_type: "action"
+         }) do
+      {:ok, msg} ->
+        Phoenix.PubSub.broadcast(
+          SovereignSoulEngine.PubSub,
+          "scene:#{scene_id}",
+          {:new_message, msg}
+        )
+
+      _ ->
+        :ok
+    end
+  end
+
+  defp pick_ambient_beat(profile, somatic, name) do
+    cond do
+      somatic && somatic.fatigue > 65 ->
+        "#{name} stifles a quiet yawn, rolling shoulders back to fight off fatigue."
+
+      somatic && somatic.hunger > 65 ->
+        "#{name} glances down at their pack, quiet hunger showing in a subtle shift of posture."
+
+      profile && profile.physical_tells && map_size(profile.physical_tells) > 0 ->
+        tell_candidates = Map.values(profile.physical_tells)
+        tell = Enum.random(tell_candidates)
+
+        if String.contains?(tell, name) or String.starts_with?(tell, "He ") or
+             String.starts_with?(tell, "She ") do
+          tell
+        else
+          "#{name} #{tell}"
+        end
+
+      true ->
+        "#{name} remains close, observing the quiet surroundings with steady patience."
+    end
   end
 end

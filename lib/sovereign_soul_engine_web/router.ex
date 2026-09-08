@@ -24,6 +24,8 @@ defmodule SovereignSoulEngineWeb.Router do
     pipe_through :api
 
     get "/characters", CharacterController, :index
+    post "/characters", CharacterController, :create
+    get "/characters/:id", CharacterController, :show
     get "/characters/:id/intent", CharacterController, :intent
 
     post "/npc_chat", NpcChatController, :send_message

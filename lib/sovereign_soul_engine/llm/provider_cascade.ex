@@ -173,7 +173,8 @@ defmodule SovereignSoulEngine.LLM.ProviderCascade do
       # already; the bug was purely here.
       updated_description:
         sanitize_nullable_string(raw[:updated_description] || raw["updated_description"]),
-      repressed_motive: sanitize_nullable_string(raw[:repressed_motive] || raw["repressed_motive"]),
+      repressed_motive:
+        sanitize_nullable_string(raw[:repressed_motive] || raw["repressed_motive"]),
       active_defense: sanitize_nullable_string(raw[:active_defense] || raw["active_defense"]),
       physical_tell: sanitize_nullable_string(raw[:physical_tell] || raw["physical_tell"]),
       shame_or_guilt: sanitize_nullable_string(raw[:shame_or_guilt] || raw["shame_or_guilt"]),
@@ -181,14 +182,19 @@ defmodule SovereignSoulEngine.LLM.ProviderCascade do
       # here) — whitelisted so it round-trips instead of being silently
       # dropped, ready for whenever that gets built.
       moral_tension: sanitize_nullable_string(raw[:moral_tension] || raw["moral_tension"]),
-      conversation_state: sanitize_nullable_string(raw[:conversation_state] || raw["conversation_state"]),
+      conversation_state:
+        sanitize_nullable_string(raw[:conversation_state] || raw["conversation_state"]),
       rumination_update:
         sanitize_rumination_update(raw[:rumination_update] || raw["rumination_update"]),
-      belief_challenge: sanitize_belief_challenge(raw[:belief_challenge] || raw["belief_challenge"]),
+      belief_challenge:
+        sanitize_belief_challenge(raw[:belief_challenge] || raw["belief_challenge"]),
       desire_update: sanitize_desire_update(raw[:desire_update] || raw["desire_update"]),
       psychological_updates:
-        sanitize_psychological_updates(raw[:psychological_updates] || raw["psychological_updates"]),
-      knowledge_update: sanitize_knowledge_update(raw[:knowledge_update] || raw["knowledge_update"]),
+        sanitize_psychological_updates(
+          raw[:psychological_updates] || raw["psychological_updates"]
+        ),
+      knowledge_update:
+        sanitize_knowledge_update(raw[:knowledge_update] || raw["knowledge_update"]),
       goal_update: sanitize_goal_update(raw[:goal_update] || raw["goal_update"]),
       grief_response: sanitize_grief_response(raw[:grief_response] || raw["grief_response"]),
       forgiveness_signal:
@@ -231,7 +237,10 @@ defmodule SovereignSoulEngine.LLM.ProviderCascade do
   # guards. Collapsing nil to "" here would silently break that distinction
   # for currently-correct code, not just leave it dead.
   defp sanitize_nullable_string(nil), do: nil
-  defp sanitize_nullable_string(str) when is_binary(str), do: String.slice(str, 0, @max_string_length)
+
+  defp sanitize_nullable_string(str) when is_binary(str),
+    do: String.slice(str, 0, @max_string_length)
+
   defp sanitize_nullable_string(_), do: nil
 
   defp sanitize_boolean(val) when is_boolean(val), do: val
@@ -253,6 +262,7 @@ defmodule SovereignSoulEngine.LLM.ProviderCascade do
 
   defp sanitize_proposed_action(action) when is_binary(action) do
     type = String.trim(action)
+
     if type == "" || type == "none" do
       nil
     else
@@ -438,7 +448,6 @@ defmodule SovereignSoulEngine.LLM.ProviderCascade do
 
   defp sanitize_integer(_), do: 0
 
-  defp sanitize_float(nil), do: 0.0
   defp sanitize_float(val) when is_float(val), do: Float.round(val, 4)
   defp sanitize_float(val) when is_integer(val), do: val / 1.0
   defp sanitize_float(_), do: 0.0

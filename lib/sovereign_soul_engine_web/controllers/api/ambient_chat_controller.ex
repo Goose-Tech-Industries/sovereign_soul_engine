@@ -30,7 +30,12 @@ defmodule SovereignSoulEngineWeb.Api.AmbientChatController do
       scene = Scenes.find_or_create_group_scene(source, group_key)
 
       {:ok, _message} =
-        Scenes.create_message(%{scene_id: scene.id, character_id: player.id, content: message, message_type: "dialogue"})
+        Scenes.create_message(%{
+          scene_id: scene.id,
+          character_id: player.id,
+          content: message,
+          message_type: "dialogue"
+        })
 
       json(conn, %{scene_id: scene.id, player_id: player.id})
     end
@@ -47,10 +52,18 @@ defmodule SovereignSoulEngineWeb.Api.AmbientChatController do
         case Generator.generate(npc.id, scene_id, player_id, conn.assigns.tenant) do
           {:ok, reply} ->
             Tenants.record_llm_call(conn.assigns.tenant)
-            json(conn, %{responded: true, npc_name: npc.name, reply: reply.content})
+
+            json(conn, %{
+              responded: true,
+              npc_name: npc.name,
+              reply: reply.content,
+              audio_url: reply.metadata["audio_url"]
+            })
 
           {:error, reason} ->
-            conn |> put_status(:bad_gateway) |> json(%{error: "npc did not respond", reason: inspect(reason)})
+            conn
+            |> put_status(:bad_gateway)
+            |> json(%{error: "npc did not respond", reason: inspect(reason)})
         end
       else
         json(conn, %{responded: false})

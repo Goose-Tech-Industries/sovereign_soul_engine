@@ -121,8 +121,11 @@ defmodule SovereignSoulEngine.LLM.FakeProvider do
     {npc_name, npc_desc} =
       if is_binary(system) do
         first_line = system |> String.split("\n", parts: 2) |> List.first() |> String.trim()
+
         case Regex.run(~r/^You are ([^,]+),\s*(.*?)\.?$/, first_line) do
-          [_, name, desc] -> {String.trim(name), String.trim(desc)}
+          [_, name, desc] ->
+            {String.trim(name), String.trim(desc)}
+
           _ ->
             case Regex.run(~r/You are ([^,]+)/, first_line) do
               [_, name] -> {String.trim(name), "a persistent character"}
@@ -365,8 +368,7 @@ defmodule SovereignSoulEngine.LLM.FakeProvider do
           true ->
             {:ok,
              %{
-               public_speech:
-                 "I hear you, but we must stay alert. This place is not safe.",
+               public_speech: "I hear you, but we must stay alert. This place is not safe.",
                private_thought: "Their words are vague. I must stay focused on our surroundings.",
                tone: "cautious",
                motivation: "Redirect focus to safety.",
@@ -394,10 +396,6 @@ defmodule SovereignSoulEngine.LLM.FakeProvider do
         end
       end
     end
-  end
-
-  defp fixture_response(:normal_speech) do
-    fixture_response_normal_speech(%{messages: []})
   end
 
   defp fixture_response(:aggressive_speech) do

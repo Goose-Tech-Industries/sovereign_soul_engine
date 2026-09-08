@@ -405,12 +405,16 @@ defmodule SovereignSoulEngineWeb.ChatLive do
         else
           Task.start(fn ->
             :timer.sleep(delay_ms)
+
             try do
               generate_npc_response(npc, player, scene, content)
             rescue
               e ->
                 require Logger
-                Logger.error("NPC Task crash for #{npc.name} (#{npc.id}): #{Exception.message(e)}\n#{Exception.format_stacktrace(__STACKTRACE__)}")
+
+                Logger.error(
+                  "NPC Task crash for #{npc.name} (#{npc.id}): #{Exception.message(e)}\n#{Exception.format_stacktrace(__STACKTRACE__)}"
+                )
             end
           end)
         end
@@ -611,21 +615,25 @@ defmodule SovereignSoulEngineWeb.ChatLive do
               </button>
             </div>
           </div>
+          
           <div>
             <h2 class="text-lg font-bold text-base-content">Sovereign Chat</h2>
+            
             <p class="text-xs text-base-content/50">Talk with simulated souls</p>
           </div>
         </div>
-
+        
         <nav class="flex-1 overflow-y-auto p-3 space-y-4">
           <%!-- Group Chats Section --%>
           <div class="space-y-1">
             <h3 class="px-2 text-[10px] font-bold text-base-content/40 uppercase tracking-wider">
               Group Rooms
             </h3>
+            
             <div :if={@group_chats == []} class="px-2 text-xs text-base-content/30 italic py-1">
               No groups created yet.
             </div>
+            
             <%= for group <- @group_chats do %>
               <button
                 phx-click="select_scene"
@@ -641,8 +649,10 @@ defmodule SovereignSoulEngineWeb.ChatLive do
                 <div class="shrink-0 w-9 h-9 rounded-xl bg-purple-500/10 flex items-center justify-center border border-purple-500/20">
                   <.icon name="hero-user-group" class="size-5 text-purple-400" />
                 </div>
+                
                 <div class="min-w-0 flex-1">
                   <div class="text-sm font-semibold truncate">{group.title}</div>
+                  
                   <div class="text-[11px] text-base-content/40 truncate">
                     {Enum.map(group.participants, & &1.character.name) |> Enum.join(", ")}
                   </div>
@@ -650,12 +660,12 @@ defmodule SovereignSoulEngineWeb.ChatLive do
               </button>
             <% end %>
           </div>
-
-          <%!-- Direct Chats Section --%>
+           <%!-- Direct Chats Section --%>
           <div class="space-y-1">
             <h3 class="px-2 text-[10px] font-bold text-base-content/40 uppercase tracking-wider">
               Direct Messages
             </h3>
+            
             <%= for {scene, npc} <- @direct_chats do %>
               <button
                 phx-click="select_character"
@@ -669,14 +679,15 @@ defmodule SovereignSoulEngineWeb.ChatLive do
                 ]}
               >
                 <div class="shrink-0 w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center">
-                  <span class="text-xs font-bold text-primary">
-                    {String.first(npc.name)}
-                  </span>
+                  <span class="text-xs font-bold text-primary">{String.first(npc.name)}</span>
                 </div>
+                
                 <div class="min-w-0 flex-1">
                   <div class="text-sm font-semibold truncate">{npc.name}</div>
+                  
                   <div class="text-xs text-base-content/50 truncate">{npc.description}</div>
                 </div>
+                
                 <div class="shrink-0 ml-auto">
                   <span class="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
                 </div>
@@ -684,23 +695,20 @@ defmodule SovereignSoulEngineWeb.ChatLive do
             <% end %>
           </div>
         </nav>
-
-        <%!-- Player identity at bottom --%>
+         <%!-- Player identity at bottom --%>
         <div class="p-4 border-t border-base-300 bg-base-200/20">
           <div class="flex items-center gap-2.5">
             <div class="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center border border-blue-500/30">
-              <span class="text-xs font-bold text-blue-400">
-                {String.first(@player.name)}
-              </span>
+              <span class="text-xs font-bold text-blue-400">{String.first(@player.name)}</span>
             </div>
+            
             <div class="text-xs text-base-content/60">
               Logged in as <span class="font-bold text-base-content">{@player.name}</span>
             </div>
           </div>
         </div>
       </aside>
-
-      <%!-- Group Creation Form (Modal state) --%>
+       <%!-- Group Creation Form (Modal state) --%>
       <div
         :if={@creating_group?}
         class="flex-1 flex flex-col bg-base-100 p-8 justify-center items-center"
@@ -708,9 +716,10 @@ defmodule SovereignSoulEngineWeb.ChatLive do
         <div class="w-full max-w-md p-6 bg-base-200 rounded-2xl border border-base-300 shadow-xl space-y-6">
           <div class="text-center">
             <h2 class="text-lg font-bold text-base-content">Create Group Chat</h2>
+            
             <p class="text-sm text-base-content/50">Talk with multiple souls simultaneously</p>
           </div>
-
+          
           <form phx-submit="create_group" class="space-y-4">
             <div class="space-y-1.5">
               <label class="text-xs font-bold text-base-content/60 uppercase">Group Name</label>
@@ -723,7 +732,7 @@ defmodule SovereignSoulEngineWeb.ChatLive do
                 class="w-full input input-bordered text-sm"
               />
             </div>
-
+            
             <div class="space-y-1.5">
               <label class="text-xs font-bold text-base-content/60 uppercase">
                 Location / Scenario backdrop
@@ -737,7 +746,7 @@ defmodule SovereignSoulEngineWeb.ChatLive do
                 class="w-full input input-bordered text-sm"
               />
             </div>
-
+            
             <div class="grid grid-cols-2 gap-3">
               <div class="space-y-1.5">
                 <label class="text-xs font-bold text-base-content/60 uppercase">Mood</label>
@@ -750,6 +759,7 @@ defmodule SovereignSoulEngineWeb.ChatLive do
                   class="w-full input input-bordered text-sm"
                 />
               </div>
+              
               <div class="space-y-1.5">
                 <label class="text-xs font-bold text-base-content/60 uppercase">Weather / Air</label>
                 <input
@@ -762,7 +772,7 @@ defmodule SovereignSoulEngineWeb.ChatLive do
                 />
               </div>
             </div>
-
+            
             <div class="space-y-2">
               <label class="text-xs font-bold text-base-content/60 uppercase block">
                 Select Members
@@ -782,7 +792,7 @@ defmodule SovereignSoulEngineWeb.ChatLive do
                 <% end %>
               </div>
             </div>
-
+            
             <div class="flex gap-3 justify-end pt-2">
               <button
                 type="button"
@@ -790,16 +800,12 @@ defmodule SovereignSoulEngineWeb.ChatLive do
                 class="btn btn-ghost btn-sm"
               >
                 Cancel
-              </button>
-              <button type="submit" class="btn btn-primary btn-sm px-5">
-                Create
-              </button>
+              </button> <button type="submit" class="btn btn-primary btn-sm px-5">Create</button>
             </div>
           </form>
         </div>
       </div>
-
-      <%!-- Main Chat Area --%>
+       <%!-- Main Chat Area --%>
       <div :if={!@creating_group? && @selected_scene} class="flex-1 flex flex-col min-w-0">
         <%!-- Chat Header --%>
         <header class="shrink-0 flex items-center gap-3 px-6 py-4 border-b border-base-300 bg-base-200/30">
@@ -807,40 +813,41 @@ defmodule SovereignSoulEngineWeb.ChatLive do
             :if={@selected_npc}
             class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center"
           >
-            <span class="text-sm font-bold text-primary">
-              {String.first(@selected_npc.name)}
-            </span>
+            <span class="text-sm font-bold text-primary">{String.first(@selected_npc.name)}</span>
           </div>
+          
           <div
             :if={!@selected_npc}
             class="w-10 h-10 rounded-xl bg-purple-500/15 flex items-center justify-center border border-purple-500/20"
           >
             <.icon name="hero-user-group" class="size-5 text-purple-400" />
           </div>
-
+          
           <div class="min-w-0 flex-1 space-y-1">
             <div class="flex items-center gap-3">
               <h1 class="text-base font-semibold text-base-content">
                 {if @selected_npc, do: @selected_npc.name, else: @selected_scene.title}
               </h1>
-              <%!-- Scenario Context --%>
+               <%!-- Scenario Context --%>
               <div class="hidden md:flex items-center gap-2 text-[11px] bg-base-300/40 px-2 py-1 rounded-lg border border-base-300">
                 <span class="font-mono text-base-content/40 uppercase text-[9px] tracking-wider">
                   Scenario:
                 </span>
                 <span class="flex items-center gap-0.5 font-semibold text-base-content/70">
-                  <.icon name="hero-map-pin" class="size-3 text-primary/80" />
-                  {@selected_scene.location || "Unknown"}
-                </span>
-                <span class="text-base-content/30">•</span>
+                  <.icon name="hero-map-pin" class="size-3 text-primary/80" /> {@selected_scene.location ||
+                    "Unknown"}
+                </span> <span class="text-base-content/30">•</span>
                 <span class="flex items-center gap-0.5 font-semibold text-base-content/70">
-                  <.icon name="hero-face-smile" class="size-3 text-secondary/80" />
-                  {get_in(@selected_scene.context || %{}, ["mood"]) || "calm"}
-                </span>
-                <span class="text-base-content/30">•</span>
+                  <.icon name="hero-face-smile" class="size-3 text-secondary/80" /> {get_in(
+                    @selected_scene.context || %{},
+                    ["mood"]
+                  ) || "calm"}
+                </span> <span class="text-base-content/30">•</span>
                 <span class="flex items-center gap-0.5 font-semibold text-base-content/70">
-                  <.icon name="hero-cloud" class="size-3 text-info/80" />
-                  {get_in(@selected_scene.context || %{}, ["weather"]) || "clear"}
+                  <.icon name="hero-cloud" class="size-3 text-info/80" /> {get_in(
+                    @selected_scene.context || %{},
+                    ["weather"]
+                  ) || "clear"}
                 </span>
                 <button
                   phx-click="toggle_edit_scenario"
@@ -850,16 +857,17 @@ defmodule SovereignSoulEngineWeb.ChatLive do
                 </button>
               </div>
             </div>
+            
             <p class="text-xs text-base-content/50 truncate">
               {if @selected_npc,
                 do: @selected_npc.description,
                 else: Enum.map(@selected_scene.participants, & &1.character.name) |> Enum.join(", ")}
             </p>
           </div>
-
+          
           <div class="flex items-center gap-3 shrink-0">
             <%!-- Invite Button & Dropdown --%>
-            <div :if={@selected_scene && @invite_candidates != []} class="relative">
+            <div :if={@invite_candidates != []} class="relative">
               <button
                 phx-click="toggle_invite_menu"
                 class="btn btn-outline btn-xs flex items-center gap-1 border-base-300 hover:bg-base-300 text-base-content/80"
@@ -873,40 +881,40 @@ defmodule SovereignSoulEngineWeb.ChatLive do
                 <h4 class="px-2 py-1 text-[9px] font-bold text-base-content/40 uppercase tracking-wider font-mono">
                   Invite Character
                 </h4>
+                
                 <%= for candidate <- @invite_candidates do %>
                   <button
                     phx-click="invite_character"
                     phx-value-character_id={candidate.id}
                     class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-base-300/80 text-xs font-semibold text-base-content transition-colors flex items-center gap-2"
                   >
-                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                    {candidate.name}
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> {candidate.name}
                   </button>
                 <% end %>
               </div>
             </div>
-
+            
             <%= if @emotional_state do %>
               <div class="hidden sm:flex items-center gap-2 text-xs text-base-content/50">
                 <span
                   title="Trust"
                   class="flex items-center gap-1 bg-base-300/30 px-2 py-1 rounded-md"
                 >
-                  <.icon name="hero-shield-check" class="size-3.5 text-emerald-400" />
-                  {@emotional_state.confidence || 0}
+                  <.icon name="hero-shield-check" class="size-3.5 text-emerald-400" /> {@emotional_state.confidence ||
+                    0}
                 </span>
                 <span
                   title="Curiosity"
                   class="flex items-center gap-1 bg-base-300/30 px-2 py-1 rounded-md"
                 >
-                  <.icon name="hero-sparkles" class="size-3.5 text-cyan-400" />
-                  {@emotional_state.curiosity || 0}
+                  <.icon name="hero-sparkles" class="size-3.5 text-cyan-400" /> {@emotional_state.curiosity ||
+                    0}
                 </span>
               </div>
             <% end %>
           </div>
         </header>
-
+        
         <div
           id="chat-messages"
           phx-hook=".ChatScroll"
@@ -924,12 +932,12 @@ defmodule SovereignSoulEngineWeb.ChatLive do
                     <p class="text-xs italic text-amber-400/80 leading-relaxed font-medium tracking-wide">
                       <span class="text-amber-500/40 select-none">**</span>{msg.content}<span class="text-amber-500/40 select-none">**</span>
                     </p>
+                    
                     <div class="text-[9px] text-base-content/25 mt-0.5">
                       {format_time(msg.inserted_at)}
                     </div>
                   </div>
                 </div>
-
               <% true -> %>
                 <div
                   id={dom_id}
@@ -952,7 +960,7 @@ defmodule SovereignSoulEngineWeb.ChatLive do
                       {character_avatar_letter(@npcs, msg.character_id)}
                     <% end %>
                   </div>
-
+                  
                   <div class="flex-1 min-w-0">
                     <%!-- Speaker name for group chats --%>
                     <%= if !@selected_npc and msg.character_id != @player.id do %>
@@ -960,7 +968,7 @@ defmodule SovereignSoulEngineWeb.ChatLive do
                         {character_name_by_id(@npcs, msg.character_id)}
                       </div>
                     <% end %>
-
+                    
                     <div class={[
                       "px-4 py-2.5 rounded-2xl text-sm leading-relaxed",
                       msg.character_id == @player.id &&
@@ -969,12 +977,14 @@ defmodule SovereignSoulEngineWeb.ChatLive do
                         "bg-base-300 text-base-content rounded-tl-md"
                     ]}>
                       <p class="whitespace-pre-wrap break-words">{msg.content}</p>
+                      
                       <%= if Map.get(msg, :private_thought) && Map.get(msg, :private_thought) != "" do %>
                         <div class="mt-2 pt-1.5 border-t border-purple-500/20 text-[10px] text-purple-400 font-mono">
                           <span class="font-bold">🧠 Thought:</span> {msg.private_thought}
                         </div>
                       <% end %>
                     </div>
+                    
                     <div class={[
                       "text-[9px] text-base-content/30 mt-1 ml-1",
                       msg.character_id == @player.id && "text-right mr-1"
@@ -986,23 +996,23 @@ defmodule SovereignSoulEngineWeb.ChatLive do
             <% end %>
           <% end %>
         </div>
-
-        <%!-- Empty state --%>
+         <%!-- Empty state --%>
         <div :if={@messages_empty?} class="flex-1 flex items-center justify-center">
           <div class="text-center space-y-3">
             <div class="w-16 h-16 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
               <.icon name="hero-chat-bubble-left-right" class="size-8 text-primary/50" />
             </div>
+            
             <p class="text-base-content/60 font-medium">
               Start a conversation in {if @selected_npc,
                 do: @selected_npc.name,
                 else: @selected_scene.title}
             </p>
+            
             <p class="text-sm text-base-content/40">Send a message below to begin.</p>
           </div>
         </div>
-
-        <%!-- Message Input --%>
+         <%!-- Message Input --%>
         <div class="shrink-0 px-6 py-4 border-t border-base-300 bg-base-200/30">
           <.form
             for={@message_form}
@@ -1026,6 +1036,7 @@ defmodule SovereignSoulEngineWeb.ChatLive do
                 phx-hook=".ChatInput"
               />
             </div>
+            
             <button
               type="submit"
               id="chat-send-btn"
@@ -1036,8 +1047,7 @@ defmodule SovereignSoulEngineWeb.ChatLive do
             </button>
           </.form>
         </div>
-
-        <%!-- Colocated hook: auto-scroll to bottom --%>
+         <%!-- Colocated hook: auto-scroll to bottom --%>
         <script :type={Phoenix.LiveView.ColocatedHook} name=".ChatScroll">
           export default {
             mounted() {
@@ -1054,8 +1064,7 @@ defmodule SovereignSoulEngineWeb.ChatLive do
             }
           }
         </script>
-
-        <%!-- Colocated hook: autofocus input --%>
+         <%!-- Colocated hook: autofocus input --%>
         <script :type={Phoenix.LiveView.ColocatedHook} name=".ChatInput">
           export default {
             mounted() {
@@ -1064,21 +1073,21 @@ defmodule SovereignSoulEngineWeb.ChatLive do
           }
         </script>
       </div>
-
-      <%!-- No active chat at allFallback --%>
+       <%!-- No active chat at allFallback --%>
       <div :if={!@creating_group? && !@selected_scene} class="flex-1 flex items-center justify-center">
         <div class="text-center space-y-3">
           <div class="w-20 h-20 mx-auto rounded-full bg-base-200 flex items-center justify-center">
             <.icon name="hero-user-group" class="size-10 text-base-content/30" />
           </div>
+          
           <p class="text-lg font-medium text-base-content/60">No Active Chats</p>
+          
           <p class="text-sm text-base-content/40">
             Select a character or create a group chat from the sidebar to begin.
           </p>
         </div>
       </div>
-
-      <%!-- Edit Scenario Modal --%>
+       <%!-- Edit Scenario Modal --%>
       <div
         :if={@editing_scenario? && @selected_scene}
         class="fixed inset-0 bg-base-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
@@ -1086,9 +1095,10 @@ defmodule SovereignSoulEngineWeb.ChatLive do
         <div class="w-full max-w-md p-6 bg-base-200 rounded-2xl border border-base-300 shadow-xl space-y-6">
           <div class="text-center">
             <h2 class="text-lg font-bold text-base-content">Edit Room Scenario</h2>
+            
             <p class="text-sm text-base-content/50">Change the narrative backdrop for this room</p>
           </div>
-
+          
           <form phx-submit="save_scenario" class="space-y-4">
             <div class="space-y-1.5">
               <label class="text-xs font-bold text-base-content/60 uppercase">Location</label>
@@ -1101,7 +1111,7 @@ defmodule SovereignSoulEngineWeb.ChatLive do
                 class="w-full input input-bordered text-sm"
               />
             </div>
-
+            
             <div class="grid grid-cols-2 gap-3">
               <div class="space-y-1.5">
                 <label class="text-xs font-bold text-base-content/60 uppercase">Mood</label>
@@ -1114,6 +1124,7 @@ defmodule SovereignSoulEngineWeb.ChatLive do
                   class="w-full input input-bordered text-sm"
                 />
               </div>
+              
               <div class="space-y-1.5">
                 <label class="text-xs font-bold text-base-content/60 uppercase">Weather / Air</label>
                 <input
@@ -1126,19 +1137,18 @@ defmodule SovereignSoulEngineWeb.ChatLive do
                 />
               </div>
             </div>
-
+            
             <div class="space-y-1.5">
               <label class="text-xs font-bold text-base-content/60 uppercase">
                 Scene Narrative / Transition description (DM mode)
-              </label>
-              <textarea
+              </label> <textarea
                 name="narrative"
                 rows="3"
                 placeholder="Describe what is happening as the room transitions (e.g. who meets whom, what they see)..."
                 class="w-full textarea textarea-bordered text-sm leading-relaxed"
               >{get_in(@selected_scene.context || %{}, ["narrative"]) || ""}</textarea>
             </div>
-
+            
             <div class="flex gap-3 justify-end pt-2">
               <button
                 type="button"
@@ -1146,10 +1156,7 @@ defmodule SovereignSoulEngineWeb.ChatLive do
                 class="btn btn-ghost btn-sm"
               >
                 Cancel
-              </button>
-              <button type="submit" class="btn btn-primary btn-sm px-5">
-                Save
-              </button>
+              </button> <button type="submit" class="btn btn-primary btn-sm px-5">Save</button>
             </div>
           </form>
         </div>

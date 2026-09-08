@@ -285,6 +285,15 @@ defmodule SovereignSoulEngineWeb.SceneLive do
     {:noreply, socket}
   end
 
+  def handle_info({:audio_ready, updated_msg}, socket) do
+    messages =
+      Enum.map(socket.assigns.messages, fn m ->
+        if m.id == updated_msg.id, do: updated_msg, else: m
+      end)
+
+    {:noreply, assign(socket, :messages, messages)}
+  end
+
   def handle_info(_msg, socket), do: {:noreply, socket}
 
   defp character_name(characters, id) do
@@ -314,9 +323,10 @@ defmodule SovereignSoulEngineWeb.SceneLive do
             </span>
             <h1 class="text-lg font-semibold text-base-content">{@scene.title}</h1>
           </div>
+          
           <div class="w-24"></div>
         </div>
-
+        
         <div class="flex gap-4 h-[calc(100vh-180px)] min-h-[500px]">
           <%!-- Left: Participants + Chat --%>
           <div class="flex-1 flex flex-col min-w-0">
@@ -338,8 +348,7 @@ defmodule SovereignSoulEngineWeb.SceneLive do
                 </button>
               <% end %>
             </div>
-
-            <%!-- Chat messages area --%>
+             <%!-- Chat messages area --%>
             <div id="scene-messages" class="flex-1 overflow-y-auto space-y-3 pr-2">
               <div
                 :for={msg <- @messages}
@@ -352,7 +361,22 @@ defmodule SovereignSoulEngineWeb.SceneLive do
                   </span>
                   <span class="text-xs text-base-content/30">{format_time(msg.inserted_at)}</span>
                 </div>
+                
                 <p class="text-sm text-base-content whitespace-pre-wrap">{msg.content}</p>
+                
+                <%= if get_in(msg.metadata || %{}, ["audio_url"]) do %>
+                  <div class="mt-2 flex items-center gap-2">
+                    <span class="text-xs text-base-content/50">🔊 Voice:</span>
+                    <audio
+                      controls
+                      src={msg.metadata["audio_url"]}
+                      class="h-7 w-full max-w-xs"
+                      preload="none"
+                    >
+                    </audio>
+                  </div>
+                <% end %>
+                
                 <%= if Map.get(msg, :private_thought) && Map.get(msg, :private_thought) != "" do %>
                   <div class="mt-2 p-2 rounded bg-purple-500/10 border border-purple-500/20 text-xs text-purple-400 font-mono">
                     <span class="font-semibold">🧠 Private Thought:</span> {msg.private_thought}
@@ -360,8 +384,7 @@ defmodule SovereignSoulEngineWeb.SceneLive do
                 <% end %>
               </div>
             </div>
-
-            <%!-- Message input --%>
+             <%!-- Message input --%>
             <div class="mt-3">
               <.form
                 for={@message_form}
@@ -381,20 +404,22 @@ defmodule SovereignSoulEngineWeb.SceneLive do
                 </.button>
               </.form>
             </div>
-
-            <%!-- Event Injector --%>
+             <%!-- Event Injector --%>
             <details class="mt-3">
               <summary class="cursor-pointer text-xs font-medium text-base-content/50 uppercase tracking-wider hover:text-base-content/70 transition-colors select-none">
                 Event Injector
               </summary>
+              
               <div class="mt-2 p-3 rounded-lg border border-amber-500/30 bg-amber-500/5">
                 <p class="text-xs text-base-content/50 mb-2">
                   Inject a canonical soul event into this scene.
                 </p>
+                
                 <div class="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
                   <%= for {event_type, label} <- event_labels() do %>
                     <div>
                       <div class="text-xs text-base-content/40 mb-0.5">{label}</div>
+                      
                       <button
                         id={"inject-#{event_type}"}
                         phx-click="inject_event"
@@ -407,6 +432,7 @@ defmodule SovereignSoulEngineWeb.SceneLive do
                     </div>
                   <% end %>
                 </div>
+                
                 <%= if @event_result do %>
                   <div class={[
                     "mt-3 p-2 rounded text-xs",
@@ -414,15 +440,14 @@ defmodule SovereignSoulEngineWeb.SceneLive do
                     @event_result.status == :error && "bg-red-500/10 text-red-400"
                   ]}>
                     {@event_result.status == :ok &&
-                      "Injected #{@event_result.type} (intensity #{@event_result.intensity}) — consequence resolved."}
-                    {@event_result.status == :error && "Failed to inject #{@event_result.type}"}
+                      "Injected #{@event_result.type} (intensity #{@event_result.intensity}) — consequence resolved."} {@event_result.status ==
+                      :error && "Failed to inject #{@event_result.type}"}
                   </div>
                 <% end %>
               </div>
             </details>
           </div>
-
-          <%!-- Right: Soul Inspector --%>
+           <%!-- Right: Soul Inspector --%>
           <div class="w-80 shrink-0 space-y-4 overflow-y-auto pr-2">
             <%= if @inspector_data do %>
               <% data = @inspector_data %>
@@ -430,12 +455,12 @@ defmodule SovereignSoulEngineWeb.SceneLive do
                 <h2 class="text-sm font-semibold text-emerald-400 flex items-center gap-1.5 mb-3">
                   <.icon name="hero-eye" class="size-4" /> Soul Inspector: {data.character.name}
                 </h2>
-
-                <%!-- Emotions --%>
+                 <%!-- Emotions --%>
                 <div class="mb-4">
                   <h3 class="text-xs font-medium text-base-content/50 uppercase tracking-wider mb-2">
                     Emotions
                   </h3>
+                  
                   <div class="space-y-1.5">
                     <%= for {label, key, color} <- emotion_fields() do %>
                       <div>
@@ -445,6 +470,7 @@ defmodule SovereignSoulEngineWeb.SceneLive do
                             {Map.get(data.emotional_state || %{}, key) || 0}
                           </span>
                         </div>
+                        
                         <div class="h-1.5 w-full rounded-full bg-base-300 overflow-hidden mt-0.5">
                           <div
                             class="h-full rounded-full transition-all duration-500"
@@ -456,18 +482,19 @@ defmodule SovereignSoulEngineWeb.SceneLive do
                     <% end %>
                   </div>
                 </div>
-
-                <%!-- Relationships --%>
+                 <%!-- Relationships --%>
                 <div class="mb-4">
                   <h3 class="text-xs font-medium text-base-content/50 uppercase tracking-wider mb-2">
                     Relationships
                   </h3>
+                  
                   <div
                     :if={(data.relationships || []) == []}
                     class="text-xs text-base-content/40 italic"
                   >
                     No relationships
                   </div>
+                  
                   <%= for rel <- data.relationships || [] do %>
                     <div class="mb-2 p-2 rounded bg-base-200/50 border border-base-300">
                       <div class="flex justify-between items-center mb-1">
@@ -476,10 +503,12 @@ defmodule SovereignSoulEngineWeb.SceneLive do
                           {character_name(@characters, rel.target_character_id)}
                         </span>
                       </div>
+                      
                       <div class="grid grid-cols-5 gap-1">
                         <%= for {label, key} <- rel_dimensions() do %>
                           <div class="text-center">
                             <div class="text-[10px] text-base-content/40">{label}</div>
+                            
                             <div class={[
                               "text-xs font-medium",
                               rel_val_class(
@@ -496,22 +525,23 @@ defmodule SovereignSoulEngineWeb.SceneLive do
                     </div>
                   <% end %>
                 </div>
-
-                <%!-- Recent Memories --%>
+                 <%!-- Recent Memories --%>
                 <div>
                   <h3 class="text-xs font-medium text-base-content/50 uppercase tracking-wider mb-2">
                     Recent Memories
                   </h3>
+                  
                   <div :if={(data.memories || []) == []} class="text-xs text-base-content/40 italic">
                     No memories
                   </div>
+                  
                   <div class="space-y-1">
                     <%= for mem <- data.memories || [] do %>
                       <div class="p-2 rounded bg-base-200/50 border border-base-300">
                         <p class="text-xs text-base-content truncate">{mem.summary}</p>
+                        
                         <div class="flex gap-2 mt-1 text-[10px] text-base-content/40">
-                          <span>{mem.category}</span>
-                          <span>Imp: {mem.importance || 0}</span>
+                          <span>{mem.category}</span> <span>Imp: {mem.importance || 0}</span>
                         </div>
                       </div>
                     <% end %>

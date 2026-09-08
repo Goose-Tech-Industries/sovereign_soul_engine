@@ -98,6 +98,7 @@ defmodule SovereignSoulEngine.Social.NPCScheduler do
     advance_goals(available_npcs)
     tick_grief_arcs(available_npcs)
     tick_forgiveness_arcs(available_npcs)
+    tick_emotional_homeostasis(available_npcs)
 
     conversations_run =
       if :rand.uniform() < @conversation_probability do
@@ -106,6 +107,7 @@ defmodule SovereignSoulEngine.Social.NPCScheduler do
             Task.start(fn ->
               NPCConversation.run(npc_a.id, npc_b.id)
             end)
+
             Logger.info("NPCScheduler: triggered conversation #{npc_a.name} ↔ #{npc_b.name}")
             state.conversations_run + 1
 
@@ -116,7 +118,12 @@ defmodule SovereignSoulEngine.Social.NPCScheduler do
         state.conversations_run
       end
 
-    %{state | tick_count: state.tick_count + 1, last_tick_at: DateTime.utc_now(), conversations_run: conversations_run}
+    %{
+      state
+      | tick_count: state.tick_count + 1,
+        last_tick_at: DateTime.utc_now(),
+        conversations_run: conversations_run
+    }
   end
 
   # --- Stamina regeneration ---
@@ -202,9 +209,12 @@ defmodule SovereignSoulEngine.Social.NPCScheduler do
 
         recency_weight =
           case get_last_social_action(npc_a.id) do
-            nil -> 3
+            nil ->
+              3
+
             ts ->
               hours_ago = DateTime.diff(DateTime.utc_now(), ts, :second) / 3600
+
               cond do
                 hours_ago > 2 -> 2
                 hours_ago > 0.5 -> 1
@@ -277,10 +287,12 @@ defmodule SovereignSoulEngine.Social.NPCScheduler do
 
         new_hunger = min((somatic.hunger || 0) + 3, 100)
         new_fatigue_raw = (somatic.fatigue || 20) + 2
+
         new_fatigue =
           if was_rested_recently,
             do: max(new_fatigue_raw - 10, 0),
             else: min(new_fatigue_raw, 100)
+
         new_pain = max((somatic.pain || 0) - 2, 0)
         new_illness = max((somatic.illness_severity || 0) - 1, 0)
 
@@ -315,7 +327,8 @@ defmodule SovereignSoulEngine.Social.NPCScheduler do
 
       if goal_to_advance do
         Souls.update_goal(goal_to_advance, %{
-          progress_notes: "Autonomous progress: step underway as of #{DateTime.utc_now() |> DateTime.to_iso8601()}"
+          progress_notes:
+            "Autonomous progress: step underway as of #{DateTime.utc_now() |> DateTime.to_iso8601()}"
         })
       end
     end)
@@ -339,7 +352,9 @@ defmodule SovereignSoulEngine.Social.NPCScheduler do
               if updated.stage == "integration" and updated.intensity < 20 do
                 Souls.update_grief_arc(updated, %{is_resolved: true})
               end
-            _ -> :ok
+
+            _ ->
+              :ok
           end
         end
       end)
@@ -355,20 +370,26 @@ defmodule SovereignSoulEngine.Social.NPCScheduler do
           case arc.direction do
             "healing" ->
               ni = max(arc.intensity - 2, 0)
-              ns = if ni < 30 and arc.stage not in ["forgiven"] do
-                advance_forgiveness_stage(arc.stage, :healing)
-              else
-                arc.stage
-              end
+
+              ns =
+                if ni < 30 and arc.stage not in ["forgiven"] do
+                  advance_forgiveness_stage(arc.stage, :healing)
+                else
+                  arc.stage
+                end
+
               {ni, ns}
 
             "hardening" ->
               ni = min(arc.intensity + 1, 95)
-              ns = if ni > 70 and arc.stage not in ["hardened"] do
-                advance_forgiveness_stage(arc.stage, :hardening)
-              else
-                arc.stage
-              end
+
+              ns =
+                if ni > 70 and arc.stage not in ["hardened"] do
+                  advance_forgiveness_stage(arc.stage, :hardening)
+                else
+                  arc.stage
+                end
+
               {ni, ns}
 
             _ ->
@@ -394,4 +415,70 @@ defmodule SovereignSoulEngine.Social.NPCScheduler do
     idx = Enum.find_index(stages, &(&1 == current_stage)) || 0
     Enum.at(stages, idx + 1, "hardened")
   end
+
+  # --- Emotional Homeostasis & Inertia Decay ---
+
+  defp tick_emotional_homeostasis(npcs) do
+    Enum.each(npcs, fn npc ->
+      emotional = Souls.get_emotional_state_by_character(npc.id)
+      profile = Souls.get_soul_profile_by_character(npc.id)
+
+      if emotional do
+        baselines = (profile && profile.baseline_emotions) || %{}
+        decay_factor = 0.90
+
+        new_anger =
+          decay_to_baseline(emotional.anger, Map.get(baselines, "anger", 0), decay_factor)
+
+        new_fear = decay_to_baseline(emotional.fear, Map.get(baselines, "fear", 0), decay_factor)
+
+        new_stress =
+          decay_to_baseline(emotional.stress, Map.get(baselines, "stress", 10), decay_factor)
+
+        new_shame = decay_to_baseline(emotional.shame, 0, decay_factor)
+        new_guilt = decay_to_baseline(emotional.guilt, 0, decay_factor)
+
+        # Cool down rumination gradually
+        new_rumination_intensity =
+          if emotional.rumination_intensity && emotional.rumination_intensity > 0 do
+            max(emotional.rumination_intensity - 2, 0)
+          else
+            0
+          end
+
+        new_rumination_subject =
+          if new_rumination_intensity == 0, do: nil, else: emotional.rumination_subject
+
+        if new_anger != emotional.anger or new_fear != emotional.fear or
+             new_stress != emotional.stress or new_shame != emotional.shame or
+             new_guilt != emotional.guilt or
+             new_rumination_intensity != emotional.rumination_intensity do
+          Souls.update_emotional_state(emotional, %{
+            anger: new_anger,
+            fear: new_fear,
+            stress: new_stress,
+            shame: new_shame,
+            guilt: new_guilt,
+            rumination_intensity: new_rumination_intensity,
+            rumination_subject: new_rumination_subject
+          })
+        end
+      end
+    end)
+  end
+
+  defp decay_to_baseline(nil, baseline, _factor), do: baseline
+
+  defp decay_to_baseline(current, baseline, factor)
+       when is_integer(current) and is_integer(baseline) do
+    diff = current - baseline
+
+    if abs(diff) <= 1 do
+      baseline
+    else
+      round(baseline + diff * factor)
+    end
+  end
+
+  defp decay_to_baseline(current, _baseline, _factor), do: current
 end

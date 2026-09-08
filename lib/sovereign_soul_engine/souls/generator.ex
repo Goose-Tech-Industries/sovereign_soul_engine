@@ -98,8 +98,12 @@ defmodule SovereignSoulEngine.Souls.Generator do
     active_goals = Souls.list_active_goals_for_character(npc.id)
     grief_arcs = Souls.list_active_grief_arcs_for_character(npc.id)
     forgiveness_arcs = Souls.list_active_forgiveness_arcs_for_character(npc.id)
-    knowledge_about_player = if player.id, do: TheoryOfMind.list_knowledge_about(npc.id, player.id), else: []
-    player_knowledge_about_npc = if player.id, do: TheoryOfMind.list_knowledge_about(player.id, npc.id), else: []
+
+    knowledge_about_player =
+      if player.id, do: TheoryOfMind.list_knowledge_about(npc.id, player.id), else: []
+
+    player_knowledge_about_npc =
+      if player.id, do: TheoryOfMind.list_knowledge_about(player.id, npc.id), else: []
 
     # What this character knows about people OTHER than whoever they're
     # talking to right now — previously never fed into the prompt at all,
@@ -280,7 +284,8 @@ defmodule SovereignSoulEngine.Souls.Generator do
     cognitive_load_prompt = CognitiveLoad.prompt_instruction(cog_score, cog_stressors)
 
     # Intrusive thought calculation
-    intrusive_thought = maybe_surface_intrusive_thought(npc.id, emotional_state, memories, grief_arcs)
+    intrusive_thought =
+      maybe_surface_intrusive_thought(npc.id, emotional_state, memories, grief_arcs)
 
     # Humor context
     relationship_to_player =
@@ -316,6 +321,7 @@ defmodule SovereignSoulEngine.Souls.Generator do
         hunger_note = if somatic_state.hunger > 60, do: " — distractingly hungry", else: ""
         pain_note = if somatic_state.pain > 50, do: " — in noticeable pain", else: ""
         fatigue_note = if somatic_state.fatigue > 60, do: " — running on low energy", else: ""
+
         discomfort_note =
           if somatic_state.hunger > 70 or somatic_state.pain > 70 or somatic_state.fatigue > 70 do
             "\nThese physical discomforts are affecting your patience and emotional regulation."
@@ -341,6 +347,7 @@ defmodule SovereignSoulEngine.Souls.Generator do
         lines =
           Enum.map_join(active_goals, "\n", fn g ->
             blocker_note = if g.blocker, do: "\n  BLOCKED: #{g.blocker}", else: ""
+
             "- #{g.goal} | Step: #{g.current_step || "undefined"} | Priority: #{g.priority}/100#{blocker_note}"
           end)
 
@@ -639,7 +646,13 @@ defmodule SovereignSoulEngine.Souls.Generator do
         action_resolution =
           if action_res && (action_res[:type] || action_res["type"]) do
             %{
-              proposed_action: normalize_enum(action_res[:type] || action_res["type"], ActionIntent.action_types(), "none", "proposed_action"),
+              proposed_action:
+                normalize_enum(
+                  action_res[:type] || action_res["type"],
+                  ActionIntent.action_types(),
+                  "none",
+                  "proposed_action"
+                ),
               confidence: action_res[:confidence] || action_res["confidence"] || 0.0,
               reason: action_res[:reason] || action_res["reason"] || ""
             }
@@ -653,7 +666,13 @@ defmodule SovereignSoulEngine.Souls.Generator do
             mc = List.first(mcs) || %{}
 
             %{
-              category: normalize_enum(mc[:category] || mc["category"] || "episodic", Memory.categories(), "episodic", "memory category"),
+              category:
+                normalize_enum(
+                  mc[:category] || mc["category"] || "episodic",
+                  Memory.categories(),
+                  "episodic",
+                  "memory category"
+                ),
               summary: mc[:summary] || mc["summary"] || "interaction",
               details: mc[:details] || mc["details"] || "",
               importance: mc[:importance] || mc["importance"] || 50,
@@ -672,7 +691,8 @@ defmodule SovereignSoulEngine.Souls.Generator do
                scene_id: scene.id,
                event_type: :speak,
                event_intensity: 10,
-               message_content: first_non_blank([response[:public_speech], response["public_speech"], "..."]),
+               message_content:
+                 first_non_blank([response[:public_speech], response["public_speech"], "..."]),
                private_thought:
                  response[:private_thought] || response["private_thought"] || "...",
                action_resolution: action_resolution,
@@ -786,6 +806,7 @@ defmodule SovereignSoulEngine.Souls.Generator do
 
             # Process theory of mind update
             knowledge_upd = response[:knowledge_update] || response["knowledge_update"]
+
             if knowledge_upd && player.id do
               process_knowledge_update(knowledge_upd, npc.id, player.id, characters)
             end
@@ -836,7 +857,8 @@ defmodule SovereignSoulEngine.Souls.Generator do
             # already dispatched above (relationship side-effects, scene
             # broadcast) — this is purely so the HTTP caller (twisted_paradox)
             # can also see what the NPC decided, e.g. to detect "join_player".
-            conv_state = response[:conversation_state] || response["conversation_state"] || "continuing"
+            conv_state =
+              response[:conversation_state] || response["conversation_state"] || "continuing"
 
             metadata_updates =
               %{}
@@ -857,8 +879,8 @@ defmodule SovereignSoulEngine.Souls.Generator do
             final_message =
               if map_size(metadata_updates) > 0 do
                 case Scenes.update_message(result.scene_message, %{
-                  metadata: Map.merge(result.scene_message.metadata || %{}, metadata_updates)
-                }) do
+                       metadata: Map.merge(result.scene_message.metadata || %{}, metadata_updates)
+                     }) do
                   {:ok, updated_msg} -> updated_msg
                   _ -> result.scene_message
                 end
@@ -880,6 +902,11 @@ defmodule SovereignSoulEngine.Souls.Generator do
               "character:#{npc.id}",
               {:emotion_updated, latest_state_after}
             )
+
+            # Trigger asynchronous voice generation if configured
+            if SovereignSoulEngine.Voice.configured?() do
+              SovereignSoulEngine.Voice.speak_message_async(final_message, npc)
+            end
 
             {:ok, final_message}
 
@@ -937,7 +964,10 @@ defmodule SovereignSoulEngine.Souls.Generator do
     if value in valid_values do
       value
     else
-      Logger.warning("LLM proposed invalid #{field_label} #{inspect(value)}; defaulting to #{inspect(default)}")
+      Logger.warning(
+        "LLM proposed invalid #{field_label} #{inspect(value)}; defaulting to #{inspect(default)}"
+      )
+
       default
     end
   end
@@ -963,8 +993,6 @@ defmodule SovereignSoulEngine.Souls.Generator do
     apply_action_side_effects(action_type, npc, player)
     broadcast_action_message(npc, scene, text)
   end
-
-  defp dispatch_action(_npc, _player, _scene, _action), do: :ok
 
   # Narrative text for each action type — shown in chat as an action beat
   defp action_narrative("protect", npc, player, reason),
@@ -1355,7 +1383,10 @@ defmodule SovereignSoulEngine.Souls.Generator do
     wound_memories = Enum.filter(memories, &(&1.category == "wound" and &1.importance > 70))
 
     active_grief =
-      Enum.filter(grief_arcs, &(&1.intensity > 60 and &1.stage in ["anger", "bargaining", "depression"]))
+      Enum.filter(
+        grief_arcs,
+        &(&1.intensity > 60 and &1.stage in ["anger", "bargaining", "depression"])
+      )
 
     cond do
       rumination_intensity > 70 and rumination_subject ->
@@ -1363,10 +1394,12 @@ defmodule SovereignSoulEngine.Souls.Generator do
 
       length(wound_memories) > 0 and :rand.uniform(100) < 20 ->
         mem = Enum.random(wound_memories)
+
         "#{mem.summary} — this flash of memory surfaces mid-conversation. Acknowledge it involuntarily, then recover."
 
       length(active_grief) > 0 and :rand.uniform(100) < 15 ->
         arc = Enum.random(active_grief)
+
         "A sudden image of #{arc.subject} surfaces. You weren't thinking about it — now you can't stop."
 
       true ->
@@ -1380,25 +1413,41 @@ defmodule SovereignSoulEngine.Souls.Generator do
     humor_style = (profile && profile.humor_style) || "none"
 
     cond do
-      humor_style == "none" -> nil
-      trust < 50 -> nil
-      stress > 60 -> nil
+      humor_style == "none" ->
+        nil
+
+      trust < 50 ->
+        nil
+
+      stress > 60 ->
+        nil
+
       trust > 70 and stress < 30 ->
         "HUMOR AVAILABLE: Trust is high and stress is low. #{humor_style_instruction(humor_style)} Brief and earned — not forced."
+
       trust > 55 and stress < 45 ->
         "HUMOR AVAILABLE (subtle): A small #{humor_style} moment is appropriate if it arises naturally."
-      true -> nil
+
+      true ->
+        nil
     end
   end
 
-  defp humor_style_instruction("dry"), do: "Your dry wit can emerge — understated, deadpan, barely smiling."
-  defp humor_style_instruction("sarcastic"), do: "Controlled sarcasm is on the table — pointed but not cruel."
-  defp humor_style_instruction("warm"), do: "Gentle warmth and light teasing are appropriate."
-  defp humor_style_instruction("dark"), do: "Dark gallows humor fits your character here — laugh at the darkness."
-  defp humor_style_instruction("absurdist"), do: "Absurdist observations are welcome — find the surreal in the mundane."
-  defp humor_style_instruction(_), do: ""
+  defp humor_style_instruction("dry"),
+    do: "Your dry wit can emerge — understated, deadpan, barely smiling."
 
-  defp process_knowledge_update(nil, _npc_id, _player_id, _characters), do: :ok
+  defp humor_style_instruction("sarcastic"),
+    do: "Controlled sarcasm is on the table — pointed but not cruel."
+
+  defp humor_style_instruction("warm"), do: "Gentle warmth and light teasing are appropriate."
+
+  defp humor_style_instruction("dark"),
+    do: "Dark gallows humor fits your character here — laugh at the darkness."
+
+  defp humor_style_instruction("absurdist"),
+    do: "Absurdist observations are welcome — find the surreal in the mundane."
+
+  defp humor_style_instruction(_), do: ""
 
   defp process_knowledge_update(upd, npc_id, player_id, characters) when is_map(upd) do
     fact = upd[:fact] || upd["fact"]
@@ -1417,7 +1466,11 @@ defmodule SovereignSoulEngine.Souls.Generator do
       # something A believes about NPC C, and it lands here as B's own
       # knowledge about C, not about A or B.
       subject_id =
-        resolve_target_character_id(upd[:target_character] || upd["target_character"], characters, player_id)
+        resolve_target_character_id(
+          upd[:target_character] || upd["target_character"],
+          characters,
+          player_id
+        )
 
       TheoryOfMind.upsert_knowledge(npc_id, subject_id, to_string(fact),
         certainty: certainty,
@@ -1469,9 +1522,19 @@ defmodule SovereignSoulEngine.Souls.Generator do
       if matching do
         updates =
           %{}
-          |> then(fn m -> if new_step, do: Map.put(m, :current_step, to_string(new_step)), else: m end)
-          |> then(fn m -> if blocker && blocker != "null", do: Map.put(m, :blocker, to_string(blocker)), else: Map.put(m, :blocker, nil) end)
-          |> then(fn m -> if status in ["active", "paused", "achieved", "abandoned"], do: Map.put(m, :status, status), else: m end)
+          |> then(fn m ->
+            if new_step, do: Map.put(m, :current_step, to_string(new_step)), else: m
+          end)
+          |> then(fn m ->
+            if blocker && blocker != "null",
+              do: Map.put(m, :blocker, to_string(blocker)),
+              else: Map.put(m, :blocker, nil)
+          end)
+          |> then(fn m ->
+            if status in ["active", "paused", "achieved", "abandoned"],
+              do: Map.put(m, :status, status),
+              else: m
+          end)
 
         Souls.update_goal(matching, updates)
       end
@@ -1504,16 +1567,29 @@ defmodule SovereignSoulEngine.Souls.Generator do
             stages = ~w(denial anger bargaining depression integration)
             idx = Enum.find_index(stages, &(&1 == matching.stage)) || 0
             next_stage = Enum.at(stages, idx + 1, "integration")
-            Souls.update_grief_arc(matching, %{intensity: new_intensity, stage: next_stage, last_progressed_at: new_last_progressed})
+
+            Souls.update_grief_arc(matching, %{
+              intensity: new_intensity,
+              stage: next_stage,
+              last_progressed_at: new_last_progressed
+            })
 
           "deepening" ->
             stages = ~w(denial anger bargaining depression integration)
             idx = Enum.find_index(stages, &(&1 == matching.stage)) || 0
             prev_stage = Enum.at(stages, max(idx - 1, 0), "denial")
-            Souls.update_grief_arc(matching, %{intensity: new_intensity, stage: prev_stage, last_progressed_at: new_last_progressed})
+
+            Souls.update_grief_arc(matching, %{
+              intensity: new_intensity,
+              stage: prev_stage,
+              last_progressed_at: new_last_progressed
+            })
 
           _ ->
-            Souls.update_grief_arc(matching, %{intensity: new_intensity, last_progressed_at: new_last_progressed})
+            Souls.update_grief_arc(matching, %{
+              intensity: new_intensity,
+              last_progressed_at: new_last_progressed
+            })
         end
       end
     end

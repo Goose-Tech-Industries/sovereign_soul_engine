@@ -31,7 +31,12 @@ defmodule SovereignSoulEngineWeb.Api.NpcChatController do
       scene = Scenes.find_or_create_direct_scene(player, npc)
 
       {:ok, _player_message} =
-        Scenes.create_message(%{scene_id: scene.id, character_id: player.id, content: message, message_type: "dialogue"})
+        Scenes.create_message(%{
+          scene_id: scene.id,
+          character_id: player.id,
+          content: message,
+          message_type: "dialogue"
+        })
 
       ConsequenceEngine.resolve(%{
         character_id: player.id,
@@ -51,20 +56,30 @@ defmodule SovereignSoulEngineWeb.Api.NpcChatController do
             npc_name: npc.name,
             reply: reply.content,
             tell: reply.metadata["physical_tell"],
+            audio_url: reply.metadata["audio_url"],
             joined_player: reply.metadata["proposed_action"] == "join_player",
             left_player: reply.metadata["proposed_action"] == "leave_player"
           })
 
         {:error, reason} ->
-          conn |> put_status(:bad_gateway) |> json(%{error: "npc did not respond", reason: inspect(reason)})
+          conn
+          |> put_status(:bad_gateway)
+          |> json(%{error: "npc did not respond", reason: inspect(reason)})
       end
     else
-      {:error, :not_found} -> conn |> put_status(:not_found) |> json(%{error: "npc not found"})
-      {:error, :empty_message} -> conn |> put_status(:unprocessable_entity) |> json(%{error: "message is empty"})
+      {:error, :not_found} ->
+        conn |> put_status(:not_found) |> json(%{error: "npc not found"})
+
+      {:error, :empty_message} ->
+        conn |> put_status(:unprocessable_entity) |> json(%{error: "message is empty"})
     end
   end
 
-  def history(conn, %{"external_source" => source, "external_player_id" => player_id, "npc_id" => npc_id}) do
+  def history(conn, %{
+        "external_source" => source,
+        "external_player_id" => player_id,
+        "npc_id" => npc_id
+      }) do
     with {:ok, npc} <- fetch_active_npc(npc_id),
          player when not is_nil(player) <- Characters.get_external_player(source, player_id),
          scene when not is_nil(scene) <- Scenes.find_direct_scene(player, npc) do
@@ -98,7 +113,11 @@ defmodule SovereignSoulEngineWeb.Api.NpcChatController do
   test call that correctly wrote a source=player row but a source=npc
   read of it came back empty until this fix.
   """
-  def relationship(conn, %{"external_source" => source, "external_player_id" => player_id, "npc_id" => npc_id}) do
+  def relationship(conn, %{
+        "external_source" => source,
+        "external_player_id" => player_id,
+        "npc_id" => npc_id
+      }) do
     with {:ok, npc} <- fetch_active_npc(npc_id),
          player when not is_nil(player) <- Characters.get_external_player(source, player_id) do
       case Relationships.get_relationship(player.id, npc.id) do

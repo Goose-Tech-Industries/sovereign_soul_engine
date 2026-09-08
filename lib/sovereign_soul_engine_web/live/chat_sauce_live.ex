@@ -1778,13 +1778,12 @@ defmodule SovereignSoulEngineWeb.ChatSauceLive do
           <div class="text-center">
             <h2 class="text-lg font-bold text-white">Edit Character Details & Motives</h2>
             <p class="text-sm text-slate-400">
-              Modify description or current objectives for {@editing_character &&
-                @editing_character.name}
+              Modify description or current objectives for {@editing_character.name}
             </p>
           </div>
 
           <.form
-            for={Characters.change_character(@editing_character || %Characters.Character{})}
+            for={Characters.change_character(@editing_character)}
             phx-submit="update_character"
             class="space-y-4"
           >
