@@ -7,7 +7,7 @@ defmodule SovereignSoulEngine.LLM.LocalProvider do
 
   @behaviour SovereignSoulEngine.LLM.Provider
 
-  @default_url "http://localhost:11434/v1/chat/completions"
+  @default_url "http://127.0.0.1:11434/v1/chat/completions"
   @default_model "llama3.1:8b"
 
   @impl true
@@ -17,15 +17,15 @@ defmodule SovereignSoulEngine.LLM.LocalProvider do
   def health do
     url = base_url()
 
-    case Req.get("http://localhost:11434/api/tags", receive_timeout: 2000) do
+    case Req.get("http://127.0.0.1:11434/api/tags", receive_timeout: 2000) do
       {:ok, %{status: 200}} ->
         {:ok, %{status: "available", model: model_name(), endpoint: url}}
 
       _ ->
-        {:error, "Local LLM server not reachable on localhost:11434"}
+        {:error, "Local LLM server not reachable on 127.0.0.1:11434"}
     end
   rescue
-    _ -> {:error, "Local LLM server not reachable on localhost:11434"}
+    _ -> {:error, "Local LLM server not reachable on 127.0.0.1:11434"}
   end
 
   @impl true
@@ -41,7 +41,7 @@ defmodule SovereignSoulEngine.LLM.LocalProvider do
 
   defp build_request_body(%{messages: messages} = input, opts) do
     system = input[:system] || input["system"]
-    max_tokens = input[:max_tokens] || input["max_tokens"] || 4096
+    max_tokens = input[:max_tokens] || input["max_tokens"] || 650
     model = Keyword.get(opts, :model, model_name())
 
     msgs = build_messages(messages, system)
@@ -79,7 +79,7 @@ defmodule SovereignSoulEngine.LLM.LocalProvider do
 
   defp send_request(body, opts) do
     url = base_url()
-    timeout = Keyword.get(opts, :timeout_ms, 60_000)
+    timeout = Keyword.get(opts, :timeout_ms, 120_000)
 
     case Req.post(url,
            json: body,
@@ -99,19 +99,55 @@ defmodule SovereignSoulEngine.LLM.LocalProvider do
 
   # ── Response Parsing ────────────────────────────────────────
 
-  defp parse_response(%{"choices" => [%{"message" => %{"content" => content}} | _]} = raw) do
+  defp parse_response(%{"choices" => [%{"message" => %{"content" => content}} | _]}) do
     case Jason.decode(content) do
-      {:ok, parsed_json} ->
-        {:ok, %{content: parsed_json, raw_response: raw}}
+      {:ok, parsed_json} when is_map(parsed_json) ->
+        {:ok, parsed_json}
 
-      {:error, _} ->
-        {:ok, %{content: %{"public_speech" => content}, raw_response: raw}}
+      _ ->
+        # Attempt regex extraction if JSON was truncated by max_tokens limit
+        speech = extract_json_field(content, "public_speech")
+        thought = extract_json_field(content, "private_thought")
+        tone = extract_json_field(content, "tone") || "neutral"
+        motivation = extract_json_field(content, "motivation") || "respond"
+
+        if speech do
+          {:ok,
+           %{
+             "public_speech" => speech,
+             "private_thought" => thought || "",
+             "tone" => tone,
+             "motivation" => motivation
+           }}
+        else
+          {:ok,
+           %{
+             "public_speech" => String.slice(content, 0, 5000),
+             "private_thought" => "",
+             "tone" => "neutral",
+             "motivation" => "respond"
+           }}
+        end
     end
   end
 
   defp parse_response(response) do
     {:error, "unexpected response format from Local LLM: #{inspect(response)}"}
   end
+
+  defp extract_json_field(str, field) when is_binary(str) do
+    case Regex.run(~r/"#{field}"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)"/, str) do
+      [_, val] ->
+        val
+        |> String.replace("\\\"", "\"")
+        |> String.replace("\\n", "\n")
+
+      _ ->
+        nil
+    end
+  end
+
+  defp extract_json_field(_str, _field), do: nil
 
   defp base_url do
     Application.get_env(:sovereign_soul_engine, :local_llm_url, @default_url)

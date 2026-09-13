@@ -92,8 +92,7 @@ config :phoenix_live_view,
 # Disable swoosh api client as it is only required for production adapters.
 config :swoosh, :api_client, false
 
-# Use DeepSeekProvider (if configured) with FakeProvider fallback in development
+# Use LocalProvider (Ollama GTX 1660 SUPER CUDA) in development
 config :sovereign_soul_engine, :llm_providers, [
-  SovereignSoulEngine.LLM.DeepSeekProvider,
-  SovereignSoulEngine.LLM.FakeProvider
+  SovereignSoulEngine.LLM.LocalProvider
 ]

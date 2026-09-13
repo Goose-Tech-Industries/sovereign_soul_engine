@@ -374,15 +374,31 @@ defmodule SovereignSoulEngineWeb.ChatLive do
         TheoryOfMind.record_life_thread_if_detected(npc.id, player.id, content)
       end)
 
-      participant_npcs
-      |> Enum.with_index()
-      |> Enum.each(fn {npc, index} ->
-        delay_ms = index * 4000
+      # Determine which NPC(s) should speak:
+      responding_npcs =
+        cond do
+          socket.assigns[:selected_npc] ->
+            [socket.assigns.selected_npc]
 
-        # Process emotional/relationship consequences of player speaking.
-        # message_content is intentionally omitted — the message was already
-        # written by Scenes.create_message above; passing it here would create
-        # a duplicate DB row for every NPC in the scene.
+          true ->
+            lower_content = String.downcase(content)
+
+            mentioned =
+              Enum.filter(participant_npcs, fn npc ->
+                first_name = hd(String.split(npc.name)) |> String.downcase()
+
+                String.contains?(lower_content, String.downcase(npc.slug)) or
+                  (String.length(first_name) > 2 and String.contains?(lower_content, first_name))
+              end)
+
+            case mentioned do
+              [first | _] -> [first]
+              [] -> Enum.take(participant_npcs, 1)
+            end
+        end
+
+      # All NPCs in the scene process the consequence of the player speaking
+      Enum.each(participant_npcs, fn npc ->
         ConsequenceEngine.resolve(%{
           character_id: player.id,
           source_character_id: player.id,
@@ -404,8 +420,14 @@ defmodule SovereignSoulEngineWeb.ChatLive do
           "scene:#{scene.id}",
           {:state_updated, %{character_id: npc.id}}
         )
+      end)
 
-        # NPCs generate their response in the background with a turn delay
+      # Only responding NPC(s) generate their spoken response
+      responding_npcs
+      |> Enum.with_index()
+      |> Enum.each(fn {npc, index} ->
+        delay_ms = index * 2000
+
         if Mix.env() == :test do
           generate_npc_response(npc, player, scene, content)
         else

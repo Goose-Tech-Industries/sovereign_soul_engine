@@ -135,6 +135,13 @@ defmodule SovereignSoulEngine.LLM.ProviderCascade do
   end
 
   defp call_provider(provider, input, timeout_ms, provider_opts) do
+    timeout_ms =
+      if provider == SovereignSoulEngine.LLM.LocalProvider do
+        max(timeout_ms, 120_000)
+      else
+        timeout_ms
+      end
+
     task = Task.async(fn -> provider.respond(input, provider_opts) end)
 
     case Task.yield(task, timeout_ms) || Task.shutdown(task) do
@@ -155,6 +162,13 @@ defmodule SovereignSoulEngine.LLM.ProviderCascade do
   @doc false
   @spec validate_and_sanitize(map()) :: {:ok, Provider.provider_response()} | {:error, String.t()}
   def validate_and_sanitize(raw) when is_map(raw) do
+    raw =
+      cond do
+        is_map(raw[:content]) -> raw[:content]
+        is_map(raw["content"]) -> raw["content"]
+        true -> raw
+      end
+
     result = %{
       public_speech: sanitize_string(raw[:public_speech] || raw["public_speech"]),
       private_thought: sanitize_string(raw[:private_thought] || raw["private_thought"]),
