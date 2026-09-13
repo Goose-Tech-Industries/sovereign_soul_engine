@@ -37,6 +37,18 @@ defmodule SovereignSoulEngineWeb.Router do
 
     get "/npc_actions/pending", NpcActionsController, :pending
     post "/npc_actions/:id/consume", NpcActionsController, :consume
+
+    # Wearables & Smart Glasses Biometric Telemetry
+    post "/telemetry/somatic", TelemetryController, :create
+    post "/telemetry/wearable", TelemetryController, :create
+    get "/telemetry/:slug", TelemetryController, :show
+  end
+
+  scope "/", SovereignSoulEngineWeb do
+    pipe_through :browser
+
+    get "/", PageController, :home
+    get "/chat", PageController, :home
   end
 
   scope "/sse", SovereignSoulEngineWeb do

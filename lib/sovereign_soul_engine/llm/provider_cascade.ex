@@ -21,6 +21,7 @@ defmodule SovereignSoulEngine.LLM.ProviderCascade do
   require Logger
 
   @default_providers [
+    SovereignSoulEngine.LLM.LocalProvider,
     SovereignSoulEngine.LLM.AnthropicProvider,
     SovereignSoulEngine.LLM.OpenAIProvider,
     SovereignSoulEngine.LLM.DeepSeekProvider,

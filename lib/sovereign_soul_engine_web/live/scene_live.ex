@@ -8,6 +8,7 @@ defmodule SovereignSoulEngineWeb.SceneLive do
   alias SovereignSoulEngine.Memories
   alias SovereignSoulEngine.SoulEvents
   alias SovereignSoulEngine.Souls.ConsequenceEngine
+  alias SovereignSoulEngine.TheoryOfMind
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
@@ -76,6 +77,11 @@ defmodule SovereignSoulEngineWeb.SceneLive do
         participant_npcs =
           socket.assigns.characters
           |> Enum.filter(&(&1.kind == "npc" and &1.status == "active"))
+
+        # Automatically detect and arm open life threads (proposals, surgeries, interviews, loneliness)
+        Enum.each(participant_npcs, fn npc ->
+          TheoryOfMind.record_life_thread_if_detected(npc.id, character.id, content)
+        end)
 
         participant_npcs
         |> Enum.with_index()

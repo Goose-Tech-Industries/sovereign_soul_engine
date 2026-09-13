@@ -18,6 +18,7 @@ defmodule SovereignSoulEngine.Application do
       SovereignSoulEngine.RateLimiter,
       SovereignSoulEngine.Memories.MemoryMerger,
       SovereignSoulEngine.Social.NPCScheduler,
+      SovereignSoulEngine.TheoryOfMind.ProactiveDispatcher,
       # Start to serve requests, typically the last entry
       SovereignSoulEngineWeb.Endpoint
     ]

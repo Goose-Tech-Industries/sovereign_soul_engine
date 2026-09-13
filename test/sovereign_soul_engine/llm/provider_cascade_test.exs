@@ -399,7 +399,8 @@ defmodule SovereignSoulEngine.LLM.ProviderCascadeTest do
       providers = ProviderCascade.configured_providers()
 
       assert is_list(providers)
-      assert length(providers) == 5
+      assert length(providers) == 6
+      assert SovereignSoulEngine.LLM.LocalProvider in providers
     end
 
     test "returns configured providers when set" do

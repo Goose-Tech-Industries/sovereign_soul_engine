@@ -5,6 +5,7 @@ defmodule SovereignSoulEngineWeb.ChatLive do
   alias SovereignSoulEngine.Scenes
   alias SovereignSoulEngine.Souls
   alias SovereignSoulEngine.Souls.ConsequenceEngine
+  alias SovereignSoulEngine.TheoryOfMind
 
   import Ecto.Query
 
@@ -367,6 +368,11 @@ defmodule SovereignSoulEngineWeb.ChatLive do
         scene.participants
         |> Enum.map(& &1.character)
         |> Enum.filter(&(&1.kind == "npc" and &1.status == "active"))
+
+      # Automatically detect and arm open life threads (proposals, surgeries, interviews, loneliness)
+      Enum.each(participant_npcs, fn npc ->
+        TheoryOfMind.record_life_thread_if_detected(npc.id, player.id, content)
+      end)
 
       participant_npcs
       |> Enum.with_index()

@@ -400,9 +400,19 @@ defmodule SovereignSoulEngine.Souls.Generator do
         "\nUNRESOLVED WOUNDS (requiring forgiveness or release):\n#{lines}\n"
       end
 
-    # Theory of mind prompt
+    # Theory of mind prompt (Theory of Mind 2.0)
     theory_of_mind_prompt =
-      if knowledge_about_player != [] or player_knowledge_about_npc != [] do
+      if player.id do
+        last_statement = if last_player_message, do: last_player_message.content, else: ""
+        defensiveness = (somatic_state && somatic_state.defensiveness) || 0
+
+        tom_2_brief =
+          TheoryOfMind.build_character_tom_brief(npc.id, player.id,
+            last_statement: last_statement,
+            sentiment: player_tone,
+            defensiveness: defensiveness
+          )
+
         player_knows_lines =
           if player_knowledge_about_npc != [] do
             player_knowledge_about_npc
@@ -427,6 +437,8 @@ defmodule SovereignSoulEngine.Souls.Generator do
         """
 
         THEORY OF MIND:
+        #{tom_2_brief}
+
         What you believe #{player.name} knows about you:
         #{player_knows_lines}
         #{if what_player_doesnt_know != "", do: "What you believe #{player.name} does NOT know:\n#{what_player_doesnt_know}", else: ""}
