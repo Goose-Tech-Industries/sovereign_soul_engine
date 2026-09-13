@@ -404,7 +404,8 @@ defmodule SovereignSoulEngine.Souls.Generator do
     theory_of_mind_prompt =
       if player.id do
         last_statement = if last_player_message, do: last_player_message.content, else: ""
-        defensiveness = (somatic_state && somatic_state.defensiveness) || 0
+        traits = (profile && profile.personality_traits) || %{}
+        defensiveness = Map.get(traits, :defensiveness) || Map.get(traits, "defensiveness") || 0
 
         tom_2_brief =
           TheoryOfMind.build_character_tom_brief(npc.id, player.id,
