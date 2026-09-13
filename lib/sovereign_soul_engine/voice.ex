@@ -6,7 +6,7 @@ defmodule SovereignSoulEngine.Voice do
   associating voices with characters, and broadcasting real-time audio updates.
   """
 
-  alias SovereignSoulEngine.Voice.ElevenLabs
+  alias SovereignSoulEngine.Voice.{ElevenLabs, LocalTTS}
   alias SovereignSoulEngine.Scenes
   alias SovereignSoulEngine.Characters.Character
   alias SovereignSoulEngine.Scenes.SceneMessage
@@ -16,7 +16,9 @@ defmodule SovereignSoulEngine.Voice do
   @doc """
   Checks if voice synthesis is configured and ready.
   """
-  defdelegate configured?, to: ElevenLabs
+  def configured? do
+    ElevenLabs.configured?() or LocalTTS.available?()
+  end
 
   @doc """
   Lists available voices from ElevenLabs.
@@ -48,12 +50,14 @@ defmodule SovereignSoulEngine.Voice do
     if configured?() and is_binary(message.content) and String.trim(message.content) != "" do
       voice_id = resolve_voice_id(character)
 
-      opts = [
-        voice_id: voice_id,
-        filename: "msg_#{message.id}"
-      ]
+      gen_result =
+        if ElevenLabs.configured?() do
+          ElevenLabs.generate_speech(message.content, voice_id: voice_id, filename: "msg_#{message.id}")
+        else
+          LocalTTS.generate_speech(message.content, character: character, filename: "msg_#{message.id}")
+        end
 
-      case ElevenLabs.generate_speech(message.content, opts) do
+      case gen_result do
         {:ok, %{audio_url: audio_url}} ->
           current_meta = message.metadata || %{}
 

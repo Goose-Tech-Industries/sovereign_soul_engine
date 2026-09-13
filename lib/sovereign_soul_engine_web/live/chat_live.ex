@@ -11,11 +11,22 @@ defmodule SovereignSoulEngineWeb.ChatLive do
 
   @impl true
   def mount(_params, _session, socket) do
+    player = Characters.get_character_by_slug!("goose")
+
     if connected?(socket) do
       Phoenix.PubSub.subscribe(SovereignSoulEngine.PubSub, "scenes:list_updates")
+      Phoenix.PubSub.subscribe(SovereignSoulEngine.PubSub, "character:#{player.id}:biometrics")
     end
 
-    player = Characters.get_character_by_slug!("goose")
+    player_somatic = Souls.get_or_create_somatic_state(player.id)
+    player_emotional = Souls.get_emotional_state_by_character(player.id)
+
+    biometrics = %{
+      heart_rate: 72,
+      stress: (player_emotional && player_emotional.stress) || 20,
+      fatigue: (player_somatic && player_somatic.fatigue) || 15,
+      motion: "resting"
+    }
 
     npcs =
       Enum.filter(Characters.list_characters(), &(&1.kind == "npc" and &1.status == "active"))
@@ -24,6 +35,9 @@ defmodule SovereignSoulEngineWeb.ChatLive do
       socket
       |> assign(:page_title, "Chat Room — Sovereign Soul Engine")
       |> assign(:player, player)
+      |> assign(:player_biometrics, biometrics)
+      |> assign(:voice_enabled?, false)
+      |> assign(:simulating_somatic?, false)
       |> assign(:npcs, npcs)
       |> assign(:creating_group?, false)
       |> assign(:group_name, "")
@@ -499,6 +513,59 @@ defmodule SovereignSoulEngineWeb.ChatLive do
   end
 
   @impl true
+  def handle_event("toggle_voice", _params, socket) do
+    {:noreply, assign(socket, :voice_enabled?, !socket.assigns.voice_enabled?)}
+  end
+
+  @impl true
+  def handle_event("toggle_somatic_sim", _params, socket) do
+    {:noreply, assign(socket, :simulating_somatic?, !socket.assigns.simulating_somatic?)}
+  end
+
+  @impl true
+  def handle_event("apply_somatic_sim", %{"bpm" => bpm, "stress" => stress, "fatigue" => fatigue, "motion" => motion}, socket) do
+    bpm = String.to_integer(bpm)
+    stress = String.to_integer(stress)
+    fatigue = String.to_integer(fatigue)
+    player = socket.assigns.player
+
+    # 1. Update player somatic state
+    somatic = Souls.get_or_create_somatic_state(player.id)
+    Souls.update_somatic_state(somatic, %{fatigue: fatigue})
+
+    # 2. Update player emotional state
+    if emo = Souls.get_emotional_state_by_character(player.id) do
+      Souls.update_emotional_state(emo, %{stress: stress})
+    end
+
+    # 3. Notify all companions' Theory of Mind
+    Enum.each(socket.assigns.npcs, fn npc ->
+      TheoryOfMind.upsert_knowledge(
+        npc.id,
+        player.id,
+        "Goose's somatic telemetry indicates heart rate at #{bpm} bpm, stress level #{stress}/100, fatigue #{fatigue}/100, motion state: #{motion}.",
+        certainty: 90
+      )
+    end)
+
+    # 4. Broadcast live telemetry
+    payload = %{
+      character_id: player.id,
+      telemetry: %{heart_rate: bpm, stress_level: stress, fatigue_level: fatigue, motion_state: motion},
+      somatic: %{fatigue: fatigue, pain: 0},
+      emotional: %{stress: stress}
+    }
+    Phoenix.PubSub.broadcast(SovereignSoulEngine.PubSub, "character:#{player.id}:biometrics", {:telemetry_received, payload})
+
+    socket =
+      socket
+      |> assign(:player_biometrics, %{heart_rate: bpm, stress: stress, fatigue: fatigue, motion: motion})
+      |> assign(:simulating_somatic?, false)
+
+    {:noreply, socket}
+  end
+
+  @impl true
   def handle_event("toggle_invite_menu", _params, socket) do
     {:noreply, assign(socket, :showing_invite_menu?, !socket.assigns.showing_invite_menu?)}
   end
@@ -556,6 +623,38 @@ defmodule SovereignSoulEngineWeb.ChatLive do
      |> stream_insert(:messages, msg)
      |> assign(:messages_empty?, false)
      |> push_event("scroll-chat", %{})}
+  end
+
+  @impl true
+  def handle_info({:audio_ready, msg}, socket) do
+    socket = stream_insert(socket, :messages, msg)
+
+    audio_url = get_in(msg.metadata || %{}, ["audio_url"])
+
+    socket =
+      if audio_url && socket.assigns[:voice_enabled?] do
+        push_event(socket, "play_audio", %{url: audio_url})
+      else
+        socket
+      end
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:telemetry_received, payload}, socket) do
+    tel = payload[:telemetry] || %{}
+    som = payload[:somatic] || %{}
+    emo = payload[:emotional] || %{}
+
+    updated = %{
+      heart_rate: tel[:heart_rate] || socket.assigns.player_biometrics.heart_rate,
+      stress: emo[:stress] || tel[:stress_level] || socket.assigns.player_biometrics.stress,
+      fatigue: som[:fatigue] || tel[:fatigue_level] || socket.assigns.player_biometrics.fatigue,
+      motion: tel[:motion_state] || socket.assigns.player_biometrics.motion
+    }
+
+    {:noreply, assign(socket, :player_biometrics, updated)}
   end
 
   @impl true
@@ -922,6 +1021,42 @@ defmodule SovereignSoulEngineWeb.ChatLive do
               </div>
             </div>
             
+            <%!-- Galaxy Watch Biometric HUD --%>
+            <div class="hidden xl:flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-base-300/40 border border-base-300 text-xs">
+              <span class="flex items-center gap-1 font-mono font-bold text-rose-400">
+                <span class="animate-pulse">❤️</span> {@player_biometrics.heart_rate} BPM
+              </span>
+              <span class="text-base-content/20">•</span>
+              <span class="font-mono text-[11px] text-amber-400">
+                ⚡ {@player_biometrics.stress}/100
+              </span>
+              <span class="text-base-content/20">•</span>
+              <span class="font-mono text-[11px] text-sky-400">
+                💤 {@player_biometrics.fatigue}/100
+              </span>
+              <button
+                phx-click="toggle_somatic_sim"
+                class="btn btn-ghost btn-xs text-primary font-bold ml-1 hover:bg-primary/20"
+                title="Simulate Galaxy Watch pulse"
+              >
+                <.icon name="hero-bolt" class="size-3" /> Pulse
+              </button>
+            </div>
+
+            <%!-- Voice Audio Toggle --%>
+            <button
+              phx-click="toggle_voice"
+              class={[
+                "btn btn-xs flex items-center gap-1.5 border transition-all",
+                @voice_enabled? && "btn-success text-success-content border-success shadow-sm",
+                !@voice_enabled? && "btn-outline border-base-300 text-base-content/60 hover:bg-base-300"
+              ]}
+              title="Toggle automatic companion voice audio"
+            >
+              <.icon name={if @voice_enabled?, do: "hero-speaker-wave", else: "hero-speaker-x-mark"} class="size-3.5" />
+              {if @voice_enabled?, do: "Voice ON", else: "Voice OFF"}
+            </button>
+
             <%= if @emotional_state do %>
               <div class="hidden sm:flex items-center gap-2 text-xs text-base-content/50">
                 <span
@@ -1009,6 +1144,12 @@ defmodule SovereignSoulEngineWeb.ChatLive do
                       <%= if Map.get(msg, :private_thought) && Map.get(msg, :private_thought) != "" do %>
                         <div class="mt-2 pt-1.5 border-t border-purple-500/20 text-[10px] text-purple-400 font-mono">
                           <span class="font-bold">🧠 Thought:</span> {msg.private_thought}
+                        </div>
+                      <% end %>
+
+                      <%= if audio_url = get_in(msg.metadata || %{}, ["audio_url"]) do %>
+                        <div class="mt-2 pt-1.5 border-t border-base-content/10 flex items-center gap-2">
+                          <audio controls src={audio_url} class="h-7 w-60 max-w-full rounded-lg opacity-90"></audio>
                         </div>
                       <% end %>
                     </div>
@@ -1189,6 +1330,180 @@ defmodule SovereignSoulEngineWeb.ChatLive do
           </form>
         </div>
       </div>
+
+      <%!-- Somatic Biometrics Simulator Modal --%>
+      <div
+        :if={@simulating_somatic?}
+        class="fixed inset-0 bg-base-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      >
+        <div class="w-full max-w-lg p-6 bg-base-200 rounded-2xl border border-base-300 shadow-2xl space-y-5">
+          <div class="text-center">
+            <h2 class="text-lg font-bold text-base-content flex items-center justify-center gap-2">
+              <span class="text-rose-500 animate-pulse">❤️</span> Wearable Somatic Hub
+            </h2>
+            <p class="text-xs text-base-content/50 mt-1">
+              Pulse biometrics into companions' Theory of Mind
+            </p>
+          </div>
+
+          <%!-- Quick Presets --%>
+          <div class="space-y-1.5">
+            <label class="text-[10px] font-bold text-base-content/50 uppercase tracking-wider">Quick Presets</label>
+            <div class="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                phx-click="apply_somatic_sim"
+                phx-value-bpm="68"
+                phx-value-stress="15"
+                phx-value-fatigue="10"
+                phx-value-motion="resting"
+                class="btn btn-outline btn-xs flex justify-between px-3 border-emerald-500/30 hover:bg-emerald-500/15 text-emerald-400"
+              >
+                <span>🟢 Calm Baseline</span>
+                <span class="font-mono text-[10px]">68 bpm</span>
+              </button>
+
+              <button
+                type="button"
+                phx-click="apply_somatic_sim"
+                phx-value-bpm="135"
+                phx-value-stress="88"
+                phx-value-fatigue="40"
+                phx-value-motion="pacing"
+                class="btn btn-outline btn-xs flex justify-between px-3 border-rose-500/30 hover:bg-rose-500/15 text-rose-400"
+              >
+                <span>🔴 Stress Spike</span>
+                <span class="font-mono text-[10px]">135 bpm</span>
+              </button>
+
+              <button
+                type="button"
+                phx-click="apply_somatic_sim"
+                phx-value-bpm="105"
+                phx-value-stress="45"
+                phx-value-fatigue="15"
+                phx-value-motion="still"
+                class="btn btn-outline btn-xs flex justify-between px-3 border-purple-500/30 hover:bg-purple-500/15 text-purple-400"
+              >
+                <span>💜 Intimate / Aroused</span>
+                <span class="font-mono text-[10px]">105 bpm</span>
+              </button>
+
+              <button
+                type="button"
+                phx-click="apply_somatic_sim"
+                phx-value-bpm="58"
+                phx-value-stress="25"
+                phx-value-fatigue="90"
+                phx-value-motion="resting"
+                class="btn btn-outline btn-xs flex justify-between px-3 border-sky-500/30 hover:bg-sky-500/15 text-sky-400"
+              >
+                <span>💤 Exhaustion</span>
+                <span class="font-mono text-[10px]">58 bpm</span>
+              </button>
+            </div>
+          </div>
+
+          <%!-- Custom Simulation Form --%>
+          <form phx-submit="apply_somatic_sim" class="space-y-4 pt-1">
+            <div class="grid grid-cols-2 gap-3">
+              <div class="space-y-1">
+                <label class="text-xs font-semibold text-base-content/70 flex justify-between">
+                  <span>Heart Rate (BPM)</span>
+                  <span class="font-mono text-rose-400 font-bold" id="bpm-val">{@player_biometrics.heart_rate}</span>
+                </label>
+                <input
+                  type="number"
+                  name="bpm"
+                  min="40"
+                  max="200"
+                  value={@player_biometrics.heart_rate}
+                  class="w-full input input-bordered input-sm font-mono"
+                  required
+                />
+              </div>
+
+              <div class="space-y-1">
+                <label class="text-xs font-semibold text-base-content/70 flex justify-between">
+                  <span>Stress (0-100)</span>
+                  <span class="font-mono text-amber-400 font-bold">{@player_biometrics.stress}</span>
+                </label>
+                <input
+                  type="number"
+                  name="stress"
+                  min="0"
+                  max="100"
+                  value={@player_biometrics.stress}
+                  class="w-full input input-bordered input-sm font-mono"
+                  required
+                />
+              </div>
+
+              <div class="space-y-1">
+                <label class="text-xs font-semibold text-base-content/70 flex justify-between">
+                  <span>Fatigue (0-100)</span>
+                  <span class="font-mono text-sky-400 font-bold">{@player_biometrics.fatigue}</span>
+                </label>
+                <input
+                  type="number"
+                  name="fatigue"
+                  min="0"
+                  max="100"
+                  value={@player_biometrics.fatigue}
+                  class="w-full input input-bordered input-sm font-mono"
+                  required
+                />
+              </div>
+
+              <div class="space-y-1">
+                <label class="text-xs font-semibold text-base-content/70">Motion State</label>
+                <select name="motion" class="w-full select select-bordered select-sm text-xs">
+                  <option value="resting" selected={@player_biometrics.motion == "resting"}>resting</option>
+                  <option value="still" selected={@player_biometrics.motion == "still"}>still</option>
+                  <option value="walking" selected={@player_biometrics.motion == "walking"}>walking</option>
+                  <option value="pacing" selected={@player_biometrics.motion == "pacing"}>pacing</option>
+                  <option value="running" selected={@player_biometrics.motion == "running"}>running</option>
+                </select>
+              </div>
+            </div>
+
+            <%!-- Webhook Info --%>
+            <div class="p-3 bg-base-300/40 rounded-xl border border-base-300 text-[11px] space-y-1">
+              <div class="font-bold text-base-content/80 flex items-center gap-1">
+                <.icon name="hero-device-phone-mobile" class="size-3.5 text-primary" /> Galaxy Watch Live Webhook
+              </div>
+              <div class="font-mono text-[10px] text-primary/80 break-all select-all">
+                POST /sse/api/telemetry/somatic
+              </div>
+              <div class="text-[10px] text-base-content/50">
+                JSON: <code>&#123;"heart_rate": 80, "stress_level": 30, "fatigue_level": 20, "motion_state": "resting"&#125;</code>
+              </div>
+            </div>
+
+            <div class="flex gap-3 justify-end pt-2">
+              <button
+                type="button"
+                phx-click="toggle_somatic_sim"
+                class="btn btn-ghost btn-sm"
+              >
+                Close
+              </button>
+              <button type="submit" class="btn btn-primary btn-sm px-6 font-semibold">
+                Pulse to Soul Engine
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <script>
+        window.addEventListener("phx:play_audio", (e) => {
+          if (e.detail && e.detail.url) {
+            const audio = new Audio(e.detail.url);
+            audio.play().catch(err => console.log("Audio autoplay deferred:", err));
+          }
+        });
+      </script>
     </div>
     """
   end
