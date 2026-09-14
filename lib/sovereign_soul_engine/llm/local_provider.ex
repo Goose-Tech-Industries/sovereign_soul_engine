@@ -49,14 +49,19 @@ defmodule SovereignSoulEngine.LLM.LocalProvider do
     options = %{
       "num_ctx" => 2048,
       "num_predict" => max_tokens,
-      "temperature" => 0.7,
-      "num_thread" => 8
+      "temperature" => 0.75,
+      "num_thread" => 8,
+      "repeat_penalty" => 1.18,
+      "repeat_last_n" => 128
     }
 
     body = %{
       model: model,
       messages: msgs,
       max_tokens: max_tokens,
+      temperature: 0.75,
+      frequency_penalty: 0.25,
+      presence_penalty: 0.1,
       response_format: %{type: "json_object"},
       options: options
     }

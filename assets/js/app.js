@@ -37,6 +37,21 @@ topbar.config({barColors: {0: "#29d"}, shadowColor: "rgba(0, 0, 0, .3)"})
 window.addEventListener("phx:page-loading-start", _info => topbar.show(300))
 window.addEventListener("phx:page-loading-stop", _info => topbar.hide())
 
+// Global UI event listeners
+window.addEventListener("phx:clear-chat-input", () => {
+  const input = document.getElementById("chat-input") || document.querySelector("input[name='message[content]']");
+  if (input) {
+    input.value = "";
+  }
+});
+
+window.addEventListener("phx:scroll-chat", () => {
+  const scrollEl = document.querySelector("[phx-hook='.ChatScroll']") || document.getElementById("chat-scroll");
+  if (scrollEl) {
+    scrollEl.scrollTop = scrollEl.scrollHeight;
+  }
+});
+
 // connect if there are any LiveViews on the page
 liveSocket.connect()
 

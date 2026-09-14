@@ -25,15 +25,44 @@ defmodule SovereignSoulEngine.Souls.Generator do
     player =
       if player_id, do: Characters.get_character!(player_id), else: %{id: nil, name: "Goose"}
 
-    history_messages = Scenes.list_messages(scene.id) |> Enum.take(-10)
+    history_messages =
+      Scenes.list_messages(scene.id)
+      |> Enum.dedup_by(fn m -> {m.character_id, m.content} end)
+      |> Enum.take(-10)
+
     characters = Characters.list_characters()
 
     llm_messages =
-      Enum.map(history_messages, fn m ->
-        role = if m.character_id == npc.id, do: "assistant", else: "user"
+      history_messages
+      |> Enum.map(fn m ->
         char = Enum.find(characters, &(&1.id == m.character_id))
         name = if char, do: char.name, else: "Unknown"
-        %{role: role, content: "#{name}: #{m.content}"}
+
+        if m.character_id == npc.id do
+          content =
+            if m.message_type == "action" do
+              "*#{m.content}*"
+            else
+              m.content
+            end
+
+          %{role: "assistant", content: content}
+        else
+          content =
+            if m.message_type == "action" do
+              "[#{name} #{m.content}]"
+            else
+              "#{name}: #{m.content}"
+            end
+
+          %{role: "user", content: content}
+        end
+      end)
+      |> Enum.chunk_by(& &1.role)
+      |> Enum.map(fn chunk ->
+        role = hd(chunk).role
+        content = Enum.map_join(chunk, "\n", & &1.content)
+        %{role: role, content: content}
       end)
 
     emotional_state = Souls.get_emotional_state_by_character(npc.id)
@@ -576,10 +605,11 @@ defmodule SovereignSoulEngine.Souls.Generator do
     Recent Memories:
     #{Enum.map(memories, &"- #{&1.summary} (Valence: #{&1.valence})") |> Enum.join("\n")}
 
+    IMPORTANT: You are roleplaying as #{npc.name}. In "public_speech", write #{npc.name}'s actual spoken words to #{player.name}. Do NOT output template instructions or placeholder text.
     Respond in JSON format matching this schema. Keep all thoughts, motivations, tells, and reason fields concise and punchy (1-2 sentences). Do NOT produce verbose filler:
     {
-      "public_speech": "Your response to the player's message. Write only the speech itself — do NOT prefix it with '#{npc.name}:' or any other name.",
-      "private_thought": "Required. Your uncensored internal monologue, feelings, and calculations.",
+      "public_speech": "<in-character dialogue spoken aloud to #{player.name}>",
+      "private_thought": "<in-character uncensored internal monologue, feelings, and calculations>",
       "tone": "Brief description of tone.",
       "motivation": "Brief description of motivation.",
       "updated_description": "Optional. If your goals, relationship context, or narrative motives have changed significantly, write a concise new description/motivation for yourself (max 25 words). Otherwise, omit or keep empty.",
@@ -706,7 +736,12 @@ defmodule SovereignSoulEngine.Souls.Generator do
                event_type: :speak,
                event_intensity: 10,
                message_content:
-                 first_non_blank([response[:public_speech], response["public_speech"], "..."]),
+                 clean_speech(
+                   first_non_blank([response[:public_speech], response["public_speech"]]),
+                   npc,
+                   player,
+                   response
+                 ),
                private_thought:
                  first_non_blank([
                    response[:private_thought],
@@ -1671,6 +1706,84 @@ defmodule SovereignSoulEngine.Souls.Generator do
   # is the fix — not defending every downstream result.scene_message read.
   defp first_non_blank(values) do
     Enum.find(values, "...", fn v -> is_binary(v) and String.trim(v) != "" end)
+  end
+
+  defp clean_speech(raw_speech, npc, player, response) do
+    invalid_keywords = [
+      "your response to the player's message",
+      "write only the speech itself",
+      "do not prefix it with",
+      "in-character dialogue spoken aloud",
+      "public_speech",
+      "placeholder text"
+    ]
+
+    speech =
+      cond do
+        is_binary(raw_speech) -> String.trim(raw_speech)
+        true -> ""
+      end
+
+    speech_lower = String.downcase(speech)
+
+    is_invalid =
+      speech == "" or
+        speech == "..." or
+        (String.starts_with?(speech, "<") and String.ends_with?(speech, ">")) or
+        Enum.any?(invalid_keywords, &String.contains?(speech_lower, &1))
+
+    if is_invalid do
+      fallback_speech(npc, player, response)
+    else
+      strip_speaker_prefix(speech, npc.name)
+    end
+  end
+
+  defp strip_speaker_prefix(text, npc_name) do
+    first_name = hd(String.split(npc_name))
+    prefixes = [
+      "#{npc_name}:",
+      "#{npc_name} :",
+      "#{first_name}:",
+      "#{first_name} :",
+      "\"#{npc_name}\":",
+      "#{npc_name} says:",
+      "#{npc_name} says,"
+    ]
+
+    cleaned =
+      Enum.reduce(prefixes, text, fn prefix, acc ->
+        if String.starts_with?(String.downcase(acc), String.downcase(prefix)) do
+          acc |> String.slice(String.length(prefix)..-1//1) |> String.trim()
+        else
+          acc
+        end
+      end)
+      |> String.trim_leading("\"")
+      |> String.trim_trailing("\"")
+      |> String.trim()
+
+    if cleaned == "", do: text, else: cleaned
+  end
+
+  defp fallback_speech(_npc, player, response) do
+    thought = response && (response[:private_thought] || response["private_thought"])
+    tone = (response && (response[:tone] || response["tone"])) || "guarded"
+    player_name = (player && player.name) || "Goose"
+
+    cond do
+      is_binary(thought) and String.length(thought) > 10 and not String.contains?(String.downcase(thought), "required") ->
+        "I hear you, #{player_name}. Let us see where this leads."
+
+      tone in ["warm", "friendly", "welcoming"] ->
+        "It is good to speak with you, #{player_name}. What is on your mind?"
+
+      tone in ["cautious", "suspicious", "guarded"] ->
+        "I am listening, #{player_name}. Tread carefully."
+
+      true ->
+        "I hear you, #{player_name}."
+    end
   end
 
   defp fallback_thought(_npc, emotional_state, player, response) do

@@ -509,6 +509,8 @@ defmodule SovereignSoulEngineWeb.ChatLive do
           _ -> "Companion"
         end
 
+      Process.send_after(self(), :generation_timeout, 60_000)
+
       socket =
         socket
         |> assign(:is_generating?, true)
@@ -689,6 +691,14 @@ defmodule SovereignSoulEngineWeb.ChatLive do
 
   @impl true
   def handle_info({:generation_failed, _character_id}, socket) do
+    {:noreply,
+     socket
+     |> assign(:is_generating?, false)
+     |> assign(:typing_npc_name, nil)}
+  end
+
+  @impl true
+  def handle_info(:generation_timeout, socket) do
     {:noreply,
      socket
      |> assign(:is_generating?, false)
@@ -1271,6 +1281,7 @@ defmodule SovereignSoulEngineWeb.ChatLive do
             for={@message_form}
             id="chat-form"
             phx-submit="send_message"
+            onsubmit="const input = document.getElementById('chat-input'); if(input) { setTimeout(() => { input.value = ''; }, 0); }"
             class="flex items-end gap-3"
           >
             <div class="flex-1 relative">
@@ -1323,14 +1334,16 @@ defmodule SovereignSoulEngineWeb.ChatLive do
           export default {
             mounted() {
               this.el.focus()
-              this.el.form?.addEventListener("submit", () => {
-                setTimeout(() => {
-                  this.el.value = ""
-                }, 0)
-              })
-              this.handleEvent("clear-chat-input", () => {
+              const clearInput = () => {
                 this.el.value = ""
+                this.el.focus()
+              }
+              this.el.form?.addEventListener("submit", () => {
+                setTimeout(clearInput, 0)
+                setTimeout(clearInput, 50)
               })
+              this.handleEvent("clear-chat-input", clearInput)
+              window.addEventListener("phx:clear-chat-input", clearInput)
             }
           }
         </script>
