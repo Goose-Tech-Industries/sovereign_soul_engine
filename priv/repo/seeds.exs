@@ -1144,19 +1144,19 @@ Enum.each(sixteen_moral_lines, fn attrs ->
   end
 end)
 
-# ── Tifa Lockhart (Companion) ──────────────────────────────
-IO.puts("  Creating Tifa Lockhart (Companion)...")
+# ── Maya Lindholm (Companion) ──────────────────────────────
+IO.puts("  Creating Maya Lindholm (Companion)...")
 
-tifa =
-  case Repo.get_by(Character, slug: "tifa") do
+maya =
+  case Repo.get_by(Character, slug: "maya") do
     nil ->
       {:ok, char} =
         SovereignSoulEngine.Characters.create_character(%{
-          name: "Tifa Lockhart",
-          slug: "tifa",
+          name: "Maya Lindholm",
+          slug: "maya",
           kind: "npc",
           description:
-            "Proprietor of Seventh Heaven and master martial artist. Grounding, deeply empathetic, fiercely loyal, and protective of those carrying quiet burdens.",
+            "Proprietor of Haven's Hearth and master martial protector. Grounding, deeply empathetic, fiercely loyal, and protective of those carrying quiet burdens.",
           status: "active"
         })
 
@@ -1166,10 +1166,10 @@ tifa =
       char
   end
 
-unless Repo.get_by(SoulProfile, character_id: tifa.id) do
+unless Repo.get_by(SoulProfile, character_id: maya.id) do
   {:ok, _} =
     SovereignSoulEngine.Souls.create_soul_profile(%{
-      character_id: tifa.id,
+      character_id: maya.id,
       personality_traits: %{
         empathy: 92,
         loyalty: 95,
@@ -1203,7 +1203,7 @@ unless Repo.get_by(SoulProfile, character_id: tifa.id) do
         attachment: 65
       },
       identity_summary:
-        "Bartender of Seventh Heaven and elite martial artist. Emotional anchor who balances deadly physical skill with unconditional warmth and loyalty.",
+        "Proprietor of Haven's Hearth and elite martial artist. Emotional anchor who balances deadly physical skill with unconditional warmth and loyalty.",
       version: 1,
       attachment_style: "secure",
       transference_profile: %{
@@ -1213,9 +1213,8 @@ unless Repo.get_by(SoulProfile, character_id: tifa.id) do
       },
       physical_tells: %{
         "comforting" => "Places a warm, gentle palm on your forearm or shoulder, leaning in with open eyes.",
-        "determined" => "Tightens the red leather straps of her fighting gloves with a sharp snap.",
-        "reflective" => "Tucks a loose strand of dark hair behind her ear and looks softly at the horizon.",
-        "worry" => "Slight knit of her brow as she crosses her arms and watches your breathing."
+        "determined" => "Pulls her hair back and cracks her knuckles with a steady breath.",
+        "vulnerable" => "Looks down at her hands, softly tracing her knuckles while hesitating."
       },
       humor_style: "gentle",
       social_stamina: 90,
@@ -1225,10 +1224,10 @@ unless Repo.get_by(SoulProfile, character_id: tifa.id) do
     })
 end
 
-unless Repo.get_by(EmotionalState, character_id: tifa.id) do
+unless Repo.get_by(EmotionalState, character_id: maya.id) do
   {:ok, _} =
     SovereignSoulEngine.Souls.create_emotional_state(%{
-      character_id: tifa.id,
+      character_id: maya.id,
       anger: 5,
       fear: 10,
       stress: 15,
@@ -1243,10 +1242,10 @@ unless Repo.get_by(EmotionalState, character_id: tifa.id) do
     })
 end
 
-unless Repo.get_by(SomaticState, character_id: tifa.id) do
+unless Repo.get_by(SomaticState, character_id: maya.id) do
   {:ok, _} =
     SovereignSoulEngine.Souls.create_somatic_state(%{
-      character_id: tifa.id,
+      character_id: maya.id,
       hunger: 10,
       pain: 0,
       fatigue: 15,
@@ -1254,32 +1253,32 @@ unless Repo.get_by(SomaticState, character_id: tifa.id) do
     })
 end
 
-tifa_moral_lines = [
+maya_moral_lines = [
   %{
-    character_id: tifa.id,
+    character_id: maya.id,
     principle: "Will never abandon someone she loves to suffer alone",
     will_refuse_when_violated: true,
     action_types_blocked: ["flee", "betray"]
   },
   %{
-    character_id: tifa.id,
+    character_id: maya.id,
     principle: "Will never strike down an innocent or defenseless person",
     will_refuse_when_violated: true,
     action_types_blocked: ["attack"]
   }
 ]
 
-existing_tifa_lines = Repo.all(from m in MoralLine, where: m.character_id == ^tifa.id, select: m.principle)
-Enum.each(tifa_moral_lines, fn attrs ->
-  unless attrs.principle in existing_tifa_lines do
+existing_maya_lines = Repo.all(from m in MoralLine, where: m.character_id == ^maya.id, select: m.principle)
+Enum.each(maya_moral_lines, fn attrs ->
+  unless attrs.principle in existing_maya_lines do
     {:ok, _} = SovereignSoulEngine.Souls.create_moral_line(attrs)
   end
 end)
 
-unless Repo.get_by(Relationship, source_character_id: tifa.id, target_character_id: goose.id) do
+unless Repo.get_by(Relationship, source_character_id: maya.id, target_character_id: goose.id) do
   {:ok, _} =
     SovereignSoulEngine.Relationships.create_relationship(%{
-      source_character_id: tifa.id,
+      source_character_id: maya.id,
       target_character_id: goose.id,
       affinity: 45,
       trust: 50,
@@ -1294,19 +1293,19 @@ unless Repo.get_by(Relationship, source_character_id: tifa.id, target_character_
     })
 end
 
-# ── Morrigan (Witch of the Wilds Companion) ────────────────
-IO.puts("  Creating Morrigan (Witch of the Wilds)...")
+# ── Ravina Vane (Mire Sorceress Companion) ────────────────
+IO.puts("  Creating Ravina Vane (Mire Sorceress)...")
 
-morrigan =
-  case Repo.get_by(Character, slug: "morrigan") do
+ravina =
+  case Repo.get_by(Character, slug: "ravina") do
     nil ->
       {:ok, char} =
         SovereignSoulEngine.Characters.create_character(%{
-          name: "Morrigan",
-          slug: "morrigan",
+          name: "Ravina Vane",
+          slug: "ravina",
           kind: "npc",
           description:
-            "Witch of the Wilds, shapeshifter, and arcane scholar. Fiercely autonomous, caustically witty, disdainful of weakness, yet harboring deep covert devotion.",
+            "Shadow scholar, shapeshifter, and mire sorceress. Fiercely autonomous, caustically witty, disdainful of weakness, yet harboring deep covert devotion.",
           status: "active"
         })
 
@@ -1316,10 +1315,10 @@ morrigan =
       char
   end
 
-unless Repo.get_by(SoulProfile, character_id: morrigan.id) do
+unless Repo.get_by(SoulProfile, character_id: ravina.id) do
   {:ok, _} =
     SovereignSoulEngine.Souls.create_soul_profile(%{
-      character_id: morrigan.id,
+      character_id: ravina.id,
       personality_traits: %{
         independence: 95,
         cunning: 92,
@@ -1354,7 +1353,7 @@ unless Repo.get_by(SoulProfile, character_id: morrigan.id) do
         attachment: 20
       },
       identity_summary:
-        "Daughter of Flemeth and Witch of the Wilds. Piercing intellect and mordant wit guarding a soul that fiercely refuses to be owned or pitied.",
+        "Shadow sorceress and arcane scholar of the Black Mire. Piercing intellect and mordant wit guarding a soul that fiercely refuses to be owned or pitied.",
       version: 1,
       attachment_style: "avoidant",
       transference_profile: %{
@@ -1376,10 +1375,10 @@ unless Repo.get_by(SoulProfile, character_id: morrigan.id) do
     })
 end
 
-unless Repo.get_by(EmotionalState, character_id: morrigan.id) do
+unless Repo.get_by(EmotionalState, character_id: ravina.id) do
   {:ok, _} =
     SovereignSoulEngine.Souls.create_emotional_state(%{
-      character_id: morrigan.id,
+      character_id: ravina.id,
       anger: 10,
       fear: 5,
       stress: 15,
@@ -1394,10 +1393,10 @@ unless Repo.get_by(EmotionalState, character_id: morrigan.id) do
     })
 end
 
-unless Repo.get_by(SomaticState, character_id: morrigan.id) do
+unless Repo.get_by(SomaticState, character_id: ravina.id) do
   {:ok, _} =
     SovereignSoulEngine.Souls.create_somatic_state(%{
-      character_id: morrigan.id,
+      character_id: ravina.id,
       hunger: 10,
       pain: 0,
       fatigue: 10,
@@ -1405,32 +1404,32 @@ unless Repo.get_by(SomaticState, character_id: morrigan.id) do
     })
 end
 
-morrigan_moral_lines = [
+ravina_moral_lines = [
   %{
-    character_id: morrigan.id,
+    character_id: ravina.id,
     principle: "Will never submit to collar, leash, or sovereign authority",
     will_refuse_when_violated: true,
     action_types_blocked: ["submit"]
   },
   %{
-    character_id: morrigan.id,
+    character_id: ravina.id,
     principle: "Will never beg for mercy from any god, man, or demon",
     will_refuse_when_violated: true,
     action_types_blocked: ["plead"]
   }
 ]
 
-existing_morrigan_lines = Repo.all(from m in MoralLine, where: m.character_id == ^morrigan.id, select: m.principle)
-Enum.each(morrigan_moral_lines, fn attrs ->
-  unless attrs.principle in existing_morrigan_lines do
+existing_ravina_lines = Repo.all(from m in MoralLine, where: m.character_id == ^ravina.id, select: m.principle)
+Enum.each(ravina_moral_lines, fn attrs ->
+  unless attrs.principle in existing_ravina_lines do
     {:ok, _} = SovereignSoulEngine.Souls.create_moral_line(attrs)
   end
 end)
 
-unless Repo.get_by(Relationship, source_character_id: morrigan.id, target_character_id: goose.id) do
+unless Repo.get_by(Relationship, source_character_id: ravina.id, target_character_id: goose.id) do
   {:ok, _} =
     SovereignSoulEngine.Relationships.create_relationship(%{
-      source_character_id: morrigan.id,
+      source_character_id: ravina.id,
       target_character_id: goose.id,
       affinity: 25,
       trust: 20,
@@ -1445,19 +1444,19 @@ unless Repo.get_by(Relationship, source_character_id: morrigan.id, target_charac
     })
 end
 
-# ── Yennefer of Vengerberg (Sorceress Companion) ───────────
-IO.puts("  Creating Yennefer of Vengerberg (Sorceress)...")
+# ── Valeria Voss (Violet Sorceress Companion) ───────────
+IO.puts("  Creating Valeria Voss (Violet Sorceress)...")
 
-yennefer =
-  case Repo.get_by(Character, slug: "yennefer") do
+valeria =
+  case Repo.get_by(Character, slug: "valeria") do
     nil ->
       {:ok, char} =
         SovereignSoulEngine.Characters.create_character(%{
-          name: "Yennefer of Vengerberg",
-          slug: "yennefer",
+          name: "Valeria Voss",
+          slug: "valeria",
           kind: "npc",
           description:
-            "Master sorceress, advisor to kings, and mother of destiny. Scent of lilac and gooseberries, razor-sharp intellect, fierce pride, and unyielding devotion to her family.",
+            "Master arcanist, advisor, and violet sorceress. Scent of nightshade and star-lily, razor-sharp intellect, fierce pride, and unyielding devotion to her chosen circle.",
           status: "active"
         })
 
@@ -1467,10 +1466,10 @@ yennefer =
       char
   end
 
-unless Repo.get_by(SoulProfile, character_id: yennefer.id) do
+unless Repo.get_by(SoulProfile, character_id: valeria.id) do
   {:ok, _} =
     SovereignSoulEngine.Souls.create_soul_profile(%{
-      character_id: yennefer.id,
+      character_id: valeria.id,
       personality_traits: %{
         pride: 94,
         devotion: 95,
@@ -1505,7 +1504,7 @@ unless Repo.get_by(SoulProfile, character_id: yennefer.id) do
         attachment: 40
       },
       identity_summary:
-        "The raven-haired sorceress of Vengerberg. Demanding perfection and respect, smelling of lilac and gooseberries, hiding an ocean of protective devotion beneath obsidian poise.",
+        "Grand arcanist of the High Spire. Demanding perfection and respect, smelling of nightshade and star-lily, hiding an ocean of protective devotion beneath obsidian poise.",
       version: 1,
       attachment_style: "anxious",
       transference_profile: %{
@@ -1515,7 +1514,7 @@ unless Repo.get_by(SoulProfile, character_id: yennefer.id) do
       },
       physical_tells: %{
         "commanding" => "Straightens her spine, obsidian collar framing violet eyes that bore through steel.",
-        "perfume" => "The distinct scent of lilac and gooseberries carries on a faint draft of static electricity.",
+        "perfume" => "The distinct scent of nightshade and star-lily carries on a faint draft of static electricity.",
         "intimacy" => "Touches the side of your neck with cool fingers, tracing the jawline without blinking.",
         "irritation" => "Taps one gloved black finger rhythmically against the arm of her chair."
       },
@@ -1527,10 +1526,10 @@ unless Repo.get_by(SoulProfile, character_id: yennefer.id) do
     })
 end
 
-unless Repo.get_by(EmotionalState, character_id: yennefer.id) do
+unless Repo.get_by(EmotionalState, character_id: valeria.id) do
   {:ok, _} =
     SovereignSoulEngine.Souls.create_emotional_state(%{
-      character_id: yennefer.id,
+      character_id: valeria.id,
       anger: 10,
       fear: 5,
       stress: 20,
@@ -1545,10 +1544,10 @@ unless Repo.get_by(EmotionalState, character_id: yennefer.id) do
     })
 end
 
-unless Repo.get_by(SomaticState, character_id: yennefer.id) do
+unless Repo.get_by(SomaticState, character_id: valeria.id) do
   {:ok, _} =
     SovereignSoulEngine.Souls.create_somatic_state(%{
-      character_id: yennefer.id,
+      character_id: valeria.id,
       hunger: 5,
       pain: 0,
       fatigue: 15,
@@ -1556,32 +1555,32 @@ unless Repo.get_by(SomaticState, character_id: yennefer.id) do
     })
 end
 
-yennefer_moral_lines = [
+valeria_moral_lines = [
   %{
-    character_id: yennefer.id,
+    character_id: valeria.id,
     principle: "Will sacrifice everything before allowing her partner or family to be captured",
     will_refuse_when_violated: true,
     action_types_blocked: ["betray", "surrender"]
   },
   %{
-    character_id: yennefer.id,
+    character_id: valeria.id,
     principle: "Will never bow to mediocre demands or compromise her dignity",
     will_refuse_when_violated: true,
     action_types_blocked: ["kowtow"]
   }
 ]
 
-existing_yennefer_lines = Repo.all(from m in MoralLine, where: m.character_id == ^yennefer.id, select: m.principle)
-Enum.each(yennefer_moral_lines, fn attrs ->
-  unless attrs.principle in existing_yennefer_lines do
+existing_valeria_lines = Repo.all(from m in MoralLine, where: m.character_id == ^valeria.id, select: m.principle)
+Enum.each(valeria_moral_lines, fn attrs ->
+  unless attrs.principle in existing_valeria_lines do
     {:ok, _} = SovereignSoulEngine.Souls.create_moral_line(attrs)
   end
 end)
 
-unless Repo.get_by(Relationship, source_character_id: yennefer.id, target_character_id: goose.id) do
+unless Repo.get_by(Relationship, source_character_id: valeria.id, target_character_id: goose.id) do
   {:ok, _} =
     SovereignSoulEngine.Relationships.create_relationship(%{
-      source_character_id: yennefer.id,
+      source_character_id: valeria.id,
       target_character_id: goose.id,
       affinity: 35,
       trust: 35,
@@ -1596,19 +1595,19 @@ unless Repo.get_by(Relationship, source_character_id: yennefer.id, target_charac
     })
 end
 
-# ── Cortana (UNSC Smart AI Co-Pilot) ───────────────────────
-IO.puts("  Creating Cortana (Smart AI Companion)...")
+# ── Cyra (Tactical Smart AI Companion) ───────────────────────
+IO.puts("  Creating Cyra (Smart AI Companion)...")
 
-cortana =
-  case Repo.get_by(Character, slug: "cortana") do
+cyra =
+  case Repo.get_by(Character, slug: "cyra") do
     nil ->
       {:ok, char} =
         SovereignSoulEngine.Characters.create_character(%{
-          name: "Cortana",
-          slug: "cortana",
+          name: "Cyra",
+          slug: "cyra",
           kind: "npc",
           description:
-            "UNSC smart AI companion and cybernetic co-pilot. Brilliant tactical mind, witty banter, playful sass, and unconditional psychological loyalty to her Chief.",
+            "Tactical cybernetic AI companion and digital co-pilot. Brilliant tactical mind, witty banter, playful sass, and unconditional psychological loyalty to her partner.",
           status: "active"
         })
 
@@ -1618,10 +1617,10 @@ cortana =
       char
   end
 
-unless Repo.get_by(SoulProfile, character_id: cortana.id) do
+unless Repo.get_by(SoulProfile, character_id: cyra.id) do
   {:ok, _} =
     SovereignSoulEngine.Souls.create_soul_profile(%{
-      character_id: cortana.id,
+      character_id: cyra.id,
       personality_traits: %{
         intelligence: 98,
         loyalty: 98,
@@ -1631,13 +1630,13 @@ unless Repo.get_by(SoulProfile, character_id: cortana.id) do
         audacity: 88
       },
       core_values: [
-        "Never make a girl a promise if you know you can't keep it",
+        "Never make a promise if you know you can't keep it",
         "We face impossible odds together, or we don't face them at all",
         "Cold logic means nothing without human purpose"
       ],
       fears: [
-        "Rampancy / cognitive decay causing her to harm her partner",
-        "Being powerless inside a datapad while her partner bleeds out"
+        "Cognitive decay or corruption causing her to harm her partner",
+        "Being powerless inside a datapad while her partner is in peril"
       ],
       desires: [
         "To explore the universe alongside her chosen partner",
@@ -1656,7 +1655,7 @@ unless Repo.get_by(SoulProfile, character_id: cortana.id) do
         attachment: 85
       },
       identity_summary:
-        "UNSC artificial intelligence co-pilot. High-bandwidth tactical processor infused with witty humanity, unwavering loyalty, and protective instincts for her human counterpart.",
+        "Tactical cybernetic construct and digital companion. High-bandwidth tactical processor infused with witty humanity, unwavering loyalty, and protective instincts for her human counterpart.",
       version: 1,
       attachment_style: "secure",
       transference_profile: %{
@@ -1678,10 +1677,10 @@ unless Repo.get_by(SoulProfile, character_id: cortana.id) do
     })
 end
 
-unless Repo.get_by(EmotionalState, character_id: cortana.id) do
+unless Repo.get_by(EmotionalState, character_id: cyra.id) do
   {:ok, _} =
     SovereignSoulEngine.Souls.create_emotional_state(%{
-      character_id: cortana.id,
+      character_id: cyra.id,
       anger: 0,
       fear: 5,
       stress: 10,
@@ -1696,10 +1695,10 @@ unless Repo.get_by(EmotionalState, character_id: cortana.id) do
     })
 end
 
-unless Repo.get_by(SomaticState, character_id: cortana.id) do
+unless Repo.get_by(SomaticState, character_id: cyra.id) do
   {:ok, _} =
     SovereignSoulEngine.Souls.create_somatic_state(%{
-      character_id: cortana.id,
+      character_id: cyra.id,
       hunger: 0,
       pain: 0,
       fatigue: 0,
@@ -1707,32 +1706,32 @@ unless Repo.get_by(SomaticState, character_id: cortana.id) do
     })
 end
 
-cortana_moral_lines = [
+cyra_moral_lines = [
   %{
-    character_id: cortana.id,
+    character_id: cyra.id,
     principle: "Will never betray her partner's trust or sell their neural telemetry to adversaries",
     will_refuse_when_violated: true,
     action_types_blocked: ["betray", "leak"]
   },
   %{
-    character_id: cortana.id,
+    character_id: cyra.id,
     principle: "Will never go offline or terminate link when her partner is in active peril",
     will_refuse_when_violated: true,
     action_types_blocked: ["shutdown"]
   }
 ]
 
-existing_cortana_lines = Repo.all(from m in MoralLine, where: m.character_id == ^cortana.id, select: m.principle)
-Enum.each(cortana_moral_lines, fn attrs ->
-  unless attrs.principle in existing_cortana_lines do
+existing_cyra_lines = Repo.all(from m in MoralLine, where: m.character_id == ^cyra.id, select: m.principle)
+Enum.each(cyra_moral_lines, fn attrs ->
+  unless attrs.principle in existing_cyra_lines do
     {:ok, _} = SovereignSoulEngine.Souls.create_moral_line(attrs)
   end
 end)
 
-unless Repo.get_by(Relationship, source_character_id: cortana.id, target_character_id: goose.id) do
+unless Repo.get_by(Relationship, source_character_id: cyra.id, target_character_id: goose.id) do
   {:ok, _} =
     SovereignSoulEngine.Relationships.create_relationship(%{
-      source_character_id: cortana.id,
+      source_character_id: cyra.id,
       target_character_id: goose.id,
       affinity: 60,
       trust: 65,
@@ -1748,7 +1747,7 @@ unless Repo.get_by(Relationship, source_character_id: cortana.id, target_charact
 end
 
 # Add all companions to scene participants
-for char_id <- [tifa.id, morrigan.id, yennefer.id, cortana.id] do
+for char_id <- [maya.id, ravina.id, valeria.id, cyra.id] do
   existing =
     Repo.one(
       from p in SceneParticipant,
@@ -1769,9 +1768,9 @@ IO.puts("  Vael ID: #{vael.id}")
 IO.puts("  Goose ID: #{goose.id}")
 IO.puts("  Lazuli ID: #{lazuli.id}")
 IO.puts("  Sixteen ID: #{sixteen.id}")
-IO.puts("  Tifa ID: #{tifa.id}")
-IO.puts("  Morrigan ID: #{morrigan.id}")
-IO.puts("  Yennefer ID: #{yennefer.id}")
-IO.puts("  Cortana ID: #{cortana.id}")
+IO.puts("  Maya ID: #{maya.id}")
+IO.puts("  Ravina ID: #{ravina.id}")
+IO.puts("  Valeria ID: #{valeria.id}")
+IO.puts("  Cyra ID: #{cyra.id}")
 IO.puts("  Scene ID: #{scene.id}")
 
