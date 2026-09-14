@@ -86,6 +86,28 @@ defmodule SovereignSoulEngine.LLM.ProviderCascadeTest do
       assert response.motivation == "unknown"
     end
 
+    test "accepts thought field aliases such as :thought or :internal_monologue", %{pid: pid} do
+      FakeProvider.set_raw(
+        pid,
+        {:ok,
+         %{
+           public_speech: "Hello.",
+           thought: "This is a secret thought.",
+           tone: "calm",
+           motivation: "talk"
+         }}
+      )
+
+      assert {:ok, response} =
+               ProviderCascade.respond(
+                 %{messages: []},
+                 providers: [FakeProvider],
+                 timeout_ms: 1_000
+               )
+
+      assert response.private_thought == "This is a secret thought."
+    end
+
     test "truncates excessively large string fields", %{pid: pid} do
       large = String.duplicate("X", 50_000)
 

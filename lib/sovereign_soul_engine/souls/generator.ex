@@ -579,7 +579,7 @@ defmodule SovereignSoulEngine.Souls.Generator do
     Respond in JSON format matching this schema:
     {
       "public_speech": "Your response to the player's message. Write only the speech itself — do NOT prefix it with '#{npc.name}:' or any other name.",
-      "private_thought": "Your internal monologue and calculations.",
+      "private_thought": "Required. Your uncensored internal monologue, feelings, and calculations.",
       "tone": "Brief description of tone.",
       "motivation": "Brief description of motivation.",
       "updated_description": "Optional. If your goals, relationship context, or narrative motives have changed significantly, write a concise new description/motivation for yourself (max 25 words). Otherwise, omit or keep empty.",
@@ -708,7 +708,19 @@ defmodule SovereignSoulEngine.Souls.Generator do
                message_content:
                  first_non_blank([response[:public_speech], response["public_speech"], "..."]),
                private_thought:
-                 response[:private_thought] || response["private_thought"] || "...",
+                 first_non_blank([
+                   response[:private_thought],
+                   response["private_thought"],
+                   response[:thought],
+                   response["thought"],
+                   response[:internal_thought],
+                   response["internal_thought"],
+                   response[:internal_monologue],
+                   response["internal_monologue"],
+                   response[:reflection],
+                   response["reflection"],
+                   fallback_thought(npc, emotional_state, player, response)
+                 ]),
                action_resolution: action_resolution,
                memory_candidate: memory_candidate,
                correlation_id: correlation_id
@@ -721,7 +733,13 @@ defmodule SovereignSoulEngine.Souls.Generator do
             active_defense = response[:active_defense] || response["active_defense"] || "none"
 
             private_monologue =
-              response[:private_thought] || response["private_thought"] || "none"
+              first_non_blank([
+                response[:private_thought],
+                response["private_thought"],
+                response[:thought],
+                response["thought"],
+                fallback_thought(npc, emotional_state, player, response)
+              ])
 
             emotional_drift = %{
               "anger" => (emotional_state && emotional_state.anger) || 0,
@@ -1653,5 +1671,35 @@ defmodule SovereignSoulEngine.Souls.Generator do
   # is the fix — not defending every downstream result.scene_message read.
   defp first_non_blank(values) do
     Enum.find(values, "...", fn v -> is_binary(v) and String.trim(v) != "" end)
+  end
+
+  defp fallback_thought(_npc, emotional_state, player, response) do
+    tone = (response && (response[:tone] || response["tone"])) || "guarded"
+    motivation = (response && (response[:motivation] || response["motivation"])) || "assess"
+    player_name = (player && player.name) || "them"
+    stress = (emotional_state && emotional_state.stress) || 0
+    fear = (emotional_state && emotional_state.fear) || 0
+    anger = (emotional_state && emotional_state.anger) || 0
+    attachment = (emotional_state && emotional_state.attachment) || 0
+
+    cond do
+      stress > 60 ->
+        "The tension is rising. I need to keep my composure around #{player_name} and not show any cracks in my armor."
+
+      fear > 50 ->
+        "Something about this feels precarious. I must stay alert and observe #{player_name}'s intentions closely."
+
+      anger > 50 ->
+        "They are testing my patience. I must stay composed, measured, and in total control of this exchange."
+
+      attachment > 50 ->
+        "There is something disarming about #{player_name}, but I cannot afford to lower my guard prematurely."
+
+      is_binary(tone) and tone not in ["", "neutral"] and is_binary(motivation) and motivation not in ["", "unknown", "respond"] ->
+        "Maintaining a #{tone} posture. My focus right now is to #{motivation} while reading #{player_name}."
+
+      true ->
+        "Observing #{player_name} carefully, weighing their words and assessing what they truly seek from this interaction."
+    end
   end
 end

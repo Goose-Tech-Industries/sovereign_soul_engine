@@ -171,7 +171,14 @@ defmodule SovereignSoulEngine.LLM.ProviderCascade do
 
     result = %{
       public_speech: sanitize_string(raw[:public_speech] || raw["public_speech"]),
-      private_thought: sanitize_string(raw[:private_thought] || raw["private_thought"]),
+      private_thought:
+        sanitize_string(
+          raw[:private_thought] || raw["private_thought"] ||
+            raw[:thought] || raw["thought"] ||
+            raw[:internal_thought] || raw["internal_thought"] ||
+            raw[:internal_monologue] || raw["internal_monologue"] ||
+            raw[:reflection] || raw["reflection"]
+        ),
       tone: sanitize_string(raw[:tone] || raw["tone"]),
       motivation: sanitize_string(raw[:motivation] || raw["motivation"]),
       target_character_id:

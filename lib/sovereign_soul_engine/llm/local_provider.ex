@@ -41,7 +41,7 @@ defmodule SovereignSoulEngine.LLM.LocalProvider do
 
   defp build_request_body(%{messages: messages} = input, opts) do
     system = input[:system] || input["system"]
-    max_tokens = input[:max_tokens] || input["max_tokens"] || 350
+    max_tokens = input[:max_tokens] || input["max_tokens"] || 500
     model = Keyword.get(opts, :model, model_name())
 
     msgs = build_messages(messages, system)
@@ -115,7 +115,14 @@ defmodule SovereignSoulEngine.LLM.LocalProvider do
       _ ->
         # Attempt regex extraction if JSON was truncated by max_tokens limit
         speech = extract_json_field(content, "public_speech")
-        thought = extract_json_field(content, "private_thought")
+
+        thought =
+          extract_json_field(content, "private_thought") ||
+            extract_json_field(content, "thought") ||
+            extract_json_field(content, "internal_thought") ||
+            extract_json_field(content, "internal_monologue") ||
+            extract_json_field(content, "reflection")
+
         tone = extract_json_field(content, "tone") || "neutral"
         motivation = extract_json_field(content, "motivation") || "respond"
 
@@ -131,7 +138,7 @@ defmodule SovereignSoulEngine.LLM.LocalProvider do
           {:ok,
            %{
              "public_speech" => String.slice(content, 0, 5000),
-             "private_thought" => "",
+             "private_thought" => thought || "",
              "tone" => "neutral",
              "motivation" => "respond"
            }}
@@ -144,7 +151,7 @@ defmodule SovereignSoulEngine.LLM.LocalProvider do
   end
 
   defp extract_json_field(str, field) when is_binary(str) do
-    case Regex.run(~r/"#{field}"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)"/, str) do
+    case Regex.run(~r/"#{field}"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)"/s, str) do
       [_, val] ->
         val
         |> String.replace("\\\"", "\"")
