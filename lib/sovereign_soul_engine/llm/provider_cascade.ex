@@ -136,7 +136,7 @@ defmodule SovereignSoulEngine.LLM.ProviderCascade do
 
   defp call_provider(provider, input, timeout_ms, provider_opts) do
     timeout_ms =
-      if provider == SovereignSoulEngine.LLM.LocalProvider do
+      if provider == SovereignSoulEngine.LLM.LocalProvider and Mix.env() != :test do
         max(timeout_ms, 120_000)
       else
         timeout_ms

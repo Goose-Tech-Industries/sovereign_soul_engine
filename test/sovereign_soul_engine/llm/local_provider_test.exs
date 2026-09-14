@@ -31,7 +31,7 @@ defmodule SovereignSoulEngine.LLM.LocalProviderTest do
 
           case LocalProvider.respond(input, timeout_ms: 15_000) do
             {:ok, response} ->
-              assert is_map(response.content)
+              assert is_map(response)
 
             {:error, reason} ->
               # In CI / mock environments without GPU

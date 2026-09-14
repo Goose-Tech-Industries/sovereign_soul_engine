@@ -99,10 +99,12 @@ defmodule SovereignSoulEngineWeb.ChatLive do
       end)
 
     direct_npcs =
-      Enum.map(directs, fn scene ->
+      directs
+      |> Enum.map(fn scene ->
         npc_participant = Enum.find(scene.participants, &(&1.character_id != player.id))
-        {scene, npc_participant.character}
+        {scene, npc_participant && npc_participant.character}
       end)
+      |> Enum.filter(fn {_scene, char} -> char && char.status == "active" end)
 
     socket
     |> assign(:direct_chats, direct_npcs)
