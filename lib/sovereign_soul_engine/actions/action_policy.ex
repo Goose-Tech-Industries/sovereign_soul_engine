@@ -212,6 +212,24 @@ defmodule SovereignSoulEngine.Actions.ActionPolicy do
     end
   end
 
+  defp check_fear_refusal(action, emotions) when action in [:bargain, :assist] do
+    fear = Map.get(emotions, :fear, 0)
+    stress = Map.get(emotions, :stress, 0)
+
+    cond do
+      fear >= 75 ->
+        {:transformed, :flee,
+         "Extreme fear (#{fear}) interrupts complex action #{action}; transformed to flee"}
+
+      stress >= 85 ->
+        {:transformed, :refuse,
+         "Severe cognitive overload (stress #{stress}) prevents #{action}; transformed to refuse"}
+
+      true ->
+        nil
+    end
+  end
+
   defp check_fear_refusal(_, _), do: nil
 
   defp check_protection_override(action, emotions, relationship)

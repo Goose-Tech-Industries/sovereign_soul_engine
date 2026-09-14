@@ -282,6 +282,7 @@ defmodule SovereignSoulEngine.Souls.Generator do
       CognitiveLoad.compute(emotional_state, somatic_state, grief_arcs, active_goals)
 
     cognitive_load_prompt = CognitiveLoad.prompt_instruction(cog_score, cog_stressors)
+    stress_biorhythm_prompt = CognitiveLoad.stress_biorhythm_directives(emotional_state)
 
     # Intrusive thought calculation
     intrusive_thought =
@@ -560,7 +561,7 @@ defmodule SovereignSoulEngine.Souls.Generator do
     Secrets You Carry (do NOT reveal these unless the scene demands it):
     #{secrets_prompt}
     #{trigger_spikes_prompt}
-    #{somatic_prompt}#{if cognitive_load_prompt, do: cognitive_load_prompt <> "\n", else: ""}#{if intrusive_thought, do: "INTRUSIVE THOUGHT: " <> intrusive_thought <> "\n", else: ""}#{if humor_context, do: humor_context <> "\n", else: ""}#{if contagion_note, do: "EMOTIONAL CONTAGION: " <> contagion_note <> "\n", else: ""}#{theory_of_mind_prompt}#{gossip_material_prompt}#{goals_prompt}#{grief_prompt}#{forgiveness_prompt}
+    #{if stress_biorhythm_prompt, do: stress_biorhythm_prompt <> "\n", else: ""}#{somatic_prompt}#{if cognitive_load_prompt, do: cognitive_load_prompt <> "\n", else: ""}#{if intrusive_thought, do: "INTRUSIVE THOUGHT: " <> intrusive_thought <> "\n", else: ""}#{if humor_context, do: humor_context <> "\n", else: ""}#{if contagion_note, do: "EMOTIONAL CONTAGION: " <> contagion_note <> "\n", else: ""}#{theory_of_mind_prompt}#{gossip_material_prompt}#{goals_prompt}#{grief_prompt}#{forgiveness_prompt}
     ═══════════════════════════════════════════
 
     Current Scenario / Backdrop:

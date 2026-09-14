@@ -77,4 +77,23 @@ defmodule SovereignSoulEngine.Souls.CognitiveLoad do
   end
 
   def prompt_instruction(_, _), do: nil
+
+  @doc """
+  Computes stress biorhythm directives (Prompt Compression and Private Thought Fragmentation)
+  when stress or fear is above 75.
+  """
+  def stress_biorhythm_directives(emotional_state) do
+    stress = (emotional_state && emotional_state.stress) || 0
+    fear = (emotional_state && emotional_state.fear) || 0
+
+    if stress > 75 or fear > 75 do
+      """
+      ### CRITICAL STRESS BIORHYTHM ACTIVE (Stress: #{stress}/100, Fear: #{fear}/100)
+      - PROMPT COMPRESSION: You are in acute cognitive overload. Your public speech MUST be compressed into 1 or 2 short, erratic, defensive, or blunt sentences. No eloquent or lengthy speeches.
+      - PRIVATE THOUGHT FRAGMENTATION: Your private_thought MUST be disorganized, hurried, and hyper-focused on raw survival triggers, exits, physical sensations, or threat cues (e.g. 'Can't breathe... watching their hands... need to get out').
+      """
+    else
+      nil
+    end
+  end
 end

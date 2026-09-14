@@ -15,6 +15,7 @@ defmodule SovereignSoulEngine.Runtime.NPCServer do
   alias SovereignSoulEngine.Characters
   alias SovereignSoulEngine.Souls
   alias SovereignSoulEngine.Scenes
+  alias SovereignSoulEngine.Memories.DreamLoop
   alias SovereignSoulEngine.Runtime.NPCRegistry
 
   require Logger
@@ -79,9 +80,24 @@ defmodule SovereignSoulEngine.Runtime.NPCServer do
 
   @doc """
   Updates the immediate state map (merged with existing).
+  Updates the immediate state map (merged with existing).
   """
   def update_immediate_state(character_id, updates) do
     call(character_id, {:update_immediate_state, updates})
+  end
+
+  @doc """
+  Initiates the Dream Loop biological consolidation cycle, pruning context and decaying emotions.
+  """
+  def enter_dream(character_id, opts \\ []) do
+    call(character_id, {:enter_dream, opts})
+  end
+
+  @doc """
+  Wakes up an NPC from dreaming status.
+  """
+  def wake_up(character_id) do
+    call(character_id, :wake_up)
   end
 
   @doc """
@@ -170,6 +186,30 @@ defmodule SovereignSoulEngine.Runtime.NPCServer do
     new_immediate = Map.merge(state.immediate_state, updates)
     new_state = %{state | immediate_state: new_immediate}
     {:reply, :ok, new_state}
+  end
+
+  @impl true
+  def handle_call({:enter_dream, opts}, _from, state) do
+    # Run dream consolidation cycle
+    {:ok, dream_result} = DreamLoop.run_cycle(state.character_id, opts)
+
+    # Prune context to retain minimal working memory
+    pruned_context = Enum.take(state.recent_context, 5)
+
+    new_state = %{
+      state
+      | status: :dreaming,
+        recent_context: pruned_context,
+        pending_intention: nil
+    }
+
+    {:reply, {:ok, dream_result}, new_state}
+  end
+
+  @impl true
+  def handle_call(:wake_up, _from, state) do
+    new_state = %{state | status: :observing}
+    {:reply, {:ok, :awake}, new_state}
   end
 
   @impl true

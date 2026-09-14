@@ -65,6 +65,7 @@ defmodule SovereignSoulEngine.Souls.ConsequenceEngine do
       |> create_soul_event(params, correlation_id)
       |> process_emotions(params, correlation_id)
       |> process_relationship(params, correlation_id)
+      |> maybe_evolve_beliefs(params, correlation_id)
       |> maybe_create_memory(params, correlation_id)
       |> maybe_resolve_action(params, correlation_id)
 
@@ -283,6 +284,32 @@ defmodule SovereignSoulEngine.Souls.ConsequenceEngine do
           )
 
         repo.insert(entry)
+      end)
+    end
+  end
+
+  defp maybe_evolve_beliefs(multi, params, correlation_id) do
+    target_id = params[:target_character_id]
+
+    if is_nil(target_id) do
+      multi
+    else
+      Ecto.Multi.run(multi, :belief_evolution, fn _repo, results ->
+        rel = Map.get(results, :relationship_after)
+
+        if rel && (rel.wound >= 80 or (rel.trust >= 90 and rel.affinity >= 70)) do
+          case SovereignSoulEngine.Souls.BeliefEvolution.evaluate_shift(
+                 target_id,
+                 rel,
+                 correlation_id: correlation_id
+               ) do
+            {:ok, shift_data} -> {:ok, shift_data}
+            {:no_shift, _} -> {:ok, :no_shift}
+            {:error, reason} -> {:ok, {:error, reason}}
+          end
+        else
+          {:ok, :no_shift}
+        end
       end)
     end
   end
