@@ -41,16 +41,24 @@ defmodule SovereignSoulEngine.LLM.LocalProvider do
 
   defp build_request_body(%{messages: messages} = input, opts) do
     system = input[:system] || input["system"]
-    max_tokens = input[:max_tokens] || input["max_tokens"] || 650
+    max_tokens = input[:max_tokens] || input["max_tokens"] || 350
     model = Keyword.get(opts, :model, model_name())
 
     msgs = build_messages(messages, system)
+
+    options = %{
+      "num_ctx" => 2048,
+      "num_predict" => max_tokens,
+      "temperature" => 0.7,
+      "num_thread" => 8
+    }
 
     body = %{
       model: model,
       messages: msgs,
       max_tokens: max_tokens,
-      response_format: %{type: "json_object"}
+      response_format: %{type: "json_object"},
+      options: options
     }
 
     {:ok, body}
@@ -154,6 +162,31 @@ defmodule SovereignSoulEngine.LLM.LocalProvider do
   end
 
   defp model_name do
-    Application.get_env(:sovereign_soul_engine, :local_llm_model, @default_model)
+    case Application.get_env(:sovereign_soul_engine, :local_llm_model) do
+      nil ->
+        case Req.get("http://127.0.0.1:11434/api/tags", receive_timeout: 1000) do
+          {:ok, %{status: 200, body: %{"models" => models}}} ->
+            names = Enum.map(models, & &1["name"])
+
+            cond do
+              Enum.any?(names, &String.starts_with?(&1, "llama3.1:8b-instruct-q3_K_M")) ->
+                "llama3.1:8b-instruct-q3_K_M"
+
+              Enum.any?(names, &String.starts_with?(&1, "llama3.2:3b")) ->
+                "llama3.2:3b"
+
+              true ->
+                @default_model
+            end
+
+          _ ->
+            @default_model
+        end
+
+      configured ->
+        configured
+    end
+  rescue
+    _ -> @default_model
   end
 end

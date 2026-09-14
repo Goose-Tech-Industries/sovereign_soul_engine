@@ -48,6 +48,8 @@ defmodule SovereignSoulEngineWeb.ChatLive do
       |> assign(:editing_scenario?, false)
       |> assign(:showing_invite_menu?, false)
       |> assign(:invite_candidates, [])
+      |> assign(:is_generating?, false)
+      |> assign(:typing_npc_name, nil)
       |> load_scenes()
       |> select_first_available_chat()
 
@@ -469,11 +471,25 @@ defmodule SovereignSoulEngineWeb.ChatLive do
         "dashboard",
         {:ledger_updated, %{}}
       )
-    end
 
-    {:noreply,
-     socket
-     |> assign(:message_form, to_form(%{"content" => ""}, as: :message))}
+      typing_name =
+        case responding_npcs do
+          [first | _] -> first.name
+          _ -> "Companion"
+        end
+
+      socket =
+        socket
+        |> assign(:is_generating?, true)
+        |> assign(:typing_npc_name, typing_name)
+        |> push_event("clear-chat-input", %{})
+        |> push_event("scroll-chat", %{})
+        |> assign(:message_form, to_form(%{"content" => ""}, as: :message))
+
+      {:noreply, socket}
+    else
+      {:noreply, socket}
+    end
   end
 
   @impl true
@@ -622,6 +638,8 @@ defmodule SovereignSoulEngineWeb.ChatLive do
   def handle_info({:new_message, msg}, socket) do
     {:noreply,
      socket
+     |> assign(:is_generating?, false)
+     |> assign(:typing_npc_name, nil)
      |> stream_insert(:messages, msg)
      |> assign(:messages_empty?, false)
      |> push_event("scroll-chat", %{})}
@@ -1166,6 +1184,11 @@ defmodule SovereignSoulEngineWeb.ChatLive do
                 </div>
             <% end %>
           <% end %>
+
+          <div :if={@is_generating?} class="flex items-center gap-2.5 px-4 py-2 my-2 rounded-2xl bg-base-200/60 border border-base-300/40 text-xs text-base-content/60 italic animate-pulse w-fit">
+            <span class="loading loading-dots loading-xs text-primary"></span>
+            <span>{@typing_npc_name || "Companion"} is formulating a response...</span>
+          </div>
         </div>
          <%!-- Empty state --%>
         <div :if={@messages_empty?} class="flex-1 flex items-center justify-center">
@@ -1212,9 +1235,10 @@ defmodule SovereignSoulEngineWeb.ChatLive do
               type="submit"
               id="chat-send-btn"
               class="btn btn-primary btn-square shrink-0"
-              phx-disable-with={".icon name=\"hero-arrow-path\" class=\"size-5 motion-safe:animate-spin\""}
+              disabled={@is_generating?}
             >
-              <.icon name="hero-paper-airplane" class="size-5 rotate-90" />
+              <.icon :if={!@is_generating?} name="hero-paper-airplane" class="size-5 rotate-90" />
+              <.icon :if={@is_generating?} name="hero-arrow-path" class="size-5 motion-safe:animate-spin" />
             </button>
           </.form>
         </div>
@@ -1235,11 +1259,19 @@ defmodule SovereignSoulEngineWeb.ChatLive do
             }
           }
         </script>
-         <%!-- Colocated hook: autofocus input --%>
+         <%!-- Colocated hook: autofocus input and clear on submit --%>
         <script :type={Phoenix.LiveView.ColocatedHook} name=".ChatInput">
           export default {
             mounted() {
               this.el.focus()
+              this.el.form?.addEventListener("submit", () => {
+                setTimeout(() => {
+                  this.el.value = ""
+                }, 0)
+              })
+              this.handleEvent("clear-chat-input", () => {
+                this.el.value = ""
+              })
             }
           }
         </script>
