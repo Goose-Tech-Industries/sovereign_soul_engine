@@ -576,7 +576,7 @@ defmodule SovereignSoulEngine.Souls.Generator do
     Recent Memories:
     #{Enum.map(memories, &"- #{&1.summary} (Valence: #{&1.valence})") |> Enum.join("\n")}
 
-    Respond in JSON format matching this schema:
+    Respond in JSON format matching this schema. Keep all thoughts, motivations, tells, and reason fields concise and punchy (1-2 sentences). Do NOT produce verbose filler:
     {
       "public_speech": "Your response to the player's message. Write only the speech itself — do NOT prefix it with '#{npc.name}:' or any other name.",
       "private_thought": "Required. Your uncensored internal monologue, feelings, and calculations.",
@@ -872,7 +872,7 @@ defmodule SovereignSoulEngine.Souls.Generator do
             end
 
             # Dispatch action resolution (e.g. increase trust if protecting)
-            if action_resolution do
+            if action_resolution && action_resolution.proposed_action not in [nil, "none"] do
               dispatch_action(npc, player, scene, action_resolution)
             end
 

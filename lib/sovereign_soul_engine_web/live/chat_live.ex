@@ -440,6 +440,15 @@ defmodule SovereignSoulEngineWeb.ChatLive do
         )
       end)
 
+      # Emit immediate visceral action / presence beat beforehand so the player gets instant feedback
+      case responding_npcs do
+        [first_npc | _] ->
+          emit_immediate_reaction(first_npc, scene, player)
+
+        _ ->
+          :ok
+      end
+
       # Only responding NPC(s) generate their spoken response
       responding_npcs
       |> Enum.with_index()
@@ -453,13 +462,35 @@ defmodule SovereignSoulEngineWeb.ChatLive do
             :timer.sleep(delay_ms)
 
             try do
-              generate_npc_response(npc, player, scene, content)
+              case generate_npc_response(npc, player, scene, content) do
+                {:ok, _} ->
+                  :ok
+
+                {:error, reason} ->
+                  require Logger
+
+                  Logger.error(
+                    "NPC generation failed for #{npc.name} (#{npc.id}): #{inspect(reason)}"
+                  )
+
+                  Phoenix.PubSub.broadcast(
+                    SovereignSoulEngine.PubSub,
+                    "scene:#{scene.id}",
+                    {:generation_failed, npc.id}
+                  )
+              end
             rescue
               e ->
                 require Logger
 
                 Logger.error(
                   "NPC Task crash for #{npc.name} (#{npc.id}): #{Exception.message(e)}\n#{Exception.format_stacktrace(__STACKTRACE__)}"
+                )
+
+                Phoenix.PubSub.broadcast(
+                  SovereignSoulEngine.PubSub,
+                  "scene:#{scene.id}",
+                  {:generation_failed, npc.id}
                 )
             end
           end)
@@ -636,13 +667,32 @@ defmodule SovereignSoulEngineWeb.ChatLive do
 
   @impl true
   def handle_info({:new_message, msg}, socket) do
+    # Only clear the typing indicator when an NPC dialogue response arrives
+    is_companion_dialogue =
+      msg.character_id != socket.assigns.player.id and msg.message_type == "dialogue"
+
+    socket =
+      if is_companion_dialogue do
+        socket
+        |> assign(:is_generating?, false)
+        |> assign(:typing_npc_name, nil)
+      else
+        socket
+      end
+
     {:noreply,
      socket
-     |> assign(:is_generating?, false)
-     |> assign(:typing_npc_name, nil)
      |> stream_insert(:messages, msg)
      |> assign(:messages_empty?, false)
      |> push_event("scroll-chat", %{})}
+  end
+
+  @impl true
+  def handle_info({:generation_failed, _character_id}, socket) do
+    {:noreply,
+     socket
+     |> assign(:is_generating?, false)
+     |> assign(:typing_npc_name, nil)}
   end
 
   @impl true
@@ -1553,5 +1603,103 @@ defmodule SovereignSoulEngineWeb.ChatLive do
 
   defp generate_npc_response(npc, player, scene, _user_message) do
     SovereignSoulEngine.Souls.Generator.generate(npc.id, scene.id, player.id)
+  end
+
+  defp emit_immediate_reaction(npc, scene, player) do
+    profile = Souls.get_soul_profile_by_character(npc.id)
+    emotional_state = Souls.get_emotional_state_by_character(npc.id)
+    text = pick_immediate_action_text(npc, profile, emotional_state, player)
+
+    case Scenes.create_message(%{
+           scene_id: scene.id,
+           character_id: npc.id,
+           content: text,
+           message_type: "action"
+         }) do
+      {:ok, msg} ->
+        Phoenix.PubSub.broadcast(
+          SovereignSoulEngine.PubSub,
+          "scene:#{scene.id}",
+          {:new_message, msg}
+        )
+
+      _ ->
+        :ok
+    end
+  end
+
+  defp pick_immediate_action_text(npc, profile, emotional_state, player) do
+    stress = (emotional_state && emotional_state.stress) || 0
+    fear = (emotional_state && emotional_state.fear) || 0
+    anger = (emotional_state && emotional_state.anger) || 0
+    attachment = (emotional_state && emotional_state.attachment) || 0
+    player_name = (player && player.name) || "you"
+
+    tells = (profile && profile.physical_tells) || %{}
+
+    selected_tell =
+      cond do
+        anger > 50 and Map.has_key?(tells, "irritation") ->
+          tells["irritation"]
+
+        fear > 50 and Map.has_key?(tells, "worry") ->
+          tells["worry"]
+
+        stress > 50 and Map.has_key?(tells, "guarded") ->
+          tells["guarded"]
+
+        attachment > 50 and Map.has_key?(tells, "intimacy") ->
+          tells["intimacy"]
+
+        attachment > 40 and Map.has_key?(tells, "comforting") ->
+          tells["comforting"]
+
+        attachment > 40 and Map.has_key?(tells, "softening") ->
+          tells["softening"]
+
+        Map.has_key?(tells, "commanding") and anger > 30 ->
+          tells["commanding"]
+
+        Map.has_key?(tells, "tactical") ->
+          tells["tactical"]
+
+        map_size(tells) > 0 ->
+          Enum.random(Map.values(tells))
+
+        true ->
+          nil
+      end
+
+    cond do
+      selected_tell ->
+        format_tell(npc.name, selected_tell)
+
+      stress > 50 ->
+        "#{npc.name}'s eyes narrow slightly, quietly measuring #{player_name}'s demeanor."
+
+      anger > 50 ->
+        "#{npc.name}'s jaw sets firmly, holding #{player_name}'s gaze with calculated stillness."
+
+      attachment > 50 ->
+        "#{npc.name} pauses, looking directly at #{player_name} with an attentive, lingering quiet."
+
+      true ->
+        "#{npc.name} pauses, taking in #{player_name}'s words as she considers a response."
+    end
+  end
+
+  defp format_tell(name, tell) do
+    cond do
+      String.contains?(tell, name) ->
+        tell
+
+      String.starts_with?(tell, "He ") or String.starts_with?(tell, "She ") ->
+        tell
+
+      true ->
+        first = String.first(tell) |> String.downcase()
+        rest = String.slice(tell, 1..-1//1)
+        "#{name} #{first}#{rest}"
+    end
   end
 end
