@@ -1099,93 +1099,102 @@ defmodule SovereignSoulEngineWeb.ChatLive do
         </header>
         
         <div
-          id="chat-messages"
+          id="chat-scroll-container"
           phx-hook=".ChatScroll"
-          phx-update="stream"
           class={["flex-1 overflow-y-auto px-6 py-4 space-y-4", @messages_empty? && "hidden"]}
         >
-          <%= for {dom_id, msg} <- @streams.messages do %>
-            <%= cond do %>
-              <% msg.message_type == "action" -> %>
-                <div
-                  id={dom_id}
-                  class="flex items-start gap-2 px-2 py-0.5 mx-auto max-w-[90%] w-full"
-                >
-                  <div class="flex-1 text-center">
-                    <p class="text-xs italic text-amber-400/80 leading-relaxed font-medium tracking-wide">
-                      <span class="text-amber-500/40 select-none">**</span>{msg.content}<span class="text-amber-500/40 select-none">**</span>
-                    </p>
-                    
-                    <div class="text-[9px] text-base-content/25 mt-0.5">
-                      {format_time(msg.inserted_at)}
-                    </div>
-                  </div>
-                </div>
-              <% true -> %>
-                <div
-                  id={dom_id}
-                  class={[
-                    "flex gap-3 max-w-[80%]",
-                    msg.character_id == @player.id && "ml-auto flex-row-reverse",
-                    msg.character_id != @player.id && "mr-auto"
-                  ]}
-                >
-                  <%!-- Avatar --%>
-                  <div class={[
-                    "shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold",
-                    msg.character_id == @player.id &&
-                      "bg-blue-500/20 text-blue-400 border border-blue-500/30",
-                    msg.character_id != @player.id && "bg-primary/20 text-primary"
-                  ]}>
-                    <%= if msg.character_id == @player.id do %>
-                      {String.first(@player.name)}
-                    <% else %>
-                      {character_avatar_letter(@npcs, msg.character_id)}
-                    <% end %>
-                  </div>
-                  
-                  <div class="flex-1 min-w-0">
-                    <%!-- Speaker name for group chats --%>
-                    <%= if !@selected_npc and msg.character_id != @player.id do %>
-                      <div class="text-[10px] font-semibold text-primary/75 mb-0.5 ml-1">
-                        {character_name_by_id(@npcs, msg.character_id)}
-                      </div>
-                    <% end %>
-                    
-                    <div class={[
-                      "px-4 py-2.5 rounded-2xl text-sm leading-relaxed",
-                      msg.character_id == @player.id &&
-                        "bg-primary text-primary-content rounded-tr-md",
-                      msg.character_id != @player.id &&
-                        "bg-base-300 text-base-content rounded-tl-md"
-                    ]}>
-                      <p class="whitespace-pre-wrap break-words">{msg.content}</p>
+          <div
+            id="chat-messages"
+            phx-update="stream"
+            class="space-y-4"
+          >
+            <%= for {dom_id, msg} <- @streams.messages do %>
+              <%= cond do %>
+                <% msg.message_type == "action" -> %>
+                  <div
+                    id={dom_id}
+                    class="flex items-start gap-2 px-2 py-0.5 mx-auto max-w-[90%] w-full"
+                  >
+                    <div class="flex-1 text-center">
+                      <p class="text-xs italic text-amber-400/80 leading-relaxed font-medium tracking-wide">
+                        <span class="text-amber-500/40 select-none">**</span>{msg.content}<span class="text-amber-500/40 select-none">**</span>
+                      </p>
                       
-                      <%= if Map.get(msg, :private_thought) && Map.get(msg, :private_thought) != "" do %>
-                        <div class="mt-2 pt-1.5 border-t border-purple-500/20 text-[10px] text-purple-400 font-mono">
-                          <span class="font-bold">🧠 Thought:</span> {msg.private_thought}
-                        </div>
-                      <% end %>
-
-                      <%= if audio_url = get_in(msg.metadata || %{}, ["audio_url"]) do %>
-                        <div class="mt-2 pt-1.5 border-t border-base-content/10 flex items-center gap-2">
-                          <audio controls src={audio_url} class="h-7 w-60 max-w-full rounded-lg opacity-90"></audio>
-                        </div>
+                      <div class="text-[9px] text-base-content/25 mt-0.5">
+                        {format_time(msg.inserted_at)}
+                      </div>
+                    </div>
+                  </div>
+                <% true -> %>
+                  <div
+                    id={dom_id}
+                    class={[
+                      "flex gap-3 max-w-[80%]",
+                      msg.character_id == @player.id && "ml-auto flex-row-reverse",
+                      msg.character_id != @player.id && "mr-auto"
+                    ]}
+                  >
+                    <%!-- Avatar --%>
+                    <div class={[
+                      "shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold",
+                      msg.character_id == @player.id &&
+                        "bg-blue-500/20 text-blue-400 border border-blue-500/30",
+                      msg.character_id != @player.id && "bg-primary/20 text-primary"
+                    ]}>
+                      <%= if msg.character_id == @player.id do %>
+                        {String.first(@player.name)}
+                      <% else %>
+                        {character_avatar_letter(@npcs, msg.character_id)}
                       <% end %>
                     </div>
                     
-                    <div class={[
-                      "text-[9px] text-base-content/30 mt-1 ml-1",
-                      msg.character_id == @player.id && "text-right mr-1"
-                    ]}>
-                      {format_time(msg.inserted_at)}
+                    <div class="flex-1 min-w-0">
+                      <%!-- Speaker name for group chats --%>
+                      <%= if !@selected_npc and msg.character_id != @player.id do %>
+                        <div class="text-[10px] font-semibold text-primary/75 mb-0.5 ml-1">
+                          {character_name_by_id(@npcs, msg.character_id)}
+                        </div>
+                      <% end %>
+                      
+                      <div class={[
+                        "px-4 py-2.5 rounded-2xl text-sm leading-relaxed",
+                        msg.character_id == @player.id &&
+                          "bg-primary text-primary-content rounded-tr-md",
+                        msg.character_id != @player.id &&
+                          "bg-base-300 text-base-content rounded-tl-md"
+                      ]}>
+                        <p class="whitespace-pre-wrap break-words">{msg.content}</p>
+                        
+                        <%= if Map.get(msg, :private_thought) && Map.get(msg, :private_thought) != "" do %>
+                          <div class="mt-2 pt-1.5 border-t border-purple-500/20 text-[10px] text-purple-400 font-mono">
+                            <span class="font-bold">🧠 Thought:</span> {msg.private_thought}
+                          </div>
+                        <% end %>
+
+                        <%= if audio_url = get_in(msg.metadata || %{}, ["audio_url"]) do %>
+                          <div class="mt-2 pt-1.5 border-t border-base-content/10 flex items-center gap-2">
+                            <audio controls src={audio_url} class="h-7 w-60 max-w-full rounded-lg opacity-90"></audio>
+                          </div>
+                        <% end %>
+                      </div>
+                      
+                      <div class={[
+                        "text-[9px] text-base-content/30 mt-1 ml-1",
+                        msg.character_id == @player.id && "text-right mr-1"
+                      ]}>
+                        {format_time(msg.inserted_at)}
+                      </div>
                     </div>
                   </div>
-                </div>
+              <% end %>
             <% end %>
-          <% end %>
+          </div>
 
-          <div :if={@is_generating?} class="flex items-center gap-2.5 px-4 py-2 my-2 rounded-2xl bg-base-200/60 border border-base-300/40 text-xs text-base-content/60 italic animate-pulse w-fit">
+          <div
+            :if={@is_generating?}
+            id="companion-typing-indicator"
+            class="flex items-center gap-2.5 px-4 py-2 my-2 rounded-2xl bg-base-200/60 border border-base-300/40 text-xs text-base-content/60 italic animate-pulse w-fit"
+          >
             <span class="loading loading-dots loading-xs text-primary"></span>
             <span>{@typing_npc_name || "Companion"} is formulating a response...</span>
           </div>
