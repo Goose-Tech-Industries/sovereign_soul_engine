@@ -42,6 +42,18 @@ defmodule SovereignSoulEngineWeb.Router do
     post "/telemetry/somatic", TelemetryController, :create
     post "/telemetry/wearable", TelemetryController, :create
     get "/telemetry/:slug", TelemetryController, :show
+
+    # Autonomous Social Feed & Polsia / Twitter Integration
+    get "/social/feed", SocialPostController, :index
+    get "/social/latest/:slug", SocialPostController, :latest
+    post "/social/generate", SocialPostController, :generate
+  end
+
+  # Public external access for Polsia / Twitter / RSS integrations
+  scope "/api", SovereignSoulEngineWeb.Api do
+    get "/social/feed", SocialPostController, :index
+    get "/social/latest/:slug", SocialPostController, :latest
+    post "/social/generate", SocialPostController, :generate
   end
 
   scope "/", SovereignSoulEngineWeb do

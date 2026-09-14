@@ -10,11 +10,14 @@ defmodule SovereignSoulEngine.Voice.LocalTTS do
   @default_voice "en-US-AriaNeural"
 
   @character_voices %{
-    "cortana" => "en-US-AriaNeural",
-    "tifa" => "en-US-JennyNeural",
-    "morrigan" => "en-GB-SoniaNeural",
-    "yennefer" => "en-GB-LibbyNeural",
-    "vael" => "en-US-GuyNeural"
+    "maya" => "en-US-JennyNeural",
+    "ravina" => "en-GB-LibbyNeural",
+    "valeria" => "en-US-AriaNeural",
+    "cyra" => "en-US-AvaNeural",
+    "vael" => "en-US-ChristopherNeural",
+    "goose" => "en-US-GuyNeural",
+    "sixteen" => "en-US-JennyNeural",
+    "georgina" => "en-GB-SoniaNeural"
   }
 
   @doc """

@@ -52,6 +52,21 @@ window.addEventListener("phx:scroll-chat", () => {
   }
 });
 
+let currentSoulAudio = null;
+window.addEventListener("phx:play_audio", (e) => {
+  const url = e.detail?.url;
+  if (url) {
+    if (currentSoulAudio) {
+      currentSoulAudio.pause();
+      currentSoulAudio.currentTime = 0;
+    }
+    currentSoulAudio = new Audio(url);
+    currentSoulAudio.play().catch(err => {
+      console.warn("[Voice] Audio play blocked or failed:", err);
+    });
+  }
+});
+
 // connect if there are any LiveViews on the page
 liveSocket.connect()
 

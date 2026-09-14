@@ -36,7 +36,7 @@ defmodule SovereignSoulEngineWeb.ChatLive do
       |> assign(:page_title, "Chat Room — Sovereign Soul Engine")
       |> assign(:player, player)
       |> assign(:player_biometrics, biometrics)
-      |> assign(:voice_enabled?, false)
+      |> assign(:voice_enabled?, true)
       |> assign(:simulating_somatic?, false)
       |> assign(:npcs, npcs)
       |> assign(:creating_group?, false)
@@ -50,8 +50,14 @@ defmodule SovereignSoulEngineWeb.ChatLive do
       |> assign(:invite_candidates, [])
       |> assign(:is_generating?, false)
       |> assign(:typing_npc_name, nil)
+      |> assign(:social_posts, SovereignSoulEngine.Social.SocialFeed.list_recent_posts(limit: 15))
+      |> assign(:showing_social_drawer?, false)
       |> load_scenes()
       |> select_first_available_chat()
+
+    if connected?(socket) do
+      Phoenix.PubSub.subscribe(SovereignSoulEngine.PubSub, SovereignSoulEngine.Social.SocialFeed.pubsub_topic())
+    end
 
     {:ok, socket, layout: false}
   end
@@ -410,8 +416,11 @@ defmodule SovereignSoulEngineWeb.ChatLive do
               end)
 
             case mentioned do
-              [first | _] -> [first]
-              [] -> Enum.take(participant_npcs, 1)
+              [] ->
+                Enum.take(participant_npcs, 2)
+
+              npcs ->
+                Enum.take(npcs, 2)
             end
         end
 
@@ -449,22 +458,19 @@ defmodule SovereignSoulEngineWeb.ChatLive do
           :ok
       end
 
-      # Only responding NPC(s) generate their spoken response
-      responding_npcs
-      |> Enum.with_index()
-      |> Enum.each(fn {npc, index} ->
-        delay_ms = index * 2000
-
-        if Mix.env() == :test do
+      # Only responding NPC(s) generate their spoken response sequentially
+      if Mix.env() == :test do
+        Enum.each(responding_npcs, fn npc ->
           generate_npc_response(npc, player, scene, content)
-        else
-          Task.start(fn ->
-            :timer.sleep(delay_ms)
-
+        end)
+      else
+        Task.start(fn ->
+          Enum.reduce_while(responding_npcs, :ok, fn npc, _acc ->
             try do
               case generate_npc_response(npc, player, scene, content) do
                 {:ok, _} ->
-                  :ok
+                  Process.sleep(1500)
+                  {:cont, :ok}
 
                 {:error, reason} ->
                   require Logger
@@ -478,6 +484,8 @@ defmodule SovereignSoulEngineWeb.ChatLive do
                     "scene:#{scene.id}",
                     {:generation_failed, npc.id}
                   )
+
+                  {:halt, :error}
               end
             rescue
               e ->
@@ -492,10 +500,12 @@ defmodule SovereignSoulEngineWeb.ChatLive do
                   "scene:#{scene.id}",
                   {:generation_failed, npc.id}
                 )
+
+                {:halt, :error}
             end
           end)
-        end
-      end)
+        end)
+      end
 
       Phoenix.PubSub.broadcast(
         SovereignSoulEngine.PubSub,
@@ -566,6 +576,72 @@ defmodule SovereignSoulEngineWeb.ChatLive do
   @impl true
   def handle_event("toggle_voice", _params, socket) do
     {:noreply, assign(socket, :voice_enabled?, !socket.assigns.voice_enabled?)}
+  end
+
+  @impl true
+  def handle_event("play_message_audio", %{"url" => url}, socket) do
+    {:noreply, push_event(socket, "play_audio", %{url: url})}
+  end
+
+  @impl true
+  def handle_event("trigger_banter", _params, socket) do
+    scene = socket.assigns.selected_scene
+    player = socket.assigns.player
+
+    participant_npcs =
+      scene.participants
+      |> Enum.map(& &1.character)
+      |> Enum.filter(&(&1 && &1.kind == "npc" and &1.status == "active"))
+
+    if length(participant_npcs) >= 2 do
+      messages = Scenes.list_messages(scene.id)
+      last_message = List.last(messages)
+      last_speaker_id = last_message && last_message.character_id
+
+      next_npc =
+        Enum.find(participant_npcs, &(&1.id != last_speaker_id)) || List.first(participant_npcs)
+
+      if next_npc do
+        emit_immediate_reaction(next_npc, scene, player)
+
+        if Mix.env() == :test do
+          generate_npc_response(next_npc, player, scene, "")
+        else
+          Task.start(fn ->
+            generate_npc_response(next_npc, player, scene, "")
+          end)
+        end
+
+        {:noreply,
+         socket
+         |> assign(:is_generating?, true)
+         |> assign(:typing_npc_name, next_npc.name)}
+      else
+        {:noreply, socket}
+      end
+    else
+      {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_event("toggle_social_drawer", _params, socket) do
+    {:noreply, assign(socket, :showing_social_drawer?, !socket.assigns[:showing_social_drawer?])}
+  end
+
+  @impl true
+  def handle_event("generate_social_post", %{"slug" => slug}, socket) do
+    case SovereignSoulEngine.Characters.get_character_by_slug(slug) do
+      nil ->
+        {:noreply, socket}
+
+      char ->
+        Task.start(fn ->
+          SovereignSoulEngine.Social.SocialFeed.generate_post(char.id)
+        end)
+
+        {:noreply, socket}
+    end
   end
 
   @impl true
@@ -719,6 +795,13 @@ defmodule SovereignSoulEngineWeb.ChatLive do
       end
 
     {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:new_social_post, post}, socket) do
+    current_posts = socket.assigns[:social_posts] || []
+    updated_posts = [post | Enum.reject(current_posts, &(&1.id == post.id))]
+    {:noreply, assign(socket, :social_posts, Enum.take(updated_posts, 25))}
   end
 
   @impl true
@@ -1136,6 +1219,32 @@ defmodule SovereignSoulEngineWeb.ChatLive do
               <.icon name={if @voice_enabled?, do: "hero-speaker-wave", else: "hero-speaker-x-mark"} class="size-3.5" />
               {if @voice_enabled?, do: "Voice ON", else: "Voice OFF"}
             </button>
+
+            <%!-- Social Wire / Echoes Drawer Toggle --%>
+            <button
+              phx-click="toggle_social_drawer"
+              class={[
+                "btn btn-xs flex items-center gap-1.5 border transition-all",
+                @showing_social_drawer? && "btn-info text-info-content border-info shadow-sm",
+                !@showing_social_drawer? && "btn-outline border-base-300 text-base-content/60 hover:bg-base-300"
+              ]}
+              title="View autonomous companion public feed & Twitter/X wire"
+            >
+              <.icon name="hero-globe-alt" class="size-3.5" />
+              <span>Echoes ({length(@social_posts)})</span>
+            </button>
+
+            <%= if !@selected_npc and @selected_scene && length(@selected_scene.participants) > 2 do %>
+              <button
+                phx-click="trigger_banter"
+                disabled={@is_generating?}
+                class="btn btn-xs btn-outline btn-secondary flex items-center gap-1.5 shadow-sm transition-all"
+                title="Prompt companions to banter and react to each other"
+              >
+                <.icon name="hero-chat-bubble-left-right" class="size-3.5" />
+                <span>Let them talk</span>
+              </button>
+            <% end %>
 
             <%= if @emotional_state do %>
               <div class="hidden sm:flex items-center gap-2 text-xs text-base-content/50">
@@ -1599,6 +1708,105 @@ defmodule SovereignSoulEngineWeb.ChatLive do
               </button>
             </div>
           </form>
+        </div>
+      </div>
+
+      <%!-- Social Wire / Echoes Modal --%>
+      <div
+        :if={@showing_social_drawer?}
+        class="fixed inset-0 bg-base-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      >
+        <div class="w-full max-w-xl max-h-[85vh] p-6 bg-base-200 rounded-2xl border border-base-300 shadow-2xl flex flex-col space-y-4">
+          <div class="flex items-center justify-between pb-3 border-b border-base-300">
+            <div class="flex items-center gap-2">
+              <div class="w-8 h-8 rounded-full bg-info/20 text-info flex items-center justify-center">
+                <.icon name="hero-globe-alt" class="size-4" />
+              </div>
+              <div>
+                <h2 class="text-base font-bold text-base-content flex items-center gap-2">
+                  Social Wire & Echoes
+                  <span class="badge badge-xs badge-info font-mono">X / Twitter</span>
+                </h2>
+                <p class="text-[11px] text-base-content/50">
+                  Autonomous public reflections, tweets, and Polsia feed
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              phx-click="toggle_social_drawer"
+              class="btn btn-ghost btn-circle btn-xs"
+            >
+              <.icon name="hero-x-mark" class="size-4" />
+            </button>
+          </div>
+
+          <%!-- Quick Generate Bar --%>
+          <div class="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-base-300/50 border border-base-300">
+            <span class="text-xs font-semibold text-base-content/70">Broadcast new thought:</span>
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <%= for companion <- @npcs do %>
+                <button
+                  type="button"
+                  phx-click="generate_social_post"
+                  phx-value-slug={companion.slug}
+                  class="btn btn-xs btn-outline btn-ghost hover:btn-primary"
+                  title={"Generate new tweet from #{companion.name}"}
+                >
+                  {companion.name}
+                </button>
+              <% end %>
+            </div>
+          </div>
+
+          <%!-- Posts Feed List --%>
+          <div class="flex-1 overflow-y-auto space-y-3 pr-1 py-1">
+            <%= if Enum.empty?(@social_posts) do %>
+              <div class="text-center py-8 text-base-content/40 text-xs">
+                No echoes broadcast yet. Click a companion name above to generate one!
+              </div>
+            <% else %>
+              <%= for post <- @social_posts do %>
+                <div class="p-3.5 rounded-xl bg-base-100 border border-base-300 shadow-sm space-y-2">
+                  <div class="flex items-center justify-between text-xs">
+                    <div class="flex items-center gap-2">
+                      <span class="font-bold text-base-content">{post.character && post.character.name}</span>
+                      <span class="text-[11px] text-base-content/40 font-mono">@{post.character && post.character.slug}</span>
+                      <%= if post.mood do %>
+                        <span class="badge badge-xs badge-ghost text-[10px] uppercase font-mono">{post.mood}</span>
+                      <% end %>
+                    </div>
+                    <span class="text-[10px] text-base-content/40">{format_time(post.posted_at)}</span>
+                  </div>
+
+                  <p class="text-xs text-base-content leading-relaxed font-sans">{post.content}</p>
+
+                  <div class="flex items-center justify-between pt-1 border-t border-base-200/80 text-[10px] text-base-content/40">
+                    <span class="font-mono">{String.length(post.content)}/280 chars</span>
+                    <button
+                      type="button"
+                      onclick={"navigator.clipboard.writeText(#{Jason.encode!(post.content)}); alert('Copied tweet to clipboard!');"}
+                      class="btn btn-ghost btn-xs text-primary gap-1 hover:bg-primary/10"
+                    >
+                      <.icon name="hero-clipboard-document" class="size-3" /> Copy
+                    </button>
+                  </div>
+                </div>
+              <% end %>
+            <% end %>
+          </div>
+
+          <%!-- Integration Webhook Info for Polsia --%>
+          <div class="p-2.5 rounded-xl bg-base-300/30 border border-base-300 text-xs space-y-1">
+            <div class="font-bold text-base-content/70 flex items-center gap-1.5 text-[11px]">
+              <.icon name="hero-bolt" class="size-3.5 text-info" />
+              Polsia & Twitter Bot API
+            </div>
+            <div class="font-mono text-[10px] text-info/90 select-all break-all">
+              GET /api/social/feed • POST /api/social/generate
+            </div>
+          </div>
         </div>
       </div>
 
