@@ -21,7 +21,7 @@ if System.get_env("PHX_SERVER") do
 end
 
 config :sovereign_soul_engine, SovereignSoulEngineWeb.Endpoint,
-  http: [port: String.to_integer(System.get_env("PORT", "4050"))]
+  http: [port: String.to_integer(System.get_env("PORT", "8561"))]
 
 if config_env() == :prod do
   database_url =
