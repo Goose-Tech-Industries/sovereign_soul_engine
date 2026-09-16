@@ -1016,6 +1016,28 @@ defmodule SovereignSoulEngine.Souls.Generator do
               |> maybe_put_metadata("dopamine", neurochem.dopamine)
               |> maybe_put_metadata("serotonin", neurochem.serotonin)
 
+            # Compute and dispatch real-time tactile haptic motor pulse to wearables
+            haptic_signal =
+              if ptsd_flashback.triggered? do
+                SovereignSoulEngine.Wearables.HapticEngine.signal_for_event(
+                  :ptsd_flashback,
+                  bpm: ptsd_flashback.heart_rate_surge
+                )
+              else
+                SovereignSoulEngine.Wearables.HapticEngine.compute(
+                  current_emotional_state,
+                  somatic_state,
+                  neurochem
+                )
+              end
+
+            SovereignSoulEngine.Wearables.HapticEngine.dispatch(npc.id, haptic_signal)
+
+            metadata_updates =
+              metadata_updates
+              |> maybe_put_metadata("haptic_pattern", to_string(haptic_signal.pattern))
+              |> maybe_put_metadata("haptic_bpm", haptic_signal.bpm)
+
             # If PTSD flashback was triggered, reflect somatic surge and acute stress
             if ptsd_flashback.triggered? do
               if somatic_state do

@@ -17,7 +17,10 @@ import socketserver
 import time
 import urllib.request
 
-SSE_ENDPOINT = "http://127.0.0.1:4050/sse/api/telemetry/somatic"
+import os
+
+DEFAULT_PORT = os.environ.get("PORT", "8561")
+SSE_ENDPOINT = os.environ.get("SSE_ENDPOINT", f"http://127.0.0.1:{DEFAULT_PORT}/sse/api/telemetry/somatic")
 
 def get_local_ip():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -65,6 +68,20 @@ class WatchWebhookHandler(http.server.BaseHTTPRequestHandler):
         
         try:
             data = json.loads(body.decode('utf-8'))
+            
+            if self.path == "/haptics":
+                pattern = data.get("pattern", "heartbeat")
+                bpm = data.get("bpm", 72)
+                pulses = data.get("pulses", [])
+                label = data.get("label", "Tactile Resonance")
+                print(f"\n💓 [HAPTIC MOTOR PULSE] {label.upper()} | Pattern={pattern} | {bpm} BPM | Pulses={pulses}ms")
+                
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "haptic_triggered", "pattern": pattern}).encode('utf-8'))
+                return
+
             print(f"\n[Watch Ingestion] Received from Galaxy Watch ({self.client_address[0]}):")
             print(json.dumps(data, indent=2))
             

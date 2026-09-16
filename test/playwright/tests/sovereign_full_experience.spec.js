@@ -141,7 +141,30 @@ test.describe('Sovereign Soul Engine — Full Experience E2E', () => {
     await expect(expressionBadge).toBeVisible();
 
     // Verify Galaxy Watch biometrics HUD displays
-    await expect(page.locator('text=BPM')).toBeVisible();
+    await expect(page.locator('text=BPM').first()).toBeVisible();
+  });
+
+  test('7. Smart Glasses capture and portable .Soul capsule export link are active and responsive', async ({ page }) => {
+    await page.setViewportSize({ width: 1600, height: 900 });
+    await page.goto(BASE + '/sse/chat');
+    await waitForLiveView(page);
+
+    // Verify .Soul capsule download link is rendered and points to export API
+    const soulBtn = page.locator('a:has-text(".Soul")');
+    await expect(soulBtn).toBeVisible({ timeout: 5_000 });
+    const href = await soulBtn.getAttribute('href');
+    expect(href).toMatch(/\/sse\/api\/souls\/.*\/export/);
+
+    // Verify Glasses button is visible
+    const glassesBtn = page.locator('button:has-text("Glasses")');
+    await expect(glassesBtn).toBeVisible();
+
+    // Trigger Smart Glasses capture
+    await glassesBtn.click();
+    await page.waitForTimeout(1000);
+
+    // Confirm that action or flash confirmation occurred
+    await expect(page.locator('body')).toContainText(/smart_glasses/i, { timeout: 8_000 });
   });
 
 });

@@ -47,13 +47,29 @@ defmodule SovereignSoulEngineWeb.Router do
     get "/social/feed", SocialPostController, :index
     get "/social/latest/:slug", SocialPostController, :latest
     post "/social/generate", SocialPostController, :generate
+
+    # Multimodal Smart Glasses Vision & Camera
+    post "/vision/perceive", VisionController, :perceive
+
+    # Portable Soul Capsules (.soul export/import)
+    get "/souls/:slug/export", SoulCapsuleController, :export
+    post "/souls/import", SoulCapsuleController, :import_soul
   end
 
-  # Public external access for Polsia / Twitter / RSS integrations
+  # Public external access for Polsia / Twitter / RSS, Telegram Webhooks, and Portable Souls
   scope "/api", SovereignSoulEngineWeb.Api do
+    post "/webhooks/telegram", TelegramWebhookController, :webhook
+    post "/vision/perceive", VisionController, :perceive
+    get "/souls/:slug/export", SoulCapsuleController, :export
+    post "/souls/import", SoulCapsuleController, :import_soul
     get "/social/feed", SocialPostController, :index
     get "/social/latest/:slug", SocialPostController, :latest
     post "/social/generate", SocialPostController, :generate
+  end
+
+  # Public webhook ingress under /sse prefix
+  scope "/sse/api", SovereignSoulEngineWeb.Api do
+    post "/webhooks/telegram", TelegramWebhookController, :webhook
   end
 
   scope "/", SovereignSoulEngineWeb do

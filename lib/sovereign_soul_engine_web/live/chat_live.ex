@@ -58,11 +58,14 @@ defmodule SovereignSoulEngineWeb.ChatLive do
       |> assign(:neurochemistry, nil)
       |> assign(:neurosis_state, nil)
       |> assign(:defense_state, nil)
+      |> assign(:active_haptic, nil)
+      |> assign(:last_vision, nil)
       |> load_scenes()
       |> select_first_available_chat()
 
     if connected?(socket) do
       Phoenix.PubSub.subscribe(SovereignSoulEngine.PubSub, SovereignSoulEngine.Social.SocialFeed.pubsub_topic())
+      Phoenix.PubSub.subscribe(SovereignSoulEngine.PubSub, "wearables:haptics")
     end
 
     {:ok, socket, layout: false}
@@ -780,6 +783,29 @@ defmodule SovereignSoulEngineWeb.ChatLive do
   end
 
   @impl true
+  def handle_event("simulate_smart_glasses_snap", _params, socket) do
+    if npc = socket.assigns.selected_npc do
+      player = socket.assigns.player
+      scene = socket.assigns.selected_scene
+
+      Task.start(fn ->
+        SovereignSoulEngine.Vision.PerceptionEngine.perceive(
+          npc,
+          player,
+          "smart_glasses_camera_frame_capture",
+          source: "smart_glasses",
+          scene_id: scene.id,
+          generate_reaction: true
+        )
+      end)
+
+      {:noreply, put_flash(socket, :info, "Smart Glasses frame captured & sent to #{npc.name}")}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  @impl true
   def handle_info({:new_message, msg}, socket) do
     # Only clear the typing indicator when an NPC dialogue response arrives
     is_companion_dialogue =
@@ -871,6 +897,26 @@ defmodule SovereignSoulEngineWeb.ChatLive do
     else
       {:noreply, socket}
     end
+  end
+
+  @impl true
+  def handle_info({:haptic_pulse, haptic_signal}, socket) do
+    socket =
+      socket
+      |> assign(:active_haptic, haptic_signal)
+      |> push_event("vibrate", %{pattern: haptic_signal.pulses})
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:vision_perceived, %{perception: perception}}, socket) do
+    socket =
+      socket
+      |> assign(:last_vision, perception)
+      |> put_flash(:info, "Smart Glasses: #{perception.scene_description}")
+
+    {:noreply, socket}
   end
 
   @impl true
@@ -1283,6 +1329,13 @@ defmodule SovereignSoulEngineWeb.ChatLive do
               <span class="font-mono text-emerald-400" title="Serotonin (Affect Regulation)">🌿 {@neurochemistry.serotonin} S</span>
             </div>
 
+            <%!-- Tactile Haptic Resonance HUD --%>
+            <div :if={@active_haptic} id="haptic-resonance-hud" class="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-950/60 border border-purple-500/50 text-xs text-purple-300 animate-pulse" title={"Tactile Pattern: #{@active_haptic.pattern}"}>
+              <span class="text-sm">💓</span>
+              <span class="font-bold">{@active_haptic.label}</span>
+              <span class="font-mono text-[11px] text-purple-400">{@active_haptic.bpm} BPM</span>
+            </div>
+
             <%!-- Galaxy Watch Biometric HUD --%>
             <div class="hidden xl:flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-base-300/40 border border-base-300 text-xs">
               <span class="flex items-center gap-1 font-mono font-bold text-rose-400">
@@ -1303,7 +1356,25 @@ defmodule SovereignSoulEngineWeb.ChatLive do
               >
                 <.icon name="hero-bolt" class="size-3" /> Pulse
               </button>
+              <button
+                phx-click="simulate_smart_glasses_snap"
+                class="btn btn-ghost btn-xs text-secondary font-bold ml-1 hover:bg-secondary/20"
+                title="Capture & transmit Smart Glasses live camera frame"
+              >
+                <.icon name="hero-eye" class="size-3" /> Glasses
+              </button>
             </div>
+
+            <%!-- Export Soul Capsule --%>
+            <a
+              :if={@selected_npc}
+              href={"/sse/api/souls/#{@selected_npc.slug}/export"}
+              target="_blank"
+              class="btn btn-outline btn-xs flex items-center gap-1 border-base-300 text-base-content/70 hover:bg-base-300"
+              title="Download portable .soul capsule"
+            >
+              <.icon name="hero-arrow-down-tray" class="size-3" /> .Soul
+            </a>
 
             <%!-- Voice Audio Toggle --%>
             <button

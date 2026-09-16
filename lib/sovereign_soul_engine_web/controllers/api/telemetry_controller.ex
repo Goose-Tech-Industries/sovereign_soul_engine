@@ -36,8 +36,14 @@ defmodule SovereignSoulEngineWeb.Api.TelemetryController do
         {:ok, somatic} = sync_somatic_state(character, telemetry)
         {:ok, emotional} = sync_emotional_state(character, telemetry)
         notified_count = sync_companion_theory_of_mind(character, telemetry)
-
         broadcast_telemetry(character, telemetry, somatic, emotional)
+
+        # Trigger biofeedback calming haptic cadence on acute stress
+        if (telemetry.stress_level && telemetry.stress_level >= 75) ||
+             (telemetry.heart_rate && telemetry.heart_rate >= 105 && telemetry.motion_state != "running") do
+          calming_signal = SovereignSoulEngine.Wearables.HapticEngine.signal_for_event(:calming_guidance)
+          SovereignSoulEngine.Wearables.HapticEngine.dispatch(character.id, calming_signal)
+        end
 
         conn
         |> put_status(:ok)
