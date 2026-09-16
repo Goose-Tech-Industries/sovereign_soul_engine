@@ -167,4 +167,43 @@ test.describe('Sovereign Soul Engine — Full Experience E2E', () => {
     await expect(page.locator('body')).toContainText(/smart_glasses/i, { timeout: 8_000 });
   });
 
+  test('8. Privacy and Boundaries shield drawer opens, toggles settings, and updates state', async ({ page }) => {
+    await page.setViewportSize({ width: 1600, height: 900 });
+    await page.goto(BASE + '/sse/chat');
+    await waitForLiveView(page);
+
+    // 1. Click Privacy button in header
+    const privacyBtn = page.locator('#privacy-shield-btn');
+    await expect(privacyBtn).toBeVisible({ timeout: 5_000 });
+    await privacyBtn.click();
+    await page.waitForTimeout(400);
+
+    // 2. Verify Privacy Modal is visible
+    const modal = page.locator('#privacy-modal-overlay');
+    await expect(modal).toBeVisible();
+    await expect(modal).toContainText('Privacy & Boundaries');
+    await expect(modal).toContainText('Autonomous Outreach & Check-Ins');
+    await expect(modal).toContainText('Wearables & Biometric Telemetry');
+    await expect(modal).toContainText('Glasses, Smart Home & Voice');
+
+    // 3. Toggle master proactive outreach switch
+    const proactiveToggle = page.locator('input[phx-value-key="proactive_checkins"]');
+    await expect(proactiveToggle).toBeVisible();
+    await proactiveToggle.click();
+    await page.waitForTimeout(300);
+
+    // 4. Toggle smart glasses vision switch
+    const visionToggle = page.locator('input[phx-value-key="camera_vision"]');
+    await expect(visionToggle).toBeVisible();
+    await visionToggle.click();
+    await page.waitForTimeout(300);
+
+    // 5. Close modal by clicking Done
+    const doneBtn = page.locator('button:has-text("Done")');
+    await doneBtn.click();
+    await page.waitForTimeout(400);
+    await expect(modal).not.toBeVisible();
+  });
+
 });
+

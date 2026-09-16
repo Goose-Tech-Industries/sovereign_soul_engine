@@ -165,16 +165,20 @@ defmodule SovereignSoulEngine.Wearables.SmartHomeBridge do
   Triggers immediate smart home sync for character and broadcasts to PubSub.
   """
   def sync_environment(character_identifier) do
-    profile = get_current_ambient_profile(character_identifier)
+    if SovereignSoulEngine.Privacy.ambient_lighting_allowed?(character_identifier) do
+      profile = get_current_ambient_profile(character_identifier)
 
-    Phoenix.PubSub.broadcast(
-      SovereignSoulEngine.PubSub,
-      "smart_home:lighting",
-      {:ambient_light_sync, profile}
-    )
+      Phoenix.PubSub.broadcast(
+        SovereignSoulEngine.PubSub,
+        "smart_home:lighting",
+        {:ambient_light_sync, profile}
+      )
 
-    dispatch_to_iot_services(profile)
-    {:ok, profile}
+      dispatch_to_iot_services(profile)
+      {:ok, profile}
+    else
+      {:ignored, :disabled_by_privacy_settings}
+    end
   end
 
   # ── GenServer Callbacks ─────────────────────────────────────────────────────

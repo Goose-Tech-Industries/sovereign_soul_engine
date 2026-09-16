@@ -1,8 +1,8 @@
 # Sovereign Soul Engine (SSE)
 
 [![CI Build](https://img.shields.io/badge/build-passing-brightgreen.svg)]()
-[![ExUnit Tests](https://img.shields.io/badge/ExUnit-430%2B%20passed-blue.svg)]()
-[![Playwright Tests](https://img.shields.io/badge/Playwright-18%2F18%20passed-blueviolet.svg)]()
+[![ExUnit Tests](https://img.shields.io/badge/ExUnit-450%2B%20passed-blue.svg)]()
+[![Playwright Tests](https://img.shields.io/badge/Playwright-19%2F19%20passed-blueviolet.svg)]()
 [![Zero Stubs](https://img.shields.io/badge/codebase-0%20stubs-success.svg)]()
 [![Elixir](https://img.shields.io/badge/Elixir-1.20%2B-purple.svg)]()
 [![Phoenix](https://img.shields.io/badge/Phoenix-1.7%2B-orange.svg)]()
@@ -22,8 +22,9 @@
    - [Desk Companion Physical Vessels (ESP32 / OLED Screens)](#desk-companion-physical-vessels-esp32--oled-screens)
 4. [Autonomous Proactive Check-In Engine](#autonomous-proactive-check-in-engine)
 5. [Portable Cryptographic Soul Capsules (`.soul`)](#portable-cryptographic-soul-capsules-soul)
-6. [API Reference & Route Map](#api-reference--route-map)
-7. [Running & Verifying the Test Suite](#running--verifying-the-test-suite)
+6. [User Privacy, Consent & Boundary Controls](#user-privacy-consent--boundary-controls)
+7. [API Reference & Route Map](#api-reference--route-map)
+8. [Running & Verifying the Test Suite](#running--verifying-the-test-suite)
 
 ---
 
@@ -196,10 +197,36 @@ Take your companion with you across any game, device, or engine:
 
 ---
 
+## User Privacy, Consent & Boundary Controls
+
+The Sovereign Soul Engine adheres to **radical user sovereignty**. All proactive, biometric, sensory, and ambient integrations are strictly opt-in and can be individually toggled off at any moment via the web interface or REST API:
+
+1. **Proactive Outreach & Quiet Hours (Do Not Disturb):**
+   - Master switch for all unsolicited companion reach-outs.
+   - Granular toggles for acute stress spike interventions, morning awakenings, and late-night insomnia checks.
+   - Configurable Quiet Hours (e.g., `22:00` to `08:00`) preventing any outreach or notifications during sleep.
+2. **Wearable & Biometric Sensors:**
+   - Ingestion of heart rate, HRV, stress index, and sleep quality can be paused completely. When disabled, incoming telemetry payloads are safely acknowledged and discarded without altering state.
+3. **Wrist Haptic Resonance:**
+   - Simulated heartbeat pulses and biofeedback tactile cadences can be muted independently of other hardware channels.
+4. **Multimodal Smart Glasses Vision:**
+   - Camera frame perception and episodic visual memory recording can be turned off. When off, `/sse/api/vision/perceive` strictly returns `403 Forbidden` with a privacy notice.
+5. **Smart Home Ambient Lighting:**
+   - Dynamic room color and brightness synchronization (Philips Hue / Home Assistant) can be detached with a single switch.
+6. **Amazon Echo & Alexa Voice:**
+   - Disables voice skill intents and Echo Show visual card updates.
+
+### Live UI Boundaries Shield
+Within the web interface, click the **🛡️ Privacy** button in the top navigation bar to open the interactive Boundary Drawer and adjust real-time switches with instant persistence.
+
+---
+
 ## API Reference & Route Map
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
+| `GET` | `/sse/api/privacy/settings` | Query user privacy preferences and boundary toggles |
+| `POST` | `/sse/api/privacy/settings` | Update proactive, biometric, vision, and haptic consent settings |
 | `POST` | `/api/alexa` | Amazon Alexa Custom Skill & Echo Show APL endpoint |
 | `POST` | `/sse/api/telemetry/wearable` | Ingest Galaxy Watch, Apple Watch & Smart Ring biometrics |
 | `GET` | `/sse/api/telemetry/:slug` | Retrieve somatic & emotional profile |
@@ -223,13 +250,13 @@ The Sovereign Soul Engine adheres to a **Strict Zero-Stub Guarantee**. Every mod
 ```powershell
 powershell -NoProfile -Command "Push-Location 'C:\Users\rjd42\Desktop\sovereign_soul_engine'; mix test"
 ```
-*(430+ comprehensive unit, integration, and concurrency tests passing)*
+*(450+ comprehensive unit, integration, and concurrency tests passing)*
 
 ### Run Playwright End-to-End Tests:
 ```powershell
-powershell -NoProfile -Command "Push-Location 'C:\Users\rjd42\Desktop\sovereign_soul_engine'; npx playwright test"
+powershell -NoProfile -Command "Push-Location 'C:\Users\rjd42\Desktop\sovereign_soul_engine'; npx playwright test --config=test/playwright/playwright.config.js"
 ```
-*(18/18 end-to-end browser tests verifying LiveView chat, biometric HUDs, and visual perception)*
+*(19/19 end-to-end browser tests verifying LiveView chat, biometric HUDs, privacy shield drawer, and visual perception)*
 
 ---
 

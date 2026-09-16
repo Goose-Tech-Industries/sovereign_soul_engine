@@ -32,11 +32,20 @@ defmodule SovereignSoulEngineWeb.Api.TelemetryController do
         |> json(%{error: "Character '#{character_slug}' not found."})
 
       %Character{} = character ->
-        telemetry = extract_telemetry(params)
-        {:ok, somatic} = sync_somatic_state(character, telemetry)
-        {:ok, emotional} = sync_emotional_state(character, telemetry)
-        notified_count = sync_companion_theory_of_mind(character, telemetry)
-        broadcast_telemetry(character, telemetry, somatic, emotional)
+        if not SovereignSoulEngine.Privacy.biometrics_allowed?(character.id) do
+          conn
+          |> put_status(:ok)
+          |> json(%{
+            status: "ignored_by_privacy_settings",
+            message: "Biometrics tracking is disabled in user privacy settings.",
+            character_slug: character.slug
+          })
+        else
+          telemetry = extract_telemetry(params)
+          {:ok, somatic} = sync_somatic_state(character, telemetry)
+          {:ok, emotional} = sync_emotional_state(character, telemetry)
+          notified_count = sync_companion_theory_of_mind(character, telemetry)
+          broadcast_telemetry(character, telemetry, somatic, emotional)
 
         # Trigger biofeedback calming haptic cadence on acute stress
         if (telemetry.stress_level && telemetry.stress_level >= 75) ||
@@ -111,6 +120,7 @@ defmodule SovereignSoulEngineWeb.Api.TelemetryController do
           companions_notified: notified_count,
           timestamp: DateTime.utc_now()
         })
+        end
     end
   end
 

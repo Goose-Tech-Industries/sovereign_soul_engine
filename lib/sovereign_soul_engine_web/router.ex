@@ -62,6 +62,10 @@ defmodule SovereignSoulEngineWeb.Router do
     # Desk Companion Physical Vessel (ESP32 / OLED)
     get "/vessel/display_state", VesselController, :display_state
     post "/vessel/touch", VesselController, :touch
+
+    # Privacy, Consent & Boundary Controls
+    get "/privacy/settings", PrivacyController, :show
+    post "/privacy/settings", PrivacyController, :update
   end
 
   # Public external access for Polsia / Twitter / RSS, Telegram Webhooks, Alexa, and Portable Souls
@@ -78,6 +82,8 @@ defmodule SovereignSoulEngineWeb.Router do
     post "/smart_home/sync", SmartHomeController, :sync
     get "/vessel/display_state", VesselController, :display_state
     post "/vessel/touch", VesselController, :touch
+    get "/privacy/settings", PrivacyController, :show
+    post "/privacy/settings", PrivacyController, :update
   end
 
   # Public webhook ingress under /sse prefix

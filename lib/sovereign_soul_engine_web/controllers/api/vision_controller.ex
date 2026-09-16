@@ -33,6 +33,11 @@ defmodule SovereignSoulEngineWeb.Api.VisionController do
         |> put_status(:not_found)
         |> json(%{error: "Player character '#{player_slug}' not found."})
 
+      not SovereignSoulEngine.Privacy.vision_allowed?(player.id) ->
+        conn
+        |> put_status(:forbidden)
+        |> json(%{error: "Smart glasses vision perception is disabled in user privacy settings."})
+
       true ->
         image_input = extract_image_input(params)
 

@@ -109,34 +109,38 @@ defmodule SovereignSoulEngine.Wearables.HapticEngine do
   """
   @spec dispatch(String.t(), haptic_signal()) :: {:ok, haptic_signal()}
   def dispatch(character_id, haptic_signal) do
-    # 1. Broadcast to character-specific telemetry topic
-    Phoenix.PubSub.broadcast(
-      SovereignSoulEngine.PubSub,
-      "character:#{character_id}:haptics",
-      {:haptic_pulse, haptic_signal}
-    )
+    if SovereignSoulEngine.Privacy.haptics_allowed?(character_id) do
+      # 1. Broadcast to character-specific telemetry topic
+      Phoenix.PubSub.broadcast(
+        SovereignSoulEngine.PubSub,
+        "character:#{character_id}:haptics",
+        {:haptic_pulse, haptic_signal}
+      )
 
-    # 2. Broadcast to global wearables topic
-    Phoenix.PubSub.broadcast(
-      SovereignSoulEngine.PubSub,
-      "wearables:haptics",
-      {:haptic_pulse, Map.put(haptic_signal, :character_id, character_id)}
-    )
+      # 2. Broadcast to global wearables topic
+      Phoenix.PubSub.broadcast(
+        SovereignSoulEngine.PubSub,
+        "wearables:haptics",
+        {:haptic_pulse, Map.put(haptic_signal, :character_id, character_id)}
+      )
 
-    # 3. Asynchronously notify local or remote Wearable Bridge if configured
-    bridge_url = System.get_env("WEARABLE_BRIDGE_URL") || "http://127.0.0.1:8089/haptics"
+      # 3. Asynchronously notify local or remote Wearable Bridge if configured
+      bridge_url = System.get_env("WEARABLE_BRIDGE_URL") || "http://127.0.0.1:8089/haptics"
 
-    if bridge_url != "" and Mix.env() != :test do
-      Task.start(fn ->
-        try do
-          Req.post(bridge_url, json: haptic_signal, receive_timeout: 1000)
-        rescue
-          _ -> :ignore
-        end
-      end)
+      if bridge_url != "" and Mix.env() != :test do
+        Task.start(fn ->
+          try do
+            Req.post(bridge_url, json: haptic_signal, receive_timeout: 1000)
+          rescue
+            _ -> :ignore
+          end
+        end)
+      end
+
+      {:ok, haptic_signal}
+    else
+      {:ignored, :disabled_by_privacy_settings}
     end
-
-    {:ok, haptic_signal}
   end
 
   # ── Helpers ────────────────────────────────────────────────────────────────

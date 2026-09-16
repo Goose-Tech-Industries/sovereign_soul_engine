@@ -34,7 +34,8 @@ defmodule SovereignSoulEngine.TheoryOfMind.ProactiveDispatcher do
         knower = thread.knower_character
         subject = thread.subject_character
 
-        if knower && subject && knower.status == "active" do
+        if knower && subject && knower.status == "active" and
+             SovereignSoulEngine.Privacy.checkin_allowed?(subject.id, :proactive_life_thread) do
           scene = Scenes.find_or_create_direct_scene(subject, knower)
           content = format_checkin_message(knower, subject, thread)
 
@@ -83,45 +84,49 @@ defmodule SovereignSoulEngine.TheoryOfMind.ProactiveDispatcher do
         {:error, :character_not_found}
 
       subject ->
-        companion =
-          Repo.one(
-            from c in SovereignSoulEngine.Characters.Character,
-              where: c.kind == "npc" and c.status == "active",
-              order_by: [desc: c.inserted_at],
-              limit: 1
-          )
+        if SovereignSoulEngine.Privacy.checkin_allowed?(subject.id, event_type) do
+          companion =
+            Repo.one(
+              from c in SovereignSoulEngine.Characters.Character,
+                where: c.kind == "npc" and c.status == "active",
+                order_by: [desc: c.inserted_at],
+                limit: 1
+            )
 
-        if companion do
-          scene = Scenes.find_or_create_direct_scene(subject, companion)
-          content = format_somatic_checkin_message(companion, subject, event_type, details)
+          if companion do
+            scene = Scenes.find_or_create_direct_scene(subject, companion)
+            content = format_somatic_checkin_message(companion, subject, event_type, details)
 
-          case Scenes.create_message(%{
-                 scene_id: scene.id,
-                 character_id: companion.id,
-                 content: content,
-                 message_type: "dialogue"
-               }) do
-            {:ok, msg} ->
-              Phoenix.PubSub.broadcast(
-                SovereignSoulEngine.PubSub,
-                "scene:#{scene.id}",
-                {:new_message, msg}
-              )
+            case Scenes.create_message(%{
+                   scene_id: scene.id,
+                   character_id: companion.id,
+                   content: content,
+                   message_type: "dialogue"
+                 }) do
+              {:ok, msg} ->
+                Phoenix.PubSub.broadcast(
+                  SovereignSoulEngine.PubSub,
+                  "scene:#{scene.id}",
+                  {:new_message, msg}
+                )
 
-              Phoenix.PubSub.broadcast(
-                SovereignSoulEngine.PubSub,
-                "character:#{companion.id}",
-                {:proactive_checkin_sent, msg}
-              )
+                Phoenix.PubSub.broadcast(
+                  SovereignSoulEngine.PubSub,
+                  "character:#{companion.id}",
+                  {:proactive_checkin_sent, msg}
+                )
 
-              dispatch_outbound_push(companion, subject, content, nil)
-              {:ok, msg}
+                dispatch_outbound_push(companion, subject, content, nil)
+                {:ok, msg}
 
-            error ->
-              error
+              error ->
+                error
+            end
+          else
+            {:error, :no_active_companion}
           end
         else
-          {:error, :no_active_companion}
+          {:ignored, :disabled_by_privacy_settings}
         end
     end
   end

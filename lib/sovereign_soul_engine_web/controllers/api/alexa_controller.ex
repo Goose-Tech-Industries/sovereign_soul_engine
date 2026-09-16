@@ -31,9 +31,13 @@ defmodule SovereignSoulEngineWeb.Api.AlexaController do
     show_supported? = device_supports_show?(params)
     neurochem = get_neurochemistry(companion)
 
-    case request_type do
-      "LaunchRequest" ->
-        handle_launch(conn, companion, neurochem, show_supported?)
+    if not SovereignSoulEngine.Privacy.alexa_allowed?(companion.id) do
+      speech = "Sovereign Soul voice integration is currently paused in your privacy settings. You can re-enable it at any time."
+      json(conn, build_response(companion, speech, [], true))
+    else
+      case request_type do
+        "LaunchRequest" ->
+          handle_launch(conn, companion, neurochem, show_supported?)
 
       "IntentRequest" ->
         intent_name =
@@ -53,6 +57,7 @@ defmodule SovereignSoulEngineWeb.Api.AlexaController do
 
       _ ->
         handle_launch(conn, companion, neurochem, show_supported?)
+      end
     end
   end
 

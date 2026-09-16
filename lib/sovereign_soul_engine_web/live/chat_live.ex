@@ -60,12 +60,15 @@ defmodule SovereignSoulEngineWeb.ChatLive do
       |> assign(:defense_state, nil)
       |> assign(:active_haptic, nil)
       |> assign(:last_vision, nil)
+      |> assign(:privacy_settings, SovereignSoulEngine.Privacy.get_settings(player.id))
+      |> assign(:showing_privacy_modal?, false)
       |> load_scenes()
       |> select_first_available_chat()
 
     if connected?(socket) do
       Phoenix.PubSub.subscribe(SovereignSoulEngine.PubSub, SovereignSoulEngine.Social.SocialFeed.pubsub_topic())
       Phoenix.PubSub.subscribe(SovereignSoulEngine.PubSub, "wearables:haptics")
+      Phoenix.PubSub.subscribe(SovereignSoulEngine.PubSub, "character:#{player.id}:privacy")
     end
 
     {:ok, socket, layout: false}
@@ -806,6 +809,41 @@ defmodule SovereignSoulEngineWeb.ChatLive do
   end
 
   @impl true
+  def handle_event("toggle_privacy_modal", _params, socket) do
+    {:noreply, assign(socket, :showing_privacy_modal?, !socket.assigns.showing_privacy_modal?)}
+  end
+
+  @impl true
+  def handle_event("toggle_privacy_setting", %{"key" => key}, socket) do
+    player = socket.assigns.player
+    current = Map.get(socket.assigns.privacy_settings, key, true)
+    new_val = !current
+    new_settings = Map.put(socket.assigns.privacy_settings, key, new_val)
+
+    SovereignSoulEngine.Privacy.update_settings(player.id, %{key => new_val})
+
+    {:noreply, assign(socket, :privacy_settings, new_settings)}
+  end
+
+  @impl true
+  def handle_event("reset_privacy_settings", _params, socket) do
+    player = socket.assigns.player
+    defaults = SovereignSoulEngine.Privacy.default_settings()
+
+    SovereignSoulEngine.Privacy.update_settings(player.id, defaults)
+
+    {:noreply,
+     socket
+     |> assign(:privacy_settings, defaults)
+     |> put_flash(:info, "Privacy & autonomy settings restored to defaults")}
+  end
+
+  @impl true
+  def handle_info({:privacy_settings_updated, settings}, socket) do
+    {:noreply, assign(socket, :privacy_settings, settings)}
+  end
+
+  @impl true
   def handle_info({:new_message, msg}, socket) do
     # Only clear the typing indicator when an NPC dialogue response arrives
     is_companion_dialogue =
@@ -1417,6 +1455,21 @@ defmodule SovereignSoulEngineWeb.ChatLive do
             >
               <.icon name="hero-globe-alt" class="size-3.5" />
               <span>Echoes ({length(@social_posts)})</span>
+            </button>
+
+            <%!-- Privacy & Boundaries Shield Toggle --%>
+            <button
+              phx-click="toggle_privacy_modal"
+              id="privacy-shield-btn"
+              class={[
+                "btn btn-xs flex items-center gap-1.5 border transition-all shadow-sm font-semibold",
+                @showing_privacy_modal? && "btn-info text-info-content border-info",
+                !@showing_privacy_modal? && "btn-outline border-base-300 text-sky-400 hover:bg-sky-500/15"
+              ]}
+              title="Configure boundaries, quiet hours, and opt out of invasive companion features"
+            >
+              <.icon name="hero-shield-check" class="size-3.5 text-sky-400" />
+              <span>Privacy</span>
             </button>
 
             <%= if !@selected_npc and @selected_scene && length(@selected_scene.participants) > 2 do %>
@@ -2065,6 +2118,229 @@ defmodule SovereignSoulEngineWeb.ChatLive do
             <div class="font-mono text-[10px] text-info/90 select-all break-all">
               GET /api/social/feed • POST /api/social/generate
             </div>
+          </div>
+        </div>
+      </div>
+
+      <%!-- Privacy & Autonomy Shield Modal --%>
+      <div
+        :if={@showing_privacy_modal?}
+        id="privacy-modal-overlay"
+        class="fixed inset-0 bg-base-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      >
+        <div class="w-full max-w-xl max-h-[90vh] p-6 bg-base-200 rounded-2xl border border-base-300 shadow-2xl flex flex-col space-y-4">
+          <div class="flex items-center justify-between pb-3 border-b border-base-300">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-full bg-sky-500/20 text-sky-400 flex items-center justify-center border border-sky-500/30">
+                <.icon name="hero-shield-check" class="size-4" />
+              </div>
+              <div>
+                <h2 class="text-base font-bold text-base-content flex items-center gap-2">
+                  Privacy & Boundaries Shield
+                  <span class="badge badge-xs badge-info font-mono">Autonomy</span>
+                </h2>
+                <p class="text-[11px] text-base-content/50">
+                  Opt out of invasive companion outreach, sensors, and environmental controls
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              phx-click="toggle_privacy_modal"
+              class="btn btn-ghost btn-circle btn-xs"
+            >
+              <.icon name="hero-x-mark" class="size-4" />
+            </button>
+          </div>
+
+          <div class="flex-1 overflow-y-auto space-y-4 pr-1 py-1">
+            <%!-- Section 1: Autonomous Outreach & Proactive Care --%>
+            <div class="p-3.5 rounded-xl bg-base-100 border border-base-300 shadow-sm space-y-3">
+              <div class="text-xs font-bold text-base-content uppercase tracking-wider flex items-center gap-1.5 text-primary">
+                <.icon name="hero-chat-bubble-oval-left-ellipsis" class="size-3.5" />
+                Autonomous Outreach & Check-Ins
+              </div>
+
+              <div class="space-y-2.5">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <div class="text-xs font-semibold text-base-content">Proactive Check-Ins (Master Switch)</div>
+                    <div class="text-[11px] text-base-content/50">Allow companion to initiate unprompted messages</div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={Map.get(@privacy_settings, "proactive_checkins", true)}
+                    phx-click="toggle_privacy_setting"
+                    phx-value-key="proactive_checkins"
+                    class="toggle toggle-sm toggle-primary"
+                  />
+                </div>
+
+                <div class="flex items-center justify-between pl-3 border-l-2 border-base-300">
+                  <div>
+                    <div class="text-xs font-medium text-base-content/90">Stress Spike Calming Check-Ins</div>
+                    <div class="text-[11px] text-base-content/50">Reach out when watch detects elevated HR or stress &gt; 75%</div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={Map.get(@privacy_settings, "somatic_stress_checkins", true)}
+                    phx-click="toggle_privacy_setting"
+                    phx-value-key="somatic_stress_checkins"
+                    class="toggle toggle-xs toggle-primary"
+                  />
+                </div>
+
+                <div class="flex items-center justify-between pl-3 border-l-2 border-base-300">
+                  <div>
+                    <div class="text-xs font-medium text-base-content/90">Morning Awakening Greeting</div>
+                    <div class="text-[11px] text-base-content/50">Check in on physical energy upon waking from sleep</div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={Map.get(@privacy_settings, "morning_wake_checkins", true)}
+                    phx-click="toggle_privacy_setting"
+                    phx-value-key="morning_wake_checkins"
+                    class="toggle toggle-xs toggle-primary"
+                  />
+                </div>
+
+                <div class="flex items-center justify-between pl-3 border-l-2 border-base-300">
+                  <div>
+                    <div class="text-xs font-medium text-base-content/90">Late-Night Insomnia Presence</div>
+                    <div class="text-[11px] text-base-content/50">Allow unprompted company during late hours (1 AM - 4 AM)</div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={Map.get(@privacy_settings, "late_night_checkins", false)}
+                    phx-click="toggle_privacy_setting"
+                    phx-value-key="late_night_checkins"
+                    class="toggle toggle-xs toggle-primary"
+                  />
+                </div>
+
+                <div class="flex items-center justify-between pl-3 border-l-2 border-base-300">
+                  <div>
+                    <div class="text-xs font-medium text-base-content/90">Quiet Hours (Do Not Disturb)</div>
+                    <div class="text-[11px] text-base-content/50">Silence all unprompted messages during resting hours</div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={Map.get(@privacy_settings, "quiet_hours_enabled", false)}
+                    phx-click="toggle_privacy_setting"
+                    phx-value-key="quiet_hours_enabled"
+                    class="toggle toggle-xs toggle-primary"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <%!-- Section 2: Wearables & Biometric Ingestion --%>
+            <div class="p-3.5 rounded-xl bg-base-100 border border-base-300 shadow-sm space-y-3">
+              <div class="text-xs font-bold text-base-content uppercase tracking-wider flex items-center gap-1.5 text-rose-400">
+                <.icon name="hero-heart" class="size-3.5" />
+                Wearables & Biometric Telemetry
+              </div>
+
+              <div class="space-y-2.5">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <div class="text-xs font-semibold text-base-content">Biometric Ingestion</div>
+                    <div class="text-[11px] text-base-content/50">Share heart rate, sleep, and recovery scores with companions</div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={Map.get(@privacy_settings, "biometrics_tracking", true)}
+                    phx-click="toggle_privacy_setting"
+                    phx-value-key="biometrics_tracking"
+                    class="toggle toggle-sm toggle-error"
+                  />
+                </div>
+
+                <div class="flex items-center justify-between">
+                  <div>
+                    <div class="text-xs font-semibold text-base-content">Tactile Wrist Haptics</div>
+                    <div class="text-[11px] text-base-content/50">Allow companion to transmit heartbeat pulses and vibrations to your watch</div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={Map.get(@privacy_settings, "haptic_feedback", true)}
+                    phx-click="toggle_privacy_setting"
+                    phx-value-key="haptic_feedback"
+                    class="toggle toggle-sm toggle-secondary"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <%!-- Section 3: Smart Glasses & Environmental Hardware --%>
+            <div class="p-3.5 rounded-xl bg-base-100 border border-base-300 shadow-sm space-y-3">
+              <div class="text-xs font-bold text-base-content uppercase tracking-wider flex items-center gap-1.5 text-amber-400">
+                <.icon name="hero-cpu-chip" class="size-3.5" />
+                Glasses, Smart Home & Voice
+              </div>
+
+              <div class="space-y-2.5">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <div class="text-xs font-semibold text-base-content">Smart Glasses Camera Perception</div>
+                    <div class="text-[11px] text-base-content/50">Allow companion to perceive your surroundings and faces via glasses</div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={Map.get(@privacy_settings, "camera_vision", true)}
+                    phx-click="toggle_privacy_setting"
+                    phx-value-key="camera_vision"
+                    class="toggle toggle-sm toggle-warning"
+                  />
+                </div>
+
+                <div class="flex items-center justify-between">
+                  <div>
+                    <div class="text-xs font-semibold text-base-content">Smart Home Ambient Light Sync</div>
+                    <div class="text-[11px] text-base-content/50">Allow companion's neurochemistry to adjust room lighting (Philips Hue/HA)</div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={Map.get(@privacy_settings, "ambient_lighting", true)}
+                    phx-click="toggle_privacy_setting"
+                    phx-value-key="ambient_lighting"
+                    class="toggle toggle-sm toggle-warning"
+                  />
+                </div>
+
+                <div class="flex items-center justify-between">
+                  <div>
+                    <div class="text-xs font-semibold text-base-content">Amazon Alexa Voice Skill</div>
+                    <div class="text-[11px] text-base-content/50">Enable two-way voice dialogue through Echo smart speakers</div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={Map.get(@privacy_settings, "alexa_voice", true)}
+                    phx-click="toggle_privacy_setting"
+                    phx-value-key="alexa_voice"
+                    class="toggle toggle-sm toggle-info"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between pt-3 border-t border-base-300">
+            <button
+              type="button"
+              phx-click="reset_privacy_settings"
+              class="btn btn-ghost btn-xs text-base-content/50 hover:text-base-content"
+            >
+              Reset to Defaults
+            </button>
+            <button
+              type="button"
+              phx-click="toggle_privacy_modal"
+              class="btn btn-primary btn-xs px-4"
+            >
+              Done
+            </button>
           </div>
         </div>
       </div>

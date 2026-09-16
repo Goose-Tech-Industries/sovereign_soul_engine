@@ -109,6 +109,29 @@ defmodule SovereignSoulEngineWeb.Api.TelemetryControllerTest do
       assert Enum.any?(knowledge, &String.contains?(&1.known_fact, "recovery score (48%)"))
     end
 
+    test "ignores telemetry when user has opted out in privacy settings", %{
+      conn: conn,
+      player: player
+    } do
+      {:ok, _} =
+        SovereignSoulEngine.Privacy.update_settings(player.id, %{
+          "biometrics_tracking" => false
+        })
+
+      conn =
+        conn
+        |> put_req_header("authorization", "Bearer twisted_dev_key")
+        |> post(~p"/sse/api/telemetry/somatic", %{
+          "character_slug" => player.slug,
+          "device" => "galaxy_watch_10",
+          "heart_rate" => 150,
+          "stress_level" => 95
+        })
+
+      assert json = json_response(conn, 200)
+      assert json["status"] == "ignored_by_privacy_settings"
+    end
+
     test "returns 404 for unknown character", %{conn: conn} do
       conn =
         conn
