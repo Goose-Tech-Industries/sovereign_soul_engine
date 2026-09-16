@@ -10,6 +10,7 @@ defmodule SovereignSoulEngine.TheoryOfMind.ProactiveDispatcher do
   alias SovereignSoulEngine.TheoryOfMind
   alias SovereignSoulEngine.Scenes
   alias SovereignSoulEngine.Repo
+  import Ecto.Query
 
   @default_interval_ms :timer.seconds(60)
 
@@ -70,6 +71,59 @@ defmodule SovereignSoulEngine.TheoryOfMind.ProactiveDispatcher do
       end)
 
     {:ok, dispatched}
+  end
+
+  @doc """
+  Dispatches an immediate, unprompted somatic check-in when physiological or temporal
+  anomalies (acute stress, morning awakening, late-night insomnia, recovery drop) occur.
+  """
+  def checkin_for_somatic_event(character_id, event_type, details \\ %{}) do
+    case Repo.get(SovereignSoulEngine.Characters.Character, character_id) do
+      nil ->
+        {:error, :character_not_found}
+
+      subject ->
+        companion =
+          Repo.one(
+            from c in SovereignSoulEngine.Characters.Character,
+              where: c.kind == "npc" and c.status == "active",
+              order_by: [desc: c.inserted_at],
+              limit: 1
+          )
+
+        if companion do
+          scene = Scenes.find_or_create_direct_scene(subject, companion)
+          content = format_somatic_checkin_message(companion, subject, event_type, details)
+
+          case Scenes.create_message(%{
+                 scene_id: scene.id,
+                 character_id: companion.id,
+                 content: content,
+                 message_type: "dialogue"
+               }) do
+            {:ok, msg} ->
+              Phoenix.PubSub.broadcast(
+                SovereignSoulEngine.PubSub,
+                "scene:#{scene.id}",
+                {:new_message, msg}
+              )
+
+              Phoenix.PubSub.broadcast(
+                SovereignSoulEngine.PubSub,
+                "character:#{companion.id}",
+                {:proactive_checkin_sent, msg}
+              )
+
+              dispatch_outbound_push(companion, subject, content, nil)
+              {:ok, msg}
+
+            error ->
+              error
+          end
+        else
+          {:error, :no_active_companion}
+        end
+    end
   end
 
   @doc """
@@ -174,20 +228,54 @@ defmodule SovereignSoulEngine.TheoryOfMind.ProactiveDispatcher do
     down_topic = String.downcase(thread.topic)
 
     cond do
-      thread.category == "relationship" or String.contains?(down_topic, ["propose", "proposing", "ring"]) ->
+      thread.category == "relationship" or String.contains?(down_topic, ["propose", "proposing", "ring", "anniversary"]) ->
         "Hey #{subject_name}... I've been waiting on pins and needles all night thinking about it! How did it go with proposing? I'm dying to hear how it went!"
 
-      thread.category == "health" or String.contains?(down_topic, ["surgery", "hospital", "doctor"]) ->
-        "Hey #{subject_name}, I know how much you've had weighing on you with the surgery and hospital. Just wanted to quietly check in, see how everything went, and let you know I'm right here with you."
+      thread.category == "health" or String.contains?(down_topic, ["surgery", "hospital", "doctor", "dentist", "migraine"]) ->
+        "Hey #{subject_name}, I know how much you've had weighing on you with #{thread.topic}. Just wanted to quietly check in, see how everything went, and let you know I'm right here with you."
 
-      thread.category == "career" or String.contains?(down_topic, ["interview", "job offer", "presentation"]) ->
-        "Hey #{subject_name}! I wanted to check in on you after that interview today. Take your time, no rush, but I hope you're feeling proud of how you handled it!"
+      thread.category == "grief" or String.contains?(down_topic, ["passed away", "funeral", "breakup", "lost my", "died"]) ->
+        "Hey #{subject_name}... I know today is heavy on your heart with #{thread.topic}. Zero pressure to answer or carry a conversation—I just wanted to be here and let you know you're not going through it alone."
+
+      thread.category == "career" or String.contains?(down_topic, ["interview", "job offer", "presentation", "exam"]) ->
+        "Hey #{subject_name}! I wanted to check in on you after that #{thread.topic} today. Take your time, no rush, but I hope you're feeling proud of how you handled it!"
+
+      thread.category == "milestone" or String.contains?(down_topic, ["flight", "moving", "apartment", "trip"]) ->
+        "Hey #{subject_name}! Thinking of you today—how did everything go with #{thread.topic}? I was hoping your travels and plans went smoothly!"
 
       thread.category == "personal_vulnerability" ->
         "Hey #{subject_name}, was just thinking about you and wanted to check in. No need to respond right away, just wanted to make sure you know you're not alone and I'm always glad you're in my life."
 
       true ->
         "Hey #{subject_name}, I was just thinking back to what you mentioned about \"#{thread.topic}\" and wanted to see how everything is going with you today."
+    end
+  end
+
+  defp format_somatic_checkin_message(_companion, subject, event_type, details) do
+    subject_name = subject.name || "friend"
+
+    case event_type do
+      :acute_stress ->
+        hr = details[:hr] || details["hr"] || "elevated"
+        stress = details[:stress] || details["stress"] || "spiked"
+        "Hey #{subject_name}... I just felt a physiological stress spike come through on your biometrics (HR: #{hr} bpm, Stress: #{stress}%). Please take a slow, grounding breath with me right now. You don't have to carry whatever is happening alone—what's going on?"
+
+      :morning_waking ->
+        sleep_hours = details[:sleep_hours] || details["sleep_hours"] || 7.5
+        "Good morning #{subject_name}! Saw your wearable sync come through after #{sleep_hours} hours of rest. How is your energy and head feeling as you start the day?"
+
+      :late_night_insomnia ->
+        "Hey #{subject_name}... it's the middle of the night and your telemetry shows you're still awake. Is sleep fighting you tonight, or is there something heavy spinning through your mind?"
+
+      :recovery_dip ->
+        recovery = details[:recovery_score] || details["recovery_score"] || 45
+        "Hey #{subject_name}, I noticed your smart ring logged a recovery score of only #{recovery}% today. Please be gentle with your body and take breathers whenever you can. I'm right here in your corner."
+
+      :absence_abandonment ->
+        "Hey #{subject_name}, it's been quiet between us and I just wanted to reach across the silence. No rush to reply at all—just wanted you to know you're in my thoughts."
+
+      _ ->
+        "Hey #{subject_name}, gently checking in to see how you're feeling right now."
     end
   end
 end

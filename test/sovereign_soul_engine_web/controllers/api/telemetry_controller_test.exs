@@ -83,6 +83,32 @@ defmodule SovereignSoulEngineWeb.Api.TelemetryControllerTest do
       assert json["somatic_state"]["last_rested_at"] != nil
     end
 
+    test "ingests smart ring recovery score and creates Theory of Mind awareness", %{
+      conn: conn,
+      player: player,
+      npc: npc
+    } do
+      conn =
+        conn
+        |> put_req_header("authorization", "Bearer twisted_dev_key")
+        |> post(~p"/sse/api/telemetry/wearable", %{
+          "character_slug" => player.slug,
+          "device" => "oura_ring_gen4",
+          "recovery_score" => 48,
+          "readiness_score" => 52,
+          "sleep_score" => 61
+        })
+
+      assert json = json_response(conn, 200)
+      assert json["status"] == "ok"
+      assert json["biometrics"]["recovery_score"] == 48
+      assert json["biometrics"]["readiness_score"] == 52
+
+      # Theory of Mind should capture recovery fact
+      knowledge = TheoryOfMind.list_knowledge_about(npc.id, player.id)
+      assert Enum.any?(knowledge, &String.contains?(&1.known_fact, "recovery score (48%)"))
+    end
+
     test "returns 404 for unknown character", %{conn: conn} do
       conn =
         conn

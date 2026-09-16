@@ -43,6 +43,40 @@ defmodule SovereignSoulEngineWeb.Api.TelemetryController do
              (telemetry.heart_rate && telemetry.heart_rate >= 105 && telemetry.motion_state != "running") do
           calming_signal = SovereignSoulEngine.Wearables.HapticEngine.signal_for_event(:calming_guidance)
           SovereignSoulEngine.Wearables.HapticEngine.dispatch(character.id, calming_signal)
+
+          # Autonomous somatic check-in for acute stress
+          SovereignSoulEngine.TheoryOfMind.ProactiveDispatcher.checkin_for_somatic_event(
+            character.id,
+            :acute_stress,
+            %{stress: telemetry.stress_level, hr: telemetry.heart_rate}
+          )
+        end
+
+        # Autonomous somatic check-in for morning waking
+        if telemetry.sleep_hours && telemetry.sleep_hours > 0.0 do
+          SovereignSoulEngine.TheoryOfMind.ProactiveDispatcher.checkin_for_somatic_event(
+            character.id,
+            :morning_waking,
+            %{sleep_hours: telemetry.sleep_hours}
+          )
+        end
+
+        # Autonomous somatic check-in for late night insomnia
+        if telemetry.is_insomnia or (DateTime.utc_now().hour in [1, 2, 3, 4] and telemetry.heart_rate && telemetry.heart_rate > 70) do
+          SovereignSoulEngine.TheoryOfMind.ProactiveDispatcher.checkin_for_somatic_event(
+            character.id,
+            :late_night_insomnia,
+            %{hour: DateTime.utc_now().hour}
+          )
+        end
+
+        # Autonomous somatic check-in for smart ring recovery dip
+        if telemetry.recovery_score && telemetry.recovery_score < 60 do
+          SovereignSoulEngine.TheoryOfMind.ProactiveDispatcher.checkin_for_somatic_event(
+            character.id,
+            :recovery_dip,
+            %{recovery_score: telemetry.recovery_score}
+          )
         end
 
         conn
@@ -58,7 +92,10 @@ defmodule SovereignSoulEngineWeb.Api.TelemetryController do
             motion_state: telemetry.motion_state,
             sleep_hours: telemetry.sleep_hours,
             steps: telemetry.steps,
-            ambient_noise_db: telemetry.ambient_noise_db
+            ambient_noise_db: telemetry.ambient_noise_db,
+            recovery_score: telemetry.recovery_score,
+            readiness_score: telemetry.readiness_score,
+            sleep_score: telemetry.sleep_score
           },
           somatic_state: %{
             fatigue: somatic.fatigue,
@@ -135,7 +172,13 @@ defmodule SovereignSoulEngineWeb.Api.TelemetryController do
       sleep_hours: parse_float(params["sleep_hours"]),
       skin_temp: parse_float(params["skin_temp"]),
       ambient_noise_db: parse_float(params["ambient_noise_db"]),
-      motion_state: params["motion_state"] || "stationary"
+      motion_state: params["motion_state"] || "stationary",
+      recovery_score: parse_int(params["recovery_score"]),
+      readiness_score: parse_int(params["readiness_score"]),
+      sleep_score: parse_int(params["sleep_score"]),
+      hrv_rmssd: parse_int(params["hrv_rmssd"]) || parse_int(params["hrv"]),
+      skin_temp_deviation: parse_float(params["skin_temp_deviation"]),
+      is_insomnia: params["insomnia"] == true or params["insomnia"] == "true"
     }
   end
 
@@ -296,6 +339,16 @@ defmodule SovereignSoulEngineWeb.Api.TelemetryController do
       if telemetry.ambient_noise_db != nil && telemetry.ambient_noise_db >= 80.0 do
         [
           "#{name}'s smart glasses sensors detect a loud, overstimulating environment (#{round(telemetry.ambient_noise_db)} dB)."
+          | facts
+        ]
+      else
+        facts
+      end
+
+    facts =
+      if telemetry.recovery_score != nil && telemetry.recovery_score < 60 do
+        [
+          "#{name}'s smart ring reports a low recovery score (#{telemetry.recovery_score}%), indicating physical strain and need for rest."
           | facts
         ]
       else

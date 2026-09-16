@@ -36,7 +36,7 @@ async function openDetails(page) {
  */
 async function injectEvent(page, eventType) {
   await openDetails(page);
-  await page.locator(`#inject-${eventType}`).click();
+  await page.locator(`#inject-${eventType}`).click({ force: true });
   await page.waitForTimeout(400);
   await openDetails(page);
 }

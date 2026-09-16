@@ -54,22 +54,36 @@ defmodule SovereignSoulEngineWeb.Router do
     # Portable Soul Capsules (.soul export/import)
     get "/souls/:slug/export", SoulCapsuleController, :export
     post "/souls/import", SoulCapsuleController, :import_soul
+
+    # Smart Home Environmental Lighting Sync
+    get "/smart_home/ambient", SmartHomeController, :ambient
+    post "/smart_home/sync", SmartHomeController, :sync
+
+    # Desk Companion Physical Vessel (ESP32 / OLED)
+    get "/vessel/display_state", VesselController, :display_state
+    post "/vessel/touch", VesselController, :touch
   end
 
-  # Public external access for Polsia / Twitter / RSS, Telegram Webhooks, and Portable Souls
+  # Public external access for Polsia / Twitter / RSS, Telegram Webhooks, Alexa, and Portable Souls
   scope "/api", SovereignSoulEngineWeb.Api do
     post "/webhooks/telegram", TelegramWebhookController, :webhook
+    post "/alexa", AlexaController, :handle
     post "/vision/perceive", VisionController, :perceive
     get "/souls/:slug/export", SoulCapsuleController, :export
     post "/souls/import", SoulCapsuleController, :import_soul
     get "/social/feed", SocialPostController, :index
     get "/social/latest/:slug", SocialPostController, :latest
     post "/social/generate", SocialPostController, :generate
+    get "/smart_home/ambient", SmartHomeController, :ambient
+    post "/smart_home/sync", SmartHomeController, :sync
+    get "/vessel/display_state", VesselController, :display_state
+    post "/vessel/touch", VesselController, :touch
   end
 
   # Public webhook ingress under /sse prefix
   scope "/sse/api", SovereignSoulEngineWeb.Api do
     post "/webhooks/telegram", TelegramWebhookController, :webhook
+    post "/alexa", AlexaController, :handle
   end
 
   scope "/", SovereignSoulEngineWeb do

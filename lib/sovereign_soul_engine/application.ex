@@ -19,6 +19,7 @@ defmodule SovereignSoulEngine.Application do
       SovereignSoulEngine.Memories.MemoryMerger,
       SovereignSoulEngine.Social.NPCScheduler,
       SovereignSoulEngine.TheoryOfMind.ProactiveDispatcher,
+      SovereignSoulEngine.Wearables.SmartHomeBridge,
       # Start to serve requests, typically the last entry
       SovereignSoulEngineWeb.Endpoint
     ]

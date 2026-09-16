@@ -212,6 +212,14 @@ defmodule SovereignSoulEngine.TheoryOfMind do
   end
 
   @doc """
+  Harvests open life threads from natural dialogue statements and records them.
+  Returns `{:ok, thread}` when a thread was detected and created, or `:none`.
+  """
+  def harvest_life_threads(knower_id, subject_id, statement, opts \\ []) do
+    record_life_thread_if_detected(knower_id, subject_id, statement, opts)
+  end
+
+  @doc """
   Lists all pending threads where the due_at time has passed and no check-in has been sent.
   """
   def list_threads_due_for_checkin(now \\ DateTime.utc_now()) do

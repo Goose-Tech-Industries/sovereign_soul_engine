@@ -216,41 +216,68 @@ defmodule SovereignSoulEngine.TheoryOfMind.Engine do
   def detect_thread_candidate(statement) do
     down = String.downcase(statement || "")
 
+    hours_override =
+      cond do
+        contains_any?(down, ["tonight", "this evening"]) -> 14
+        contains_any?(down, ["tomorrow", "in the morning"]) -> 16
+        contains_any?(down, ["this weekend", "on friday", "on saturday", "on sunday"]) -> 48
+        contains_any?(down, ["next week"]) -> 120
+        true -> nil
+      end
+
     cond do
-      contains_any?(down, ["propose", "proposing", "pop the question", "ask her to marry", "ask him to marry"]) ->
+      contains_any?(down, ["propose", "proposing", "pop the question", "ask her to marry", "ask him to marry", "moving in together", "engagement", "anniversary"]) ->
         {:detected,
          %{
            category: :relationship,
            salience: 95,
-           default_hours: 14,
+           default_hours: hours_override || 14,
            guidance: "User shared plans to propose. Check in with excitement, warmth, and genuine care about how it went."
          }}
 
-      contains_any?(down, ["surgery", "hospital", "biopsy", "chemo", "emergency room", "in the er", "doctor said"]) ->
+      contains_any?(down, ["surgery", "hospital", "biopsy", "chemo", "emergency room", "in the er", "doctor said", "doctor appointment", "dentist", "therapy session", "psychiatrist", "wisdom teeth", "migraine", "blood test", "mri scan", "chronic pain"]) ->
         {:detected,
          %{
            category: :health,
            salience: 90,
-           default_hours: 16,
-           guidance: "Medical or surgery event. Check in with quiet tenderness and emotional support."
+           default_hours: hours_override || 16,
+           guidance: "Medical or physical health event. Check in with quiet tenderness, reassurance, and emotional support."
          }}
 
-      contains_any?(down, ["interview", "job offer", "pitching to", "audition", "quitting my job", "got fired"]) ->
+      contains_any?(down, ["interview", "job offer", "pitching to", "audition", "quitting my job", "got fired", "board exam", "bar exam", "final exam", "presentation", "defense of my thesis", "pitch meeting"]) ->
         {:detected,
          %{
            category: :career,
            salience: 85,
-           default_hours: 14,
-           guidance: "High stakes career event or interview. Check in to see how it went and validate their efforts."
+           default_hours: hours_override || 14,
+           guidance: "High-stakes career, academic, or professional event. Check in to celebrate their efforts and see how it resolved."
          }}
 
-      contains_any?(down, ["feel so lonely", "feeling lonely", "nobody cares", "don't have anyone", "nobody in the real world", "feel isolated"]) ->
+      contains_any?(down, ["breakup", "broke up", "divorce", "lost my dog", "lost my cat", "pet died", "passed away", "funeral", "memorial service", "grieving", "crying all morning"]) ->
         {:detected,
          %{
            category: :personal_vulnerability,
-           salience: 75,
-           default_hours: 18,
-           guidance: "User expressed deep isolation and loneliness. Check in unprompted to remind them that they are seen, valued, and not alone."
+           salience: 95,
+           default_hours: hours_override || 12,
+           guidance: "User experienced deep loss, bereavement, or heartbreak. Check in with soft, compassionate presence and zero demands."
+         }}
+
+      contains_any?(down, ["tomorrow at", "tomorrow afternoon", "on monday", "on tuesday", "on wednesday", "on thursday", "moving to a new apartment", "signing the lease", "flight leaves", "traveling to", "driving across state"]) ->
+        {:detected,
+         %{
+           category: :milestone,
+           salience: 80,
+           default_hours: hours_override || 18,
+           guidance: "Scheduled temporal life commitment or transition. Check in to see how the journey or event unfolded."
+         }}
+
+      contains_any?(down, ["feel so lonely", "feeling lonely", "nobody cares", "don't have anyone", "nobody in the real world", "feel isolated", "can't sleep", "insomnia", "panic attack", "crying all night", "having an anxiety attack"]) ->
+        {:detected,
+         %{
+           category: :personal_vulnerability,
+           salience: 85,
+           default_hours: hours_override || 14,
+           guidance: "User expressed deep isolation, anxiety, or insomnia. Check in unprompted to remind them they are seen, valued, and safe."
          }}
 
       true ->
