@@ -59,7 +59,7 @@ defmodule SovereignSoulEngineWeb.Router do
   scope "/", SovereignSoulEngineWeb do
     pipe_through :browser
 
-    get "/", PageController, :home
+    live "/", LandingLive, :index
     get "/chat", PageController, :home
   end
 

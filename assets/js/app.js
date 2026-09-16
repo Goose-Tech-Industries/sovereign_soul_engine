@@ -25,11 +25,105 @@ import {LiveSocket} from "phoenix_live_view"
 import {hooks as colocatedHooks} from "phoenix-colocated/sovereign_soul_engine"
 import topbar from "../vendor/topbar"
 
+const customHooks = {
+  VoiceIntercom: {
+    mounted() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      this.recognition = null;
+      this.isCalling = false;
+      this.isSpeaking = false;
+
+      if (!SpeechRecognition) {
+        console.warn("[VoiceIntercom] SpeechRecognition not supported in this browser.");
+        return;
+      }
+
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = "en-US";
+
+      recognition.onstart = () => {
+        this.pushEvent("intercom_status", { status: "listening" });
+      };
+
+      recognition.onresult = (event) => {
+        if (event.results && event.results[0] && event.results[0][0]) {
+          const transcript = event.results[0][0].transcript;
+          if (transcript && transcript.trim() !== "") {
+            this.pushEvent("intercom_transcription", { content: transcript });
+          }
+        }
+      };
+
+      recognition.onerror = (err) => {
+        console.warn("[VoiceIntercom] Error:", err.error);
+        this.pushEvent("intercom_status", { status: "idle" });
+      };
+
+      recognition.onend = () => {
+        if (this.isCalling && !this.isSpeaking) {
+          setTimeout(() => {
+            if (this.isCalling && !this.isSpeaking) {
+              try { recognition.start(); } catch(e) {}
+            }
+          }, 350);
+        } else {
+          this.pushEvent("intercom_status", { status: "idle" });
+        }
+      };
+
+      this.recognition = recognition;
+
+      this.handleEvent("start_voice_call", () => {
+        this.isCalling = true;
+        try {
+          this.recognition.start();
+        } catch(e) {
+          console.warn("[VoiceIntercom] Start failed:", e);
+        }
+      });
+
+      this.handleEvent("stop_voice_call", () => {
+        this.isCalling = false;
+        try {
+          this.recognition.stop();
+        } catch(e) {}
+        this.pushEvent("intercom_status", { status: "idle" });
+      });
+
+      window.addEventListener("phx:play_audio", () => {
+        this.isSpeaking = true;
+        if (this.recognition) {
+          try { this.recognition.abort(); } catch(e) {}
+        }
+        this.pushEvent("intercom_status", { status: "companion_speaking" });
+      });
+
+      window.addEventListener("soul_audio_ended", () => {
+        this.isSpeaking = false;
+        if (this.isCalling && this.recognition) {
+          setTimeout(() => {
+            if (this.isCalling && !this.isSpeaking) {
+              try { this.recognition.start(); } catch(e) {}
+            }
+          }, 300);
+        }
+      });
+    },
+    destroyed() {
+      if (this.recognition) {
+        try { this.recognition.abort(); } catch(e) {}
+      }
+    }
+  }
+};
+
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/sse/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks},
+  hooks: {...colocatedHooks, ...customHooks},
 })
 
 // Show progress bar on live navigation and form submits
@@ -61,6 +155,9 @@ window.addEventListener("phx:play_audio", (e) => {
       currentSoulAudio.currentTime = 0;
     }
     currentSoulAudio = new Audio(url);
+    currentSoulAudio.onended = () => {
+      window.dispatchEvent(new CustomEvent("soul_audio_ended"));
+    };
     currentSoulAudio.play().catch(err => {
       console.warn("[Voice] Audio play blocked or failed:", err);
     });

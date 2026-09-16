@@ -52,6 +52,9 @@ defmodule SovereignSoulEngineWeb.ChatLive do
       |> assign(:typing_npc_name, nil)
       |> assign(:social_posts, SovereignSoulEngine.Social.SocialFeed.list_recent_posts(limit: 15))
       |> assign(:showing_social_drawer?, false)
+      |> assign(:voice_call_active?, false)
+      |> assign(:intercom_status, "idle")
+      |> assign(:npc_expression, compute_emotional_expression(nil))
       |> load_scenes()
       |> select_first_available_chat()
 
@@ -579,6 +582,36 @@ defmodule SovereignSoulEngineWeb.ChatLive do
   end
 
   @impl true
+  def handle_event("toggle_voice_call", _params, socket) do
+    new_active = !socket.assigns.voice_call_active?
+
+    socket =
+      socket
+      |> assign(:voice_call_active?, new_active)
+      |> assign(:voice_enabled?, true)
+      |> assign(:intercom_status, if(new_active, do: "listening", else: "idle"))
+
+    socket =
+      if new_active do
+        push_event(socket, "start_voice_call", %{})
+      else
+        push_event(socket, "stop_voice_call", %{})
+      end
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("intercom_status", %{"status" => status}, socket) do
+    {:noreply, assign(socket, :intercom_status, status)}
+  end
+
+  @impl true
+  def handle_event("intercom_transcription", %{"content" => content}, socket) do
+    handle_event("send_message", %{"message" => %{"content" => content}}, socket)
+  end
+
+  @impl true
   def handle_event("play_message_audio", %{"url" => url}, socket) do
     {:noreply, push_event(socket, "play_audio", %{url: url})}
   end
@@ -840,20 +873,45 @@ defmodule SovereignSoulEngineWeb.ChatLive do
   @impl true
   def handle_info(_msg, socket), do: {:noreply, socket}
 
+  defp compute_emotional_expression(nil),
+    do: %{mood: "calm", label: "Calm & Centered", ring_class: "ring-emerald-500/50", badge_class: "badge-neutral text-emerald-400"}
+
+  defp compute_emotional_expression(emotional) do
+    cond do
+      (emotional.anger || 0) >= 50 or (emotional.stress || 0) >= 70 ->
+        %{mood: "guarded", label: "Guarded & Tense", ring_class: "ring-rose-500/80 animate-pulse", badge_class: "badge-error text-rose-300"}
+
+      (emotional.attachment || 0) >= 60 or (emotional.confidence || 0) >= 75 ->
+        %{mood: "intimate", label: "Warm & Intimate", ring_class: "ring-purple-500/80", badge_class: "badge-secondary text-purple-300"}
+
+      (emotional.fear || 0) >= 40 ->
+        %{mood: "vigilant", label: "Vigilant & Alert", ring_class: "ring-amber-500/80", badge_class: "badge-warning text-amber-300"}
+
+      (emotional.curiosity || 0) >= 50 ->
+        %{mood: "intrigued", label: "Curious & Intrigued", ring_class: "ring-cyan-500/80", badge_class: "badge-info text-cyan-300"}
+
+      true ->
+        %{mood: "calm", label: "Present & Attentive", ring_class: "ring-emerald-500/40", badge_class: "badge-neutral text-emerald-400"}
+    end
+  end
+
   defp assign_character_details(socket) do
     npc = socket.assigns.selected_npc
 
     if npc do
       soul_profile = Souls.get_soul_profile_by_character(npc.id)
       emotional_state = Souls.get_emotional_state_by_character(npc.id)
+      expression = compute_emotional_expression(emotional_state)
 
       socket
       |> assign(:soul_profile, soul_profile)
       |> assign(:emotional_state, emotional_state)
+      |> assign(:npc_expression, expression)
     else
       socket
       |> assign(:soul_profile, nil)
       |> assign(:emotional_state, nil)
+      |> assign(:npc_expression, compute_emotional_expression(nil))
     end
   end
 
@@ -1101,9 +1159,10 @@ defmodule SovereignSoulEngineWeb.ChatLive do
         <header class="shrink-0 flex items-center gap-3 px-6 py-4 border-b border-base-300 bg-base-200/30">
           <div
             :if={@selected_npc}
-            class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center"
+            class={["w-10 h-10 rounded-full flex items-center justify-center ring-2 transition-all duration-300 relative bg-primary/20", @npc_expression.ring_class]}
           >
             <span class="text-sm font-bold text-primary">{String.first(@selected_npc.name)}</span>
+            <span class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-base-200 bg-emerald-500" title={@npc_expression.label}></span>
           </div>
           
           <div
@@ -1115,8 +1174,11 @@ defmodule SovereignSoulEngineWeb.ChatLive do
           
           <div class="min-w-0 flex-1 space-y-1">
             <div class="flex items-center gap-3">
-              <h1 class="text-base font-semibold text-base-content">
-                {if @selected_npc, do: @selected_npc.name, else: @selected_scene.title}
+              <h1 class="text-base font-semibold text-base-content flex items-center gap-2">
+                <span>{if @selected_npc, do: @selected_npc.name, else: @selected_scene.title}</span>
+                <span :if={@selected_npc} id="companion-expression-badge" class={["text-[10px] px-2 py-0.5 rounded-full font-semibold border", @npc_expression.badge_class]}>
+                  {@npc_expression.label}
+                </span>
               </h1>
                <%!-- Scenario Context --%>
               <div class="hidden md:flex items-center gap-2 text-[11px] bg-base-300/40 px-2 py-1 rounded-lg border border-base-300">
@@ -1220,6 +1282,21 @@ defmodule SovereignSoulEngineWeb.ChatLive do
               {if @voice_enabled?, do: "Voice ON", else: "Voice OFF"}
             </button>
 
+            <%!-- Voice Call Mode Toggle (Hands-Free Intercom) --%>
+            <button
+              phx-click="toggle_voice_call"
+              id="voice-call-toggle-btn"
+              class={[
+                "btn btn-xs flex items-center gap-1.5 border transition-all shadow-sm font-semibold",
+                @voice_call_active? && "btn-error text-error-content animate-pulse border-error",
+                !@voice_call_active? && "btn-outline border-base-300 text-base-content/70 hover:bg-base-300"
+              ]}
+              title="Toggle Hands-Free Voice Call (Mic + Neural Voice Intercom)"
+            >
+              <.icon name="hero-phone" class="size-3.5" />
+              <span>{if @voice_call_active?, do: "End Call", else: "Voice Call"}</span>
+            </button>
+
             <%!-- Social Wire / Echoes Drawer Toggle --%>
             <button
               phx-click="toggle_social_drawer"
@@ -1266,6 +1343,45 @@ defmodule SovereignSoulEngineWeb.ChatLive do
             <% end %>
           </div>
         </header>
+
+        <%!-- Hands-Free Voice Call HUD Banner --%>
+        <div
+          :if={@voice_call_active?}
+          id="voice-intercom-hud"
+          phx-hook="VoiceIntercom"
+          class="shrink-0 px-6 py-3 bg-rose-950/40 border-b border-rose-500/30 flex items-center justify-between backdrop-blur-sm transition-all"
+        >
+          <div class="flex items-center gap-3">
+            <div class="relative flex items-center justify-center size-8 rounded-full bg-rose-500/20 text-rose-400">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-40"></span>
+              <.icon name="hero-phone" class="size-4 relative" />
+            </div>
+            <div>
+              <div class="text-xs font-bold text-rose-300 flex items-center gap-2">
+                <span>Hands-Free Voice Intercom Active</span>
+                <span id="intercom-status-pill" class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-rose-500/30 text-rose-200 border border-rose-500/40">
+                  {@intercom_status}
+                </span>
+              </div>
+              <p class="text-[11px] text-base-content/60">
+                <%= case @intercom_status do %>
+                  <% "listening" -> %>
+                    🎙️ Listening to your voice... Speak freely; pauses auto-submit.
+                  <% "companion_speaking" -> %>
+                    🔊 {if @selected_npc, do: @selected_npc.name, else: "Companion"} is speaking...
+                  <% _ -> %>
+                    ⚡ Ready. Speak naturally into your microphone.
+                <% end %>
+              </p>
+            </div>
+          </div>
+          <button
+            phx-click="toggle_voice_call"
+            class="btn btn-error btn-xs font-semibold px-3"
+          >
+            Hang Up
+          </button>
+        </div>
         
         <div
           id="chat-scroll-container"
@@ -1410,6 +1526,20 @@ defmodule SovereignSoulEngineWeb.ChatLive do
               />
             </div>
             
+            <button
+              type="button"
+              phx-click="toggle_voice_call"
+              id="mic-call-btn"
+              class={[
+                "btn btn-square shrink-0 transition-all",
+                @voice_call_active? && "btn-error animate-pulse text-error-content shadow-lg",
+                !@voice_call_active? && "btn-ghost text-base-content/60 hover:text-base-content hover:bg-base-300"
+              ]}
+              title={if @voice_call_active?, do: "End Voice Call", else: "Start Hands-Free Voice Call"}
+            >
+              <.icon name="hero-microphone" class="size-5" />
+            </button>
+
             <button
               type="submit"
               id="chat-send-btn"

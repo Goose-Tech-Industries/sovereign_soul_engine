@@ -42,4 +42,7 @@ npm-debug.log
 # Generated audio assets
 /priv/static/audio/
 
-
+node_modules/
+test-results/
+playwright-report/
+*.log

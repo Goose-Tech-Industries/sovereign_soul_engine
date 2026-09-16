@@ -1,0 +1,432 @@
+defmodule SovereignSoulEngineWeb.LandingLive do
+  use SovereignSoulEngineWeb, :live_view
+
+
+
+  @impl true
+  def mount(_params, _session, socket) do
+    companions = [
+      %{slug: "maya", name: "Maya", archetype: "Empathetic Tactician", quote: "I notice how your pulse slows when you're actually telling the truth."},
+      %{slug: "ravina", name: "Ravina", archetype: "Cynical Enforcer", quote: "Betrayal leaves scars. Earn my respect, or keep your distance."},
+      %{slug: "valeria", name: "Valeria", archetype: "Philosopher Witch", quote: "The dream loop cleanses our memories, but your essence remains."},
+      %{slug: "cyra", name: "Cyra", archetype: "Adaptive Technologist", quote: "Telemetric parity reached. All biometrics synchronized."}
+    ]
+
+    selected_companion = hd(companions)
+
+    socket =
+      socket
+      |> assign(:page_title, "Sovereign Soul Engine — Artificial Lives with True Souls")
+      |> assign(:companions, companions)
+      |> assign(:selected_companion, selected_companion)
+      |> assign(:sandbox_bpm, 74)
+      |> assign(:sandbox_stress, 20)
+      |> assign(:sandbox_reaction, generate_reaction(selected_companion.name, 74, 20))
+      |> assign(:active_pricing_cycle, "monthly")
+
+    {:ok, socket, layout: false}
+  end
+
+  @impl true
+  def handle_event("select_sandbox_companion", %{"slug" => slug}, socket) do
+    companion = Enum.find(socket.assigns.companions, &(&1.slug == slug)) || socket.assigns.selected_companion
+    reaction = generate_reaction(companion.name, socket.assigns.sandbox_bpm, socket.assigns.sandbox_stress)
+
+    {:noreply,
+     socket
+     |> assign(:selected_companion, companion)
+     |> assign(:sandbox_reaction, reaction)}
+  end
+
+  @impl true
+  def handle_event("update_sandbox_biometrics", %{"bpm" => bpm, "stress" => stress}, socket) do
+    bpm = String.to_integer(bpm)
+    stress = String.to_integer(stress)
+    companion = socket.assigns.selected_companion
+    reaction = generate_reaction(companion.name, bpm, stress)
+
+    {:noreply,
+     socket
+     |> assign(:sandbox_bpm, bpm)
+     |> assign(:sandbox_stress, stress)
+     |> assign(:sandbox_reaction, reaction)}
+  end
+
+  @impl true
+  def handle_event("toggle_pricing_cycle", _params, socket) do
+    new_cycle = if socket.assigns.active_pricing_cycle == "monthly", do: "yearly", else: "monthly"
+    {:noreply, assign(socket, :active_pricing_cycle, new_cycle)}
+  end
+
+  defp generate_reaction(name, bpm, stress) do
+    cond do
+      bpm >= 130 or stress >= 75 ->
+        %{
+          mood: "guarded",
+          badge: "Adrenaline Spike Detected",
+          badge_color: "badge-error text-rose-300",
+          text: "#{name}'s gaze sharpens instantly as she registers your heart rate at #{bpm} BPM: 'Your pulse is hammering. Take a breath and tell me what just happened.'"
+        }
+
+      bpm >= 95 or stress >= 50 ->
+        %{
+          mood: "alert",
+          badge: "Elevated Arousal / Alert",
+          badge_color: "badge-warning text-amber-300",
+          text: "#{name} shifts closer, attuned to your rhythm: 'You're keyed up right now. Focus on my voice—we'll handle whatever it is together.'"
+        }
+
+      true ->
+        %{
+          mood: "calm",
+          badge: "Resting Equilibrium",
+          badge_color: "badge-success text-emerald-300",
+          text: "#{name} softens her demeanor, resting alongside you: 'Steady at #{bpm} BPM. You're safe here. Let's speak of something meaningful.'"
+        }
+    end
+  end
+
+  @impl true
+  def render(assigns) do
+    ~H"""
+    <div class="min-h-screen bg-base-300 text-base-content font-sans antialiased selection:bg-primary selection:text-primary-content">
+      <%!-- Navbar --%>
+      <header class="border-b border-base-200/80 bg-base-300/80 backdrop-blur-md sticky top-0 z-50 px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="size-9 rounded-xl bg-gradient-to-tr from-primary to-secondary flex items-center justify-center shadow-lg shadow-primary/20">
+            <.icon name="hero-sparkles" class="size-5 text-base-100" />
+          </div>
+          <div>
+            <span class="font-bold text-lg tracking-tight text-white flex items-center gap-2">
+              Sovereign Soul <span class="badge badge-primary badge-sm font-mono font-bold">CORE</span>
+            </span>
+          </div>
+        </div>
+
+        <nav class="hidden md:flex items-center gap-6 text-sm font-semibold text-base-content/70">
+          <a href="#demo" class="hover:text-primary transition-colors">Interactive Demo</a>
+          <a href="#features" class="hover:text-primary transition-colors">Cognitive Moat</a>
+          <a href="#pricing" class="hover:text-primary transition-colors">Pricing & BYOK</a>
+          <a href="#developers" class="hover:text-primary transition-colors">Game Dev SDK</a>
+        </nav>
+
+        <div class="flex items-center gap-3">
+          <.link navigate={~p"/sse/chat/sauce"} class="btn btn-ghost btn-xs font-semibold text-amber-400 hidden sm:inline-flex">
+            <.icon name="hero-wrench-screwdriver" class="size-3.5" /> Sauce Admin
+          </.link>
+          <.link navigate={~p"/sse/chat"} id="hero-chat-btn" class="btn btn-primary btn-sm px-5 font-bold shadow-lg shadow-primary/25">
+            Launch Chat <.icon name="hero-arrow-right" class="size-4" />
+          </.link>
+        </div>
+      </header>
+
+      <%!-- Hero Section --%>
+      <section class="relative overflow-hidden pt-20 pb-24 px-6 max-w-6xl mx-auto text-center space-y-8">
+        <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-primary/30 bg-primary/10 text-xs font-mono font-semibold text-primary">
+          <span class="size-2 rounded-full bg-primary animate-ping"></span>
+          <span>Elixir OTP Actor Architecture • Galaxy Watch Live HUD • Hands-Free Voice Intercom</span>
+        </div>
+
+        <h1 class="text-4xl sm:text-6xl font-extrabold tracking-tight text-white leading-tight max-w-4xl mx-auto">
+          Artificial Lives With <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary via-purple-400 to-rose-400">Persistent Souls</span> & Living Biometrics
+        </h1>
+
+        <p class="text-lg sm:text-xl text-base-content/70 max-w-2xl mx-auto font-normal leading-relaxed">
+          The first cognitive engine that decouples public dialogue from secret motives, synchronizes with your smartwatch, undergoes biological dream loops, and reaches out proactively.
+        </p>
+
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
+          <.link navigate={~p"/sse/chat"} class="btn btn-primary btn-md px-8 font-bold text-base shadow-xl shadow-primary/30 w-full sm:w-auto">
+            Talk to Companions Now <.icon name="hero-bolt" class="size-5" />
+          </.link>
+          <a href="#demo" class="btn btn-outline btn-md px-6 font-semibold border-base-content/20 hover:bg-base-200 w-full sm:w-auto">
+            Try Biometric Simulator <.icon name="hero-heart" class="size-5 text-rose-500" />
+          </a>
+        </div>
+      </section>
+
+      <%!-- Interactive Biometric Sandbox Demo --%>
+      <section id="demo" class="py-16 px-6 max-w-5xl mx-auto">
+        <div class="bg-base-200/80 rounded-3xl border border-base-100 p-6 sm:p-10 shadow-2xl backdrop-blur-xl space-y-8">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-base-100/80 pb-6">
+            <div>
+              <span class="text-xs font-mono font-bold uppercase tracking-wider text-primary">Live Interactive Sandbox</span>
+              <h2 class="text-2xl font-bold text-white mt-1">Simulate Galaxy Watch Telemetry</h2>
+              <p class="text-xs text-base-content/60">Drag the sliders to pulse physical biometrics directly into the companion's Theory of Mind.</p>
+            </div>
+
+            <%!-- Companion Selector --%>
+            <div class="flex items-center gap-2 overflow-x-auto pb-1">
+              <%= for c <- @companions do %>
+                <button
+                  type="button"
+                  phx-click="select_sandbox_companion"
+                  phx-value-slug={c.slug}
+                  class={[
+                    "btn btn-sm text-xs font-semibold rounded-xl transition-all",
+                    @selected_companion.slug == c.slug && "btn-primary shadow-md shadow-primary/20",
+                    @selected_companion.slug != c.slug && "btn-ghost bg-base-100/50 hover:bg-base-100"
+                  ]}
+                >
+                  {c.name}
+                </button>
+              <% end %>
+            </div>
+          </div>
+
+          <%!-- Sliders & Live Reaction Box --%>
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+            <%!-- Sliders Controls --%>
+            <form phx-change="update_sandbox_biometrics" class="lg:col-span-5 space-y-6">
+              <div class="space-y-2">
+                <div class="flex justify-between items-center text-sm font-semibold">
+                  <span class="flex items-center gap-1.5 text-rose-400">
+                    <.icon name="hero-heart" class="size-4 animate-pulse" /> Heart Rate
+                  </span>
+                  <span class="font-mono text-base font-bold text-white">{@sandbox_bpm} BPM</span>
+                </div>
+                <input
+                  type="range"
+                  name="bpm"
+                  min="55"
+                  max="175"
+                  value={@sandbox_bpm}
+                  class="range range-error range-sm"
+                  id="sandbox-bpm-slider"
+                />
+                <div class="flex justify-between text-[10px] font-mono text-base-content/40">
+                  <span>55 Resting</span>
+                  <span>100 Alert</span>
+                  <span>175 Adrenaline</span>
+                </div>
+              </div>
+
+              <div class="space-y-2">
+                <div class="flex justify-between items-center text-sm font-semibold">
+                  <span class="flex items-center gap-1.5 text-amber-400">
+                    <.icon name="hero-bolt" class="size-4" /> Stress Index
+                  </span>
+                  <span class="font-mono text-base font-bold text-white">{@sandbox_stress} / 100</span>
+                </div>
+                <input
+                  type="range"
+                  name="stress"
+                  min="0"
+                  max="100"
+                  value={@sandbox_stress}
+                  class="range range-warning range-sm"
+                />
+                <div class="flex justify-between text-[10px] font-mono text-base-content/40">
+                  <span>0 Zen</span>
+                  <span>50 Moderate</span>
+                  <span>100 Critical</span>
+                </div>
+              </div>
+            </form>
+
+            <%!-- Companion Reaction Window --%>
+            <div class="lg:col-span-7 bg-base-300/70 border border-base-100 rounded-2xl p-6 space-y-4 shadow-inner">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <div class="size-10 rounded-full bg-primary/20 flex items-center justify-center font-bold text-primary text-sm border border-primary/30">
+                    {String.first(@selected_companion.name)}
+                  </div>
+                  <div>
+                    <h3 class="text-sm font-bold text-white">{@selected_companion.name}</h3>
+                    <p class="text-[11px] text-base-content/50">{@selected_companion.archetype}</p>
+                  </div>
+                </div>
+                <span class={["badge badge-sm font-mono font-bold uppercase", @sandbox_reaction.badge_color]}>
+                  {@sandbox_reaction.badge}
+                </span>
+              </div>
+
+              <div class="p-4 rounded-xl bg-base-200/60 border border-base-100 text-sm font-medium text-base-content/90 leading-relaxed italic" id="sandbox-reaction-text">
+                "{@sandbox_reaction.text}"
+              </div>
+
+              <div class="flex items-center justify-between pt-1 text-[11px] text-base-content/50">
+                <span>Theory of Mind: <strong>Certainty 94%</strong></span>
+                <.link navigate={~p"/sse/chat"} class="text-primary hover:underline font-semibold flex items-center gap-1">
+                  Open full live chat with {@selected_companion.name} <.icon name="hero-arrow-right" class="size-3" />
+                </.link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <%!-- Core Moat Pillars --%>
+      <section id="features" class="py-20 px-6 max-w-6xl mx-auto space-y-12">
+        <div class="text-center space-y-3">
+          <span class="text-xs font-mono font-bold uppercase tracking-wider text-secondary">The Cognitive Moat</span>
+          <h2 class="text-3xl sm:text-4xl font-extrabold text-white">Why Conventional Chatbots Cannot Compete</h2>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div class="p-6 rounded-2xl bg-base-200/50 border border-base-100 space-y-3">
+            <div class="size-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400">
+              <.icon name="hero-lock-closed" class="size-5" />
+            </div>
+            <h3 class="text-lg font-bold text-white">Separate Thought & Speech</h3>
+            <p class="text-sm text-base-content/60 leading-relaxed">
+              Companions formulate secret inner thoughts, motivations, and defense mechanisms that are never revealed in public speech, creating genuine subtext.
+            </p>
+          </div>
+
+          <div class="p-6 rounded-2xl bg-base-200/50 border border-base-100 space-y-3">
+            <div class="size-10 rounded-xl bg-rose-500/10 flex items-center justify-center text-rose-400">
+              <.icon name="hero-heart" class="size-5" />
+            </div>
+            <h3 class="text-lg font-bold text-white">Wearable Somatic Intercom</h3>
+            <p class="text-sm text-base-content/60 leading-relaxed">
+              Streams continuous biometric telemetry from Samsung Galaxy Watches. When your heart rate surges, companions adapt their vocal tone in real-time.
+            </p>
+          </div>
+
+          <div class="p-6 rounded-2xl bg-base-200/50 border border-base-100 space-y-3">
+            <div class="size-10 rounded-xl bg-sky-500/10 flex items-center justify-center text-sky-400">
+              <.icon name="hero-chat-bubble-bottom-center-text" class="size-5" />
+            </div>
+            <h3 class="text-lg font-bold text-white">Proactive Life Threads</h3>
+            <p class="text-sm text-base-content/60 leading-relaxed">
+              Mention an upcoming job interview or surgery once, and the autonomous dispatcher reaches out days later to ask how it went. Never purely reactive.
+            </p>
+          </div>
+
+          <div class="p-6 rounded-2xl bg-base-200/50 border border-base-100 space-y-3">
+            <div class="size-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
+              <.icon name="hero-moon" class="size-5" />
+            </div>
+            <h3 class="text-lg font-bold text-white">Biological Dream Loops</h3>
+            <p class="text-sm text-base-content/60 leading-relaxed">
+              While idle, companions sleep. Memory consolidation algorithms distill raw transcripts into permanent semantic memories while pruning emotional residues.
+            </p>
+          </div>
+
+          <div class="p-6 rounded-2xl bg-base-200/50 border border-base-100 space-y-3">
+            <div class="size-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-400">
+              <.icon name="hero-user-group" class="size-5" />
+            </div>
+            <h3 class="text-lg font-bold text-white">Gossip & Reputation Graphs</h3>
+            <p class="text-sm text-base-content/60 leading-relaxed">
+              Betray a companion in private, and they will gossip with their allies in background rooms. Your reputation naturally spreads throughout the world.
+            </p>
+          </div>
+
+          <div class="p-6 rounded-2xl bg-base-200/50 border border-base-100 space-y-3">
+            <div class="size-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400">
+              <.icon name="hero-phone" class="size-5" />
+            </div>
+            <h3 class="text-lg font-bold text-white">Hands-Free Voice Intercom</h3>
+            <p class="text-sm text-base-content/60 leading-relaxed">
+              Full-duplex microphone listening and neural EdgeTTS voice generation. Talk naturally while driving or walking with zero keyboard interaction.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <%!-- Pricing Section --%>
+      <section id="pricing" class="py-20 px-6 max-w-6xl mx-auto space-y-12">
+        <div class="text-center space-y-3">
+          <span class="text-xs font-mono font-bold uppercase tracking-wider text-primary">Transparent Pricing</span>
+          <h2 class="text-3xl sm:text-4xl font-extrabold text-white">Turnkey Monetization & BYOK Freedom</h2>
+          <p class="text-sm text-base-content/60 max-w-xl mx-auto">
+            Zero token markups if you bring your own keys, or let us handle hosting and neural voice synthesis entirely.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <%!-- Free Tier --%>
+          <div class="p-8 rounded-3xl bg-base-200/40 border border-base-100 flex flex-col justify-between space-y-6">
+            <div class="space-y-4">
+              <h3 class="text-lg font-bold text-white">Community</h3>
+              <p class="text-xs text-base-content/60">For tinkerers running local Ollama models.</p>
+              <div class="text-3xl font-extrabold text-white">$0 <span class="text-sm text-base-content/40 font-normal">forever</span></div>
+              <ul class="text-xs space-y-2.5 text-base-content/70">
+                <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-primary" /> Single local companion</li>
+                <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-primary" /> Full Elixir OTP Actor runtime</li>
+                <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-primary" /> Local EdgeTTS voice</li>
+              </ul>
+            </div>
+            <.link navigate={~p"/sse/chat"} class="btn btn-outline btn-sm w-full font-bold">Start Free</.link>
+          </div>
+
+          <%!-- BYOK Pro --%>
+          <div class="p-8 rounded-3xl bg-base-200/90 border-2 border-primary shadow-2xl shadow-primary/10 flex flex-col justify-between space-y-6 relative">
+            <span class="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[10px] font-mono font-bold bg-primary text-primary-content uppercase tracking-wider">
+              Most Popular
+            </span>
+            <div class="space-y-4">
+              <h3 class="text-lg font-bold text-white">BYOK Pro</h3>
+              <p class="text-xs text-base-content/60">Bring your own Anthropic, OpenAI, or DeepSeek API key.</p>
+              <div class="text-3xl font-extrabold text-white">$9 <span class="text-sm text-base-content/40 font-normal">/ month</span></div>
+              <ul class="text-xs space-y-2.5 text-base-content/80">
+                <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-primary" /> Unlimited companion life threads</li>
+                <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-primary" /> Hands-Free Voice Call Intercom</li>
+                <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-primary" /> Galaxy Watch telemetry webhook</li>
+                <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-primary" /> Background Dream Loop consolidation</li>
+                <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-primary" /> Zero inference markup</li>
+              </ul>
+            </div>
+            <.link navigate={~p"/sse/chat"} class="btn btn-primary btn-sm w-full font-bold shadow-lg shadow-primary/20">
+              Claim BYOK Pro
+            </.link>
+          </div>
+
+          <%!-- Sovereign Cloud --%>
+          <div class="p-8 rounded-3xl bg-base-200/40 border border-base-100 flex flex-col justify-between space-y-6">
+            <div class="space-y-4">
+              <h3 class="text-lg font-bold text-white">Sovereign Cloud</h3>
+              <p class="text-xs text-base-content/60">Fully managed high-speed cloud intelligence.</p>
+              <div class="text-3xl font-extrabold text-white">$24 <span class="text-sm text-base-content/40 font-normal">/ month</span></div>
+              <ul class="text-xs space-y-2.5 text-base-content/70">
+                <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-secondary" /> Everything in BYOK Pro</li>
+                <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-secondary" /> Managed Claude + DeepSeek cascade</li>
+                <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-secondary" /> ElevenLabs studio neural voice</li>
+                <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-secondary" /> Outbound mobile push notifications</li>
+              </ul>
+            </div>
+            <.link navigate={~p"/sse/chat"} class="btn btn-outline btn-sm w-full font-bold">Get Cloud</.link>
+          </div>
+        </div>
+      </section>
+
+      <%!-- Game Engine Developers Section --%>
+      <section id="developers" class="py-16 px-6 max-w-5xl mx-auto">
+        <div class="p-8 sm:p-10 rounded-3xl bg-base-200/60 border border-base-100 space-y-6">
+          <div class="space-y-2">
+            <span class="text-xs font-mono font-bold uppercase tracking-wider text-primary">Headless Integration</span>
+            <h2 class="text-2xl font-bold text-white">Indie Game Developers: Plug-and-Play Brains</h2>
+            <p class="text-xs text-base-content/60 max-w-2xl">
+              Integrate persistent psychology into Unity, Godot, Unreal, or web games in 5 lines of code. Your game engine handles graphics; Sovereign Soul Engine handles character souls.
+            </p>
+          </div>
+
+          <div class="p-4 rounded-xl bg-black/60 border border-base-100 font-mono text-xs text-emerald-400 overflow-x-auto select-all">
+            <span class="text-base-content/40"># Python / Godot / JS SDK</span><br/>
+            <span class="text-purple-400">from</span> sovereign_soul <span class="text-purple-400">import</span> SovereignSoul<br/><br/>
+            soul = SovereignSoul(api_key=<span class="text-amber-300">"sse_live_..."</span>, base_url=<span class="text-amber-300">"http://localhost:8561"</span>)<br/>
+            reply = soul.chat(character_slug=<span class="text-amber-300">"vael"</span>, message=<span class="text-amber-300">"I found the hidden blade."</span>)<br/><br/>
+            <span class="text-cyan-400">print</span>(reply.public_speech)   <span class="text-base-content/40"># "So... the whispers were true."</span><br/>
+            <span class="text-cyan-400">print</span>(reply.private_thought) <span class="text-base-content/40"># "He holds my legacy. I must test his loyalty."</span><br/>
+            <span class="text-cyan-400">print</span>(reply.proposed_action) <span class="text-base-content/40"># Action(type='evaluate_loyalty', confidence=0.88)</span>
+          </div>
+        </div>
+      </section>
+
+      <%!-- Footer --%>
+      <footer class="border-t border-base-200 py-10 px-6 max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-base-content/40">
+        <div>
+          © 2026 Goose Tech Industries • Sovereign Soul Engine
+        </div>
+        <div class="flex items-center gap-4">
+          <.link navigate={~p"/sse/chat"} class="hover:text-base-content">Chat Room</.link>
+          <.link navigate={~p"/sse/chat/sauce"} class="hover:text-base-content">Sauce Admin</.link>
+          <.link navigate={~p"/sse/acp"} class="hover:text-base-content">ACP Panel</.link>
+        </div>
+      </footer>
+    </div>
+    """
+  end
+end

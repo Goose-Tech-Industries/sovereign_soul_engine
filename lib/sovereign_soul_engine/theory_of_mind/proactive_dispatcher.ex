@@ -57,6 +57,7 @@ defmodule SovereignSoulEngine.TheoryOfMind.ProactiveDispatcher do
               )
 
               TheoryOfMind.mark_thread_checkin_sent(thread.id)
+              dispatch_outbound_push(knower, subject, content, thread)
               count + 1
 
             {:error, reason} ->
@@ -69,6 +70,72 @@ defmodule SovereignSoulEngine.TheoryOfMind.ProactiveDispatcher do
       end)
 
     {:ok, dispatched}
+  end
+
+  @doc """
+  Dispatches outbound notification via Telegram Bot API or generic webhook if configured.
+  Broadcasts outbound notification on PubSub for browser/client push listeners.
+  """
+  def dispatch_outbound_push(knower, subject, content, thread \\ nil) do
+    # 1. PubSub broadcast for web app or service worker push listeners
+    Phoenix.PubSub.broadcast(
+      SovereignSoulEngine.PubSub,
+      "notifications:outbound",
+      {:outbound_push,
+       %{
+         sender_name: knower.name,
+         recipient_name: subject.name,
+         content: content,
+         thread_id: thread && thread.id,
+         timestamp: DateTime.utc_now()
+       }}
+    )
+
+    # 2. Telegram Bot API integration if configured
+    telegram_token = System.get_env("TELEGRAM_BOT_TOKEN")
+    telegram_chat_id = System.get_env("TELEGRAM_CHAT_ID")
+
+    if telegram_token && telegram_chat_id && Mix.env() != :test do
+      Task.start(fn ->
+        url = "https://api.telegram.org/bot#{telegram_token}/sendMessage"
+        body = %{
+          chat_id: telegram_chat_id,
+          text: "💬 #{knower.name}: #{content}",
+          parse_mode: "Markdown"
+        }
+
+        case Req.post(url, json: body) do
+          {:ok, %{status: 200}} ->
+            Logger.info("[ProactiveDispatcher] Telegram notification dispatched from #{knower.name}")
+
+          {:error, reason} ->
+            Logger.warning("[ProactiveDispatcher] Telegram notification failed: #{inspect(reason)}")
+
+          other ->
+            Logger.debug("[ProactiveDispatcher] Telegram response: #{inspect(other)}")
+        end
+      end)
+    end
+
+    # 3. Generic Webhook integration if configured
+    webhook_url = System.get_env("OUTBOUND_WEBHOOK_URL")
+
+    if webhook_url && Mix.env() != :test do
+      Task.start(fn ->
+        payload = %{
+          event: "companion_proactive_checkin",
+          companion: knower.name,
+          user: subject.name,
+          message: content,
+          thread_category: thread && thread.category,
+          timestamp: DateTime.utc_now()
+        }
+
+        Req.post(webhook_url, json: payload)
+      end)
+    end
+
+    :ok
   end
 
   # ── GenServer Callbacks ────────────────────────────────────────────────

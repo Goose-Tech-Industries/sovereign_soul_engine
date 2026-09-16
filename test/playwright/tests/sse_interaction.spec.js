@@ -1,7 +1,7 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
 
-const BASE = 'http://localhost:4002';
+const BASE = process.env.BASE_URL || 'http://localhost:8561';
 
 /**
  * Wait for the LiveView socket to connect and DOM to settle.
