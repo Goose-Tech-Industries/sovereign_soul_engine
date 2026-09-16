@@ -205,5 +205,54 @@ test.describe('Sovereign Soul Engine — Full Experience E2E', () => {
     await expect(modal).not.toBeVisible();
   });
 
+  test('9. Emergency Safe Word Freeze, Relationship Archetypes, and Selective Memory Purging', async ({ page }) => {
+    await page.setViewportSize({ width: 1600, height: 900 });
+    await page.goto(BASE + '/sse/chat');
+    await waitForLiveView(page);
+
+    // 1. Open Privacy & Boundaries modal
+    const privacyBtn = page.locator('#privacy-shield-btn');
+    await expect(privacyBtn).toBeVisible({ timeout: 5_000 });
+    await privacyBtn.click();
+    await page.waitForTimeout(400);
+
+    const modal = page.locator('#privacy-modal-overlay');
+    await expect(modal).toBeVisible();
+
+    // 2. Verify new sections exist
+    await expect(modal).toContainText('Emergency Safe Word & Psychological Protection');
+    await expect(modal).toContainText('Relationship Archetype & Intimacy Ceiling');
+    await expect(modal).toContainText('Selective Amnesia & Memory Vault Purge');
+
+    // 3. Switch Relationship Archetype to "Platonic Mentor"
+    const mentorBtn = page.locator('button:has-text("Platonic Mentor")');
+    await expect(mentorBtn).toBeVisible();
+    await mentorBtn.click();
+    await page.waitForTimeout(300);
+    await expect(modal).toContainText('Cap: 40%');
+
+    // 4. Click Freeze Persona
+    const freezeBtn = page.locator('button:has-text("Freeze Persona")');
+    await expect(freezeBtn).toBeVisible();
+    await freezeBtn.click();
+    await page.waitForTimeout(300);
+
+    // 5. Close modal
+    const doneBtn = page.locator('button:has-text("Done")');
+    await doneBtn.click();
+    await page.waitForTimeout(400);
+
+    // 6. Verify header shows "🛑 Persona Paused" banner
+    const pausedBanner = page.locator('#safe-word-active-banner');
+    await expect(pausedBanner).toBeVisible();
+    await expect(pausedBanner).toContainText('Persona Paused');
+
+    // 7. Click Resume on banner
+    const resumeBtn = pausedBanner.locator('button:has-text("Resume")');
+    await resumeBtn.click();
+    await page.waitForTimeout(300);
+    await expect(pausedBanner).not.toBeVisible();
+  });
+
 });
 

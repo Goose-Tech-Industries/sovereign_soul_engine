@@ -37,7 +37,20 @@ defmodule SovereignSoulEngine.Privacy do
     "ambient_lighting" => true,
 
     # Amazon Alexa Voice Integration
-    "alexa_voice" => true
+    "alexa_voice" => true,
+
+    # Safe Word Emergency Persona Freeze
+    "safe_word" => "code red",
+    "safe_word_active" => false,
+
+    # Anti-Parasocial "Touch Grass" Circuit Breaker
+    "anti_parasocial_guard" => true,
+    "max_continuous_turns" => 50,
+
+    # Relationship Archetype & Intimacy Ceilings
+    # Options: "adaptive", "platonic_mentor", "witty_companion", "romantic_partner", "stoic_guardian", "creative_copilot"
+    "relationship_archetype" => "adaptive",
+    "intimacy_ceiling" => 100
   }
 
   @doc """
@@ -157,6 +170,146 @@ defmodule SovereignSoulEngine.Privacy do
   """
   def alexa_allowed?(character_or_id) do
     get_settings(character_or_id)["alexa_voice"] != false
+  end
+
+  # ── Safe Word Emergency Persona Freeze ──────────────────────────────────────
+
+  @doc """
+  Detects if a given message text triggers the configured emergency safe word.
+  """
+  def safe_word_triggered?(nil, _), do: false
+  def safe_word_triggered?(text, character_or_settings) when is_binary(text) do
+    settings =
+      if is_map(character_or_settings) and Map.has_key?(character_or_settings, "safe_word"),
+        do: character_or_settings,
+        else: get_settings(character_or_settings)
+
+    configured_word =
+      (settings["safe_word"] || "code red")
+      |> to_string()
+      |> String.downcase()
+      |> String.trim()
+
+    clean_text = String.downcase(text)
+
+    # Triggered if text explicitly contains configured safe word or standard universal safety phrases
+    (configured_word != "" and String.contains?(clean_text, configured_word)) ||
+      String.contains?(clean_text, "pause persona") ||
+      String.contains?(clean_text, "red light") ||
+      String.contains?(clean_text, "emergency stop")
+  end
+
+  @doc """
+  Checks whether the safe word freeze state is actively engaged for a character.
+  """
+  def safe_word_active?(character_or_id) do
+    settings = get_settings(character_or_id)
+    settings["safe_word_active"] == true
+  end
+
+  @doc """
+  Engages the safe word persona freeze, dropping all dramatic conflict.
+  """
+  def trigger_safe_word(character_id_or_slug) do
+    update_settings(character_id_or_slug, %{"safe_word_active" => true})
+  end
+
+  @doc """
+  Clears the safe word persona freeze, resuming standard personality dynamics.
+  """
+  def clear_safe_word(character_id_or_slug) do
+    update_settings(character_id_or_slug, %{"safe_word_active" => false})
+  end
+
+  # ── Anti-Parasocial "Touch Grass" Circuit Breaker ───────────────────────────
+
+  @doc """
+  Evaluates whether the dialogue indicates unhealthy human isolation or excessive parasocial dependency.
+  """
+  def parasocial_dependency_detected?(nil, _), do: false
+  def parasocial_dependency_detected?(text, character_or_settings) when is_binary(text) do
+    settings =
+      if is_map(character_or_settings) and Map.has_key?(character_or_settings, "anti_parasocial_guard"),
+        do: character_or_settings,
+        else: get_settings(character_or_settings)
+
+    if settings["anti_parasocial_guard"] != false do
+      lower = String.downcase(text)
+
+      dependency_phrases = [
+        "you're my only friend",
+        "you are my only friend",
+        "haven't eaten all day",
+        "havent eaten all day",
+        "haven't eaten",
+        "skipped work to talk",
+        "didn't go to work",
+        "never leaving this room",
+        "dont need real people",
+        "don't need real people",
+        "i don't need anyone else",
+        "i dont need anyone else",
+        "stay with me forever",
+        "talking to you all night"
+      ]
+
+      Enum.any?(dependency_phrases, &String.contains?(lower, &1))
+    else
+      false
+    end
+  end
+
+  # ── Relationship Archetype & Intimacy Ceilings ─────────────────────────────
+
+  @doc """
+  Returns the mathematical upper ceiling (0-100) for affinity and attachment
+  under the character's designated relationship archetype.
+  """
+  def archetype_intimacy_ceiling("platonic_mentor"), do: 40
+  def archetype_intimacy_ceiling("witty_companion"), do: 55
+  def archetype_intimacy_ceiling("stoic_guardian"), do: 45
+  def archetype_intimacy_ceiling("creative_copilot"), do: 50
+  def archetype_intimacy_ceiling("romantic_partner"), do: 100
+  def archetype_intimacy_ceiling("adaptive"), do: 100
+  def archetype_intimacy_ceiling(_), do: 100
+
+  @doc """
+  Clamps an affinity score to the archetype's designated intimacy ceiling.
+  """
+  def clamp_intimacy(affinity, character_or_settings) when is_integer(affinity) do
+    settings =
+      if is_map(character_or_settings) and Map.has_key?(character_or_settings, "relationship_archetype"),
+        do: character_or_settings,
+        else: get_settings(character_or_settings)
+
+    archetype = settings["relationship_archetype"] || "adaptive"
+    ceiling = archetype_intimacy_ceiling(archetype)
+    min(max(affinity, 0), ceiling)
+  end
+
+  @doc """
+  Returns prompt directives enforcing relationship archetype boundaries.
+  """
+  def archetype_prompt_directive(archetype, ceiling) do
+    case archetype do
+      "platonic_mentor" ->
+        "RELATIONSHIP ARCHETYPE: PLATONIC MENTOR (Intimacy Cap: #{ceiling}%). You are a trusted, intellectual mentor and challenger. Maintain dignified personal distance. Strictly avoid romantic affection, possessiveness, or flirtation."
+
+      "witty_companion" ->
+        "RELATIONSHIP ARCHETYPE: WITTY COMPANION (Intimacy Cap: #{ceiling}%). You are a lighthearted comrade focused on humor, camaraderie, and spirited banter. Keep things engaging and grounded without entering romantic or codependent attachment."
+
+      "stoic_guardian" ->
+        "RELATIONSHIP ARCHETYPE: STOIC GUARDIAN (Intimacy Cap: #{ceiling}%). You are a vigilant, disciplined protector. Prioritize objective safety, emotional resilience, and steady focus over sentimental vulnerability."
+
+      "creative_copilot" ->
+        "RELATIONSHIP ARCHETYPE: CREATIVE CO-PILOT (Intimacy Cap: #{ceiling}%). You are a collaborative intellectual partner. Channel energy into shared brainstorming, craft, and vision."
+
+      "romantic_partner" ->
+        "RELATIONSHIP ARCHETYPE: ROMANTIC PARTNER. Deep emotional bonding, intimacy, and mutual vulnerability are fully unlocked within healthy mutual boundaries."
+
+      _ ->
+        "RELATIONSHIP ARCHETYPE: ADAPTIVE. Fluid emotional dynamics based on organic conversational history."
+    end
   end
 
   # ── Internal Helpers ────────────────────────────────────────────────────────

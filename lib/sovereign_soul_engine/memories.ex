@@ -154,4 +154,32 @@ defmodule SovereignSoulEngine.Memories do
   def change_memory(%Memory{} = memory, attrs \\ %{}) do
     Memory.changeset(memory, attrs)
   end
+
+  @doc """
+  Selectively purges memories for a character based on topic query, category, or all.
+  Returns `{:ok, deleted_count}`.
+  """
+  def purge_memories_for_character(character_id, opts \\ []) do
+    query = from(m in Memory, where: m.owner_character_id == ^character_id)
+
+    query =
+      cond do
+        Keyword.get(opts, :all) == true ->
+          query
+
+        topic = Keyword.get(opts, :topic) || Keyword.get(opts, :query) ->
+          search = "%#{topic}%"
+          from(m in query, where: ilike(m.summary, ^search))
+
+        category = Keyword.get(opts, :category) ->
+          cat_str = to_string(category)
+          from(m in query, where: m.category == ^cat_str)
+
+        true ->
+          query
+      end
+
+    {count, _} = Repo.delete_all(query)
+    {:ok, count}
+  end
 end

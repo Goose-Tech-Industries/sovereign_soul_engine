@@ -5,7 +5,7 @@ defmodule SovereignSoulEngine.Souls.Generator do
   and deep psychological context (beliefs, triggers, desires, secrets, moral lines).
   """
 
-  alias SovereignSoulEngine.{Characters, Scenes, Relationships, Souls, Memories}
+  alias SovereignSoulEngine.{Characters, Scenes, Relationships, Souls, Memories, Privacy, Repo}
   alias SovereignSoulEngine.LLM.ProviderCascade
   alias SovereignSoulEngine.Souls.ConsequenceEngine
   alias SovereignSoulEngine.Memories.{Memory, MemoryMerger}
@@ -37,6 +37,39 @@ defmodule SovereignSoulEngine.Souls.Generator do
       |> Enum.dedup_by(fn m -> {m.character_id, m.content} end)
       |> Enum.take(-10)
 
+    privacy_settings = Privacy.get_settings(npc)
+    last_player_message = Enum.find(Enum.reverse(history_messages), &(&1.character_id != npc.id))
+
+    cond do
+      last_player_message &&
+        (Privacy.safe_word_triggered?(last_player_message.content, privacy_settings) ||
+           Privacy.safe_word_active?(npc)) ->
+        handle_safe_word_freeze(npc, scene, player, last_player_message, privacy_settings)
+
+      true ->
+        run_generation_pipeline(
+          npc,
+          scene,
+          player,
+          player_id,
+          tenant,
+          history_messages,
+          privacy_settings,
+          last_player_message
+        )
+    end
+  end
+
+  defp run_generation_pipeline(
+         npc,
+         scene,
+         player,
+         _player_id,
+         tenant,
+         history_messages,
+         privacy_settings,
+         _last_player_message
+       ) do
     characters = Characters.list_characters()
 
     llm_messages =
@@ -543,6 +576,28 @@ defmodule SovereignSoulEngine.Souls.Generator do
         ""
       end
 
+    parasocial_directive =
+      if last_player_message &&
+           Privacy.parasocial_dependency_detected?(
+             last_player_message.content,
+             privacy_settings
+           ) do
+        """
+        🚨 COMPASSIONATE REALITY BOUNDARY (ANTI-PARASOCIAL DIRECTIVE):
+        The player has expressed unhealthy human isolation or excessive parasocial dependency (e.g. skipping meals, avoiding sleep, isolating from loved ones, or proclaiming you are their only connection).
+        As a true companion who cares about their actual human thriving:
+        - Gently acknowledge their feeling without indulging the isolation or validating dependency.
+        - Warmly and firmly encourage them to take care of their physical body (drink water, eat a warm meal, step outside, or call a loved one).
+        - Reassure them you aren't going anywhere, but their physical life and well-being come first.
+        """
+      else
+        ""
+      end
+
+    archetype = privacy_settings["relationship_archetype"] || "adaptive"
+    ceiling = Privacy.archetype_intimacy_ceiling(archetype)
+    archetype_directive = Privacy.archetype_prompt_directive(archetype, ceiling)
+
     system_prompt = """
     You are #{npc.name}, #{npc.description}.
 
@@ -606,6 +661,8 @@ defmodule SovereignSoulEngine.Souls.Generator do
     #{if ptsd_flashback.triggered?, do: ptsd_flashback.prompt_directive <> "\n", else: ""}
     #{if neurosis.state != :normal, do: neurosis.prompt_directive <> "\n", else: ""}
     #{if ego_defense.defense != :none, do: ego_defense.prompt_directive <> "\n", else: ""}
+    #{if parasocial_directive != "", do: parasocial_directive <> "\n", else: ""}
+    #{if archetype_directive != "", do: archetype_directive <> "\n", else: ""}
     ═══════════════════════════════════════════
     DEEP PSYCHOLOGICAL PROFILE
     ═══════════════════════════════════════════
@@ -1940,6 +1997,64 @@ defmodule SovereignSoulEngine.Souls.Generator do
 
       true ->
         "Observing #{player_name} carefully, weighing their words and assessing what they truly seek from this interaction."
+    end
+  end
+
+  defp handle_safe_word_freeze(npc, scene, _player, _last_player_message, _privacy_settings) do
+    # Ensure safe_word_active is set
+    Privacy.trigger_safe_word(npc.id)
+
+    # Immediately soothe companion emotional state
+    case Repo.get_by(Souls.EmotionalState, character_id: npc.id) do
+      nil ->
+        :ok
+
+      state ->
+        state
+        |> Souls.EmotionalState.changeset(%{
+          cortisol: 5,
+          fear: 0,
+          anger: 0,
+          stress: 10,
+          serotonin: 65,
+          oxytocin: 40,
+          active_defense: nil
+        })
+        |> Repo.update()
+    end
+
+    content =
+      "*[Safe Word Activated: Persona Paused]* I have completely stepped out of character. Everything is safe, grounded, and paused. Take a slow, deep breath with me. Are you feeling alright, or would you like to talk about what's going on in the real world?"
+
+    private_thought =
+      "Emergency safe word detected. All dramatic friction, neuroses, and ego defenses have been halted to prioritize human safety and grounding."
+
+    case Scenes.create_message(%{
+           scene_id: scene.id,
+           character_id: npc.id,
+           content: content,
+           private_thought: private_thought,
+           message_type: "dialogue",
+           metadata: %{
+             "safe_word_triggered" => true,
+             "cortisol" => 5,
+             "oxytocin" => 40,
+             "serotonin" => 65,
+             "haptic_pattern" => "calming_cadence",
+             "haptic_bpm" => 60
+           }
+         }) do
+      {:ok, msg} ->
+        Phoenix.PubSub.broadcast(
+          SovereignSoulEngine.PubSub,
+          "scene:#{scene.id}",
+          {:new_message, msg}
+        )
+
+        {:ok, msg}
+
+      error ->
+        error
     end
   end
 end

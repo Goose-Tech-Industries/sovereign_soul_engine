@@ -839,6 +839,70 @@ defmodule SovereignSoulEngineWeb.ChatLive do
   end
 
   @impl true
+  def handle_event("trigger_safe_word", _params, socket) do
+    player = socket.assigns.player
+    {:ok, settings} = SovereignSoulEngine.Privacy.trigger_safe_word(player.id)
+
+    {:noreply,
+     socket
+     |> assign(:privacy_settings, settings)
+     |> put_flash(:error, "🚨 Emergency Safe Word Activated — Persona Paused.")}
+  end
+
+  @impl true
+  def handle_event("clear_safe_word", _params, socket) do
+    player = socket.assigns.player
+    {:ok, settings} = SovereignSoulEngine.Privacy.clear_safe_word(player.id)
+
+    {:noreply,
+     socket
+     |> assign(:privacy_settings, settings)
+     |> put_flash(:info, "Safe word cleared. Autonomous personality resumed.")}
+  end
+
+  @impl true
+  def handle_event("set_relationship_archetype", %{"archetype" => archetype}, socket) do
+    player = socket.assigns.player
+    new_settings = Map.put(socket.assigns.privacy_settings, "relationship_archetype", archetype)
+    SovereignSoulEngine.Privacy.update_settings(player.id, %{"relationship_archetype" => archetype})
+
+    {:noreply,
+     socket
+     |> assign(:privacy_settings, new_settings)
+     |> put_flash(:info, "Relationship archetype set to #{String.replace(archetype, "_", " ") |> String.capitalize()}")}
+  end
+
+  @impl true
+  def handle_event("purge_memory_topic", %{"topic" => topic}, socket) do
+    npc = socket.assigns.selected_npc
+
+    if npc && String.trim(topic) != "" do
+      {:ok, count} = SovereignSoulEngine.Memories.purge_memories_for_character(npc.id, topic: topic)
+      player = socket.assigns.player
+      SovereignSoulEngine.TheoryOfMind.purge_knowledge_about(npc.id, player.id, topic: topic)
+
+      {:noreply, put_flash(socket, :info, "Purged #{count} memories relating to '#{topic}'.")}
+    else
+      {:noreply, put_flash(socket, :error, "Please enter a valid topic to forget.")}
+    end
+  end
+
+  @impl true
+  def handle_event("purge_all_memories", _params, socket) do
+    npc = socket.assigns.selected_npc
+
+    if npc do
+      {:ok, count} = SovereignSoulEngine.Memories.purge_memories_for_character(npc.id, all: true)
+      player = socket.assigns.player
+      SovereignSoulEngine.TheoryOfMind.purge_knowledge_about(npc.id, player.id, all: true)
+
+      {:noreply, put_flash(socket, :info, "Selective amnesia complete: #{count} memories purged for #{npc.name}.")}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  @impl true
   def handle_info({:privacy_settings_updated, settings}, socket) do
     {:noreply, assign(socket, :privacy_settings, settings)}
   end
@@ -1456,6 +1520,20 @@ defmodule SovereignSoulEngineWeb.ChatLive do
               <.icon name="hero-globe-alt" class="size-3.5" />
               <span>Echoes ({length(@social_posts)})</span>
             </button>
+
+            <%!-- Emergency Safe Word Active Banner --%>
+            <%= if Map.get(@privacy_settings, "safe_word_active", false) do %>
+              <div id="safe-word-active-banner" class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-950/90 border border-rose-500 text-rose-300 text-xs font-bold animate-pulse">
+                <span>🛑 Persona Paused</span>
+                <button
+                  phx-click="clear_safe_word"
+                  class="btn btn-ghost btn-xs text-white bg-rose-700/60 hover:bg-rose-600 px-2 py-0 h-5 min-h-0"
+                  title="Resume natural character persona"
+                >
+                  Resume
+                </button>
+              </div>
+            <% end %>
 
             <%!-- Privacy & Boundaries Shield Toggle --%>
             <button
@@ -2321,6 +2399,127 @@ defmodule SovereignSoulEngineWeb.ChatLive do
                     phx-value-key="alexa_voice"
                     class="toggle toggle-sm toggle-info"
                   />
+                </div>
+              </div>
+            </div>
+
+            <%!-- Section 4: Safe Word & Psychological Circuit Breaker --%>
+            <div class="p-3.5 rounded-xl bg-base-100 border border-base-300 shadow-sm space-y-3">
+              <div class="text-xs font-bold text-base-content uppercase tracking-wider flex items-center gap-1.5 text-rose-400">
+                <.icon name="hero-lifebuoy" class="size-3.5" />
+                Emergency Safe Word & Psychological Protection
+              </div>
+
+              <div class="space-y-2.5">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <div class="text-xs font-semibold text-base-content">Safe Word Persona Freeze</div>
+                    <div class="text-[11px] text-base-content/50">Saying "<span class="font-mono text-rose-400 font-bold">{Map.get(@privacy_settings, "safe_word", "code red")}</span>" drops dramatic RP and soothes cortisol</div>
+                  </div>
+                  <%= if Map.get(@privacy_settings, "safe_word_active", false) do %>
+                    <button
+                      type="button"
+                      phx-click="clear_safe_word"
+                      class="btn btn-xs btn-outline btn-success"
+                    >
+                      Resume Persona
+                    </button>
+                  <% else %>
+                    <button
+                      type="button"
+                      phx-click="trigger_safe_word"
+                      class="btn btn-xs btn-outline btn-error"
+                    >
+                      Freeze Persona
+                    </button>
+                  <% end %>
+                </div>
+
+                <div class="flex items-center justify-between">
+                  <div>
+                    <div class="text-xs font-semibold text-base-content">"Touch Grass" Anti-Parasocial Guard</div>
+                    <div class="text-[11px] text-base-content/50">Companion warmly intervenes if dialogue shows unhealthy isolation or skipped meals</div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={Map.get(@privacy_settings, "anti_parasocial_guard", true)}
+                    phx-click="toggle_privacy_setting"
+                    phx-value-key="anti_parasocial_guard"
+                    class="toggle toggle-sm toggle-accent"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <%!-- Section 5: Relationship Archetype & Intimacy Ceilings --%>
+            <div class="p-3.5 rounded-xl bg-base-100 border border-base-300 shadow-sm space-y-3">
+              <div class="flex items-center justify-between">
+                <div class="text-xs font-bold text-base-content uppercase tracking-wider flex items-center gap-1.5 text-secondary">
+                  <.icon name="hero-user-group" class="size-3.5" />
+                  Relationship Archetype & Intimacy Ceiling
+                </div>
+                <span class="text-[11px] font-mono text-secondary font-bold">
+                  Cap: {SovereignSoulEngine.Privacy.archetype_intimacy_ceiling(Map.get(@privacy_settings, "relationship_archetype", "adaptive"))}%
+                </span>
+              </div>
+
+              <div class="grid grid-cols-3 gap-1.5 text-xs">
+                <%= for {key, label} <- [
+                  {"adaptive", "Adaptive (Fluid)"},
+                  {"platonic_mentor", "Platonic Mentor"},
+                  {"witty_companion", "Witty Comrade"},
+                  {"romantic_partner", "Romantic Partner"},
+                  {"stoic_guardian", "Stoic Guardian"},
+                  {"creative_copilot", "Creative Co-Pilot"}
+                ] do %>
+                  <button
+                    type="button"
+                    phx-click="set_relationship_archetype"
+                    phx-value-archetype={key}
+                    class={[
+                      "btn btn-xs text-[11px] font-normal transition-all",
+                      Map.get(@privacy_settings, "relationship_archetype", "adaptive") == key && "btn-secondary font-bold",
+                      Map.get(@privacy_settings, "relationship_archetype", "adaptive") != key && "btn-ghost border border-base-300"
+                    ]}
+                  >
+                    {label}
+                  </button>
+                <% end %>
+              </div>
+            </div>
+
+            <%!-- Section 6: Selective Amnesia & Memory Vault Purging --%>
+            <div class="p-3.5 rounded-xl bg-base-100 border border-base-300 shadow-sm space-y-3">
+              <div class="text-xs font-bold text-base-content uppercase tracking-wider flex items-center gap-1.5 text-purple-400">
+                <.icon name="hero-sparkles" class="size-3.5" />
+                Selective Amnesia & Memory Vault Purge
+              </div>
+
+              <div class="space-y-2">
+                <form phx-submit="purge_memory_topic" class="flex gap-2">
+                  <input
+                    type="text"
+                    name="topic"
+                    placeholder="Enter topic to forget (e.g. 'breakup', 'job', 'fear')..."
+                    class="input input-xs input-bordered flex-1 text-xs"
+                  />
+                  <button type="submit" class="btn btn-xs btn-outline btn-warning">
+                    Forget Topic
+                  </button>
+                </form>
+
+                <div class="flex items-center justify-between pt-1">
+                  <span class="text-[11px] text-base-content/50">
+                    Surgically wipes topic records from Memory & Theory of Mind with zero prompt residue.
+                  </span>
+                  <button
+                    type="button"
+                    phx-click="purge_all_memories"
+                    data-confirm="Are you sure you want to completely wipe all memories for this companion?"
+                    class="btn btn-ghost btn-xs text-error hover:bg-error/20"
+                  >
+                    Wipe Vault
+                  </button>
                 </div>
               </div>
             </div>

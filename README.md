@@ -1,8 +1,8 @@
 # Sovereign Soul Engine (SSE)
 
 [![CI Build](https://img.shields.io/badge/build-passing-brightgreen.svg)]()
-[![ExUnit Tests](https://img.shields.io/badge/ExUnit-450%2B%20passed-blue.svg)]()
-[![Playwright Tests](https://img.shields.io/badge/Playwright-19%2F19%20passed-blueviolet.svg)]()
+[![ExUnit Tests](https://img.shields.io/badge/ExUnit-465%2B%20passed-blue.svg)]()
+[![Playwright Tests](https://img.shields.io/badge/Playwright-20%2F20%20passed-blueviolet.svg)]()
 [![Zero Stubs](https://img.shields.io/badge/codebase-0%20stubs-success.svg)]()
 [![Elixir](https://img.shields.io/badge/Elixir-1.20%2B-purple.svg)]()
 [![Phoenix](https://img.shields.io/badge/Phoenix-1.7%2B-orange.svg)]()
@@ -215,6 +215,21 @@ The Sovereign Soul Engine adheres to **radical user sovereignty**. All proactive
    - Dynamic room color and brightness synchronization (Philips Hue / Home Assistant) can be detached with a single switch.
 6. **Amazon Echo & Alexa Voice:**
    - Disables voice skill intents and Echo Show visual card updates.
+7. **Emergency Safe Word Persona Freeze (`"code red"` / `"pause persona"`):**
+   - Speaking or typing a safe word immediately drops dramatic conflict, roleplay, and neuroses. It resets acute Cortisol to baseline ($5/100$) and triggers an out-of-character grounded counselor state.
+8. **"Touch Grass" Anti-Parasocial Circuit Breaker:**
+   - Detects severe human isolation (e.g. skipping meals, avoiding work, proclamations of zero human friends) and gently urges the player to step away and tend to their physical well-being.
+9. **Relationship Archetypes & Intimacy Ceilings:**
+   - Enforces mathematical caps on affinity and attachment: **Platonic Mentor** ($40\%$), **Witty Companion** ($55\%$), **Stoic Guardian** ($45\%$), **Creative Co-Pilot** ($50\%$), and **Romantic Partner** ($100\%$).
+10. **Selective Amnesia & Memory Vault Purging:**
+    - Surgically purges episodic memories and Theory of Mind knowledge records on specific sensitive topics with zero residual prompt leakage.
+
+### Physical Robotics Body & ROS2 Bridge (`RoboticsBridge.ex`)
+Bridges the companion's biological state into physical humanoid (Unitree G1) and quadruped (Unitree Go2) bodies:
+- **Head Kinematics:** Pitch (attentive tilt vs. dejected hang), Yaw (saccadic gaze tracking), Roll (empathetic $7.5^\circ$ head tilt).
+- **Torso & Stance:** Postural rigidity, motor stiffness ($20-95\%$), respiration heave ($12-30\text{ BPM}$).
+- **Locomotion:** Dynamic gait speed ($0.2-1.1\text{ m/s}$), balance compliance, quadruped tail-wag frequency ($0-3\text{ Hz}$).
+- **ROS2 Command Stream:** Serializes `/cmd_vel` velocities and target joint trajectories in radians for robot hardware controllers.
 
 ### Live UI Boundaries Shield
 Within the web interface, click the **🛡️ Privacy** button in the top navigation bar to open the interactive Boundary Drawer and adjust real-time switches with instant persistence.
@@ -227,6 +242,12 @@ Within the web interface, click the **🛡️ Privacy** button in the top naviga
 | :--- | :--- | :--- |
 | `GET` | `/sse/api/privacy/settings` | Query user privacy preferences and boundary toggles |
 | `POST` | `/sse/api/privacy/settings` | Update proactive, biometric, vision, and haptic consent settings |
+| `POST` | `/sse/api/privacy/safe_word/trigger` | Activate emergency safe word persona freeze |
+| `POST` | `/sse/api/privacy/safe_word/clear` | Resume standard companion persona dynamics |
+| `GET` | `/sse/api/robotics/actuation` | Fetch kinematics, joint radian targets, and ROS2 packets |
+| `POST` | `/sse/api/robotics/telemetry` | Ingest robot battery, motor temperature, and bumper telemetry |
+| `POST` | `/sse/api/memories/purge` | Selectively purge memories and Theory of Mind knowledge |
+| `GET` | `/sse/api/memories/inspect` | Inspect active episodic and core memories |
 | `POST` | `/api/alexa` | Amazon Alexa Custom Skill & Echo Show APL endpoint |
 | `POST` | `/sse/api/telemetry/wearable` | Ingest Galaxy Watch, Apple Watch & Smart Ring biometrics |
 | `GET` | `/sse/api/telemetry/:slug` | Retrieve somatic & emotional profile |
@@ -250,13 +271,13 @@ The Sovereign Soul Engine adheres to a **Strict Zero-Stub Guarantee**. Every mod
 ```powershell
 powershell -NoProfile -Command "Push-Location 'C:\Users\rjd42\Desktop\sovereign_soul_engine'; mix test"
 ```
-*(450+ comprehensive unit, integration, and concurrency tests passing)*
+*(465+ comprehensive unit, integration, and concurrency tests passing)*
 
 ### Run Playwright End-to-End Tests:
 ```powershell
 powershell -NoProfile -Command "Push-Location 'C:\Users\rjd42\Desktop\sovereign_soul_engine'; npx playwright test --config=test/playwright/playwright.config.js"
 ```
-*(19/19 end-to-end browser tests verifying LiveView chat, biometric HUDs, privacy shield drawer, and visual perception)*
+*(20/20 end-to-end browser tests verifying LiveView chat, biometric HUDs, privacy shield drawer, safe word freeze, and visual perception)*
 
 ---
 

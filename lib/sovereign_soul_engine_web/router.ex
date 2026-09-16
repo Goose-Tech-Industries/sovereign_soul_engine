@@ -66,6 +66,16 @@ defmodule SovereignSoulEngineWeb.Router do
     # Privacy, Consent & Boundary Controls
     get "/privacy/settings", PrivacyController, :show
     post "/privacy/settings", PrivacyController, :update
+    post "/privacy/safe_word/trigger", PrivacyController, :trigger_safe_word
+    post "/privacy/safe_word/clear", PrivacyController, :clear_safe_word
+
+    # Physical Robotics Body & ROS2 Bridge
+    get "/robotics/actuation", RoboticsController, :actuation
+    post "/robotics/telemetry", RoboticsController, :telemetry
+
+    # Selective Amnesia & Memory Purging
+    post "/memories/purge", MemoryPurgeController, :purge
+    get "/memories/inspect", MemoryPurgeController, :inspect_memories
   end
 
   # Public external access for Polsia / Twitter / RSS, Telegram Webhooks, Alexa, and Portable Souls
@@ -84,6 +94,12 @@ defmodule SovereignSoulEngineWeb.Router do
     post "/vessel/touch", VesselController, :touch
     get "/privacy/settings", PrivacyController, :show
     post "/privacy/settings", PrivacyController, :update
+    post "/privacy/safe_word/trigger", PrivacyController, :trigger_safe_word
+    post "/privacy/safe_word/clear", PrivacyController, :clear_safe_word
+    get "/robotics/actuation", RoboticsController, :actuation
+    post "/robotics/telemetry", RoboticsController, :telemetry
+    post "/memories/purge", MemoryPurgeController, :purge
+    get "/memories/inspect", MemoryPurgeController, :inspect_memories
   end
 
   # Public webhook ingress under /sse prefix

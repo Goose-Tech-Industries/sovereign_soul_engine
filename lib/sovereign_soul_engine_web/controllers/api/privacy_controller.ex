@@ -62,4 +62,52 @@ defmodule SovereignSoulEngineWeb.Api.PrivacyController do
         |> json(%{error: "Failed to update privacy settings: #{inspect(reason)}"})
     end
   end
+
+  @doc """
+  POST /sse/api/privacy/safe_word/trigger
+  POST /api/privacy/safe_word/trigger
+  """
+  def trigger_safe_word(conn, params) do
+    character_slug = params["character_slug"] || params["slug"] || "goose"
+
+    case Privacy.trigger_safe_word(character_slug) do
+      {:ok, settings} ->
+        json(conn, %{
+          status: "ok",
+          message: "Safe word emergency persona freeze engaged.",
+          character_slug: character_slug,
+          safe_word_active: true,
+          settings: settings
+        })
+
+      {:error, :character_not_found} ->
+        conn
+        |> put_status(:not_found)
+        |> json(%{error: "Character '#{character_slug}' not found."})
+    end
+  end
+
+  @doc """
+  POST /sse/api/privacy/safe_word/clear
+  POST /api/privacy/safe_word/clear
+  """
+  def clear_safe_word(conn, params) do
+    character_slug = params["character_slug"] || params["slug"] || "goose"
+
+    case Privacy.clear_safe_word(character_slug) do
+      {:ok, settings} ->
+        json(conn, %{
+          status: "ok",
+          message: "Safe word emergency freeze cleared. Normal personality dynamics resumed.",
+          character_slug: character_slug,
+          safe_word_active: false,
+          settings: settings
+        })
+
+      {:error, :character_not_found} ->
+        conn
+        |> put_status(:not_found)
+        |> json(%{error: "Character '#{character_slug}' not found."})
+    end
+  end
 end
