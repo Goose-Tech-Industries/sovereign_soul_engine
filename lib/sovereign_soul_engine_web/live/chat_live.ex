@@ -55,6 +55,9 @@ defmodule SovereignSoulEngineWeb.ChatLive do
       |> assign(:voice_call_active?, false)
       |> assign(:intercom_status, "idle")
       |> assign(:npc_expression, compute_emotional_expression(nil))
+      |> assign(:neurochemistry, nil)
+      |> assign(:neurosis_state, nil)
+      |> assign(:defense_state, nil)
       |> load_scenes()
       |> select_first_available_chat()
 
@@ -901,16 +904,31 @@ defmodule SovereignSoulEngineWeb.ChatLive do
     if npc do
       soul_profile = Souls.get_soul_profile_by_character(npc.id)
       emotional_state = Souls.get_emotional_state_by_character(npc.id)
+      somatic_state = Souls.get_somatic_state_by_character(npc.id)
+      rel = if socket.assigns[:player], do: SovereignSoulEngine.Relationships.get_relationship(socket.assigns.player.id, npc.id), else: nil
+
+      neurochem = SovereignSoulEngine.Souls.Neurochemistry.compute(emotional_state, somatic_state, rel)
+      wound = (rel && rel.wound) || 0
+      neurosis = SovereignSoulEngine.Souls.NeurosisState.evaluate(emotional_state, somatic_state, wound, false)
+      defense = SovereignSoulEngine.Souls.DefenseMechanisms.evaluate(emotional_state, somatic_state, soul_profile, rel)
       expression = compute_emotional_expression(emotional_state)
 
       socket
       |> assign(:soul_profile, soul_profile)
       |> assign(:emotional_state, emotional_state)
+      |> assign(:somatic_state, somatic_state)
+      |> assign(:neurochemistry, neurochem)
+      |> assign(:neurosis_state, neurosis)
+      |> assign(:defense_state, defense)
       |> assign(:npc_expression, expression)
     else
       socket
       |> assign(:soul_profile, nil)
       |> assign(:emotional_state, nil)
+      |> assign(:somatic_state, nil)
+      |> assign(:neurochemistry, nil)
+      |> assign(:neurosis_state, nil)
+      |> assign(:defense_state, nil)
       |> assign(:npc_expression, compute_emotional_expression(nil))
     end
   end
@@ -1174,10 +1192,18 @@ defmodule SovereignSoulEngineWeb.ChatLive do
           
           <div class="min-w-0 flex-1 space-y-1">
             <div class="flex items-center gap-3">
-              <h1 class="text-base font-semibold text-base-content flex items-center gap-2">
+              <h1 class="text-base font-semibold text-base-content flex items-center gap-2 flex-wrap">
                 <span>{if @selected_npc, do: @selected_npc.name, else: @selected_scene.title}</span>
                 <span :if={@selected_npc} id="companion-expression-badge" class={["text-[10px] px-2 py-0.5 rounded-full font-semibold border", @npc_expression.badge_class]}>
                   {@npc_expression.label}
+                </span>
+                <span :if={@selected_npc && @neurosis_state && @neurosis_state.state != :normal} id="companion-neurosis-badge" class="text-[10px] px-2 py-0.5 rounded-full font-bold border border-rose-500/50 bg-rose-950/60 text-rose-300 animate-pulse flex items-center gap-1">
+                  <.icon name="hero-exclamation-triangle" class="size-3 text-rose-400" />
+                  {Phoenix.Naming.humanize(@neurosis_state.state)} ({@neurosis_state.intensity}%)
+                </span>
+                <span :if={@selected_npc && @defense_state && @defense_state.defense != :none} id="companion-defense-badge" class="text-[10px] px-2 py-0.5 rounded-full font-semibold border border-purple-500/50 bg-purple-950/60 text-purple-300 flex items-center gap-1">
+                  <.icon name="hero-shield-exclamation" class="size-3 text-purple-400" />
+                  {Phoenix.Naming.humanize(@defense_state.defense)}
                 </span>
               </h1>
                <%!-- Scenario Context --%>
@@ -1246,6 +1272,17 @@ defmodule SovereignSoulEngineWeb.ChatLive do
               </div>
             </div>
             
+            <%!-- Neurochemistry HUD --%>
+            <div :if={@selected_npc && @neurochemistry} id="neurochemistry-hud" class="hidden 2xl:flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-base-300/40 border border-base-300 text-xs" title={@neurochemistry.hormonal_tone}>
+              <span class="font-mono text-rose-400" title="Cortisol (Stress / Vigilance)">⚡ {@neurochemistry.cortisol} C</span>
+              <span class="text-base-content/20">•</span>
+              <span class="font-mono text-purple-400" title="Oxytocin (Bonding / Empathy)">💜 {@neurochemistry.oxytocin} O</span>
+              <span class="text-base-content/20">•</span>
+              <span class="font-mono text-cyan-400" title="Dopamine (Drive / Curiosity)">✨ {@neurochemistry.dopamine} D</span>
+              <span class="text-base-content/20">•</span>
+              <span class="font-mono text-emerald-400" title="Serotonin (Affect Regulation)">🌿 {@neurochemistry.serotonin} S</span>
+            </div>
+
             <%!-- Galaxy Watch Biometric HUD --%>
             <div class="hidden xl:flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-base-300/40 border border-base-300 text-xs">
               <span class="flex items-center gap-1 font-mono font-bold text-rose-400">
@@ -1459,6 +1496,27 @@ defmodule SovereignSoulEngineWeb.ChatLive do
                         <%= if audio_url = get_in(msg.metadata || %{}, ["audio_url"]) do %>
                           <div class="mt-2 pt-1.5 border-t border-base-content/10 flex items-center gap-2">
                             <audio controls src={audio_url} class="h-7 w-60 max-w-full rounded-lg opacity-90"></audio>
+                          </div>
+                        <% end %>
+
+                        <%= if flashback_cue = get_in(msg.metadata || %{}, ["ptsd_flashback"]) do %>
+                          <div class="mt-2 px-2.5 py-1 rounded-lg bg-rose-950/70 border border-rose-500/40 text-[10px] text-rose-300 font-mono flex items-center gap-1.5">
+                            <.icon name="hero-bolt" class="size-3 text-rose-400" />
+                            <span>Involuntary PTSD Flashback: "{flashback_cue}"</span>
+                          </div>
+                        <% end %>
+
+                        <%= if neurosis_active = get_in(msg.metadata || %{}, ["neurosis_state"]) do %>
+                          <div class="mt-1 px-2.5 py-0.5 rounded-lg bg-amber-950/60 border border-amber-500/30 text-[10px] text-amber-300 font-mono flex items-center gap-1.5">
+                            <.icon name="hero-exclamation-triangle" class="size-3 text-amber-400" />
+                            <span>Altered State: {Phoenix.Naming.humanize(neurosis_active)}</span>
+                          </div>
+                        <% end %>
+
+                        <%= if active_defense = get_in(msg.metadata || %{}, ["active_defense"]) do %>
+                          <div class="mt-1 px-2.5 py-0.5 rounded-lg bg-purple-950/60 border border-purple-500/30 text-[10px] text-purple-300 font-mono flex items-center gap-1.5">
+                            <.icon name="hero-shield-exclamation" class="size-3 text-purple-400" />
+                            <span>Defense: {Phoenix.Naming.humanize(active_defense)}</span>
                           </div>
                         <% end %>
                       </div>

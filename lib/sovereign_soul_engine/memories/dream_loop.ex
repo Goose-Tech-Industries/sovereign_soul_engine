@@ -35,8 +35,12 @@ defmodule SovereignSoulEngine.Memories.DreamLoop do
 
     emotional_res = decay_emotional_residue(character_id, decay_factor)
     distillation_res = distill_episodic_memories(character_id, opts)
+    dream_residue = SovereignSoulEngine.Memories.DreamResidue.synthesize(character_id)
 
-    # Commit event to SoulLedger
+    # Apply lingering subconscious waking emotional deltas
+    if is_map(dream_residue.waking_emotional_delta) and map_size(dream_residue.waking_emotional_delta) > 0 do
+      apply_dream_deltas(character_id, dream_residue.waking_emotional_delta)
+    end
     commit_ledger_dream_entry(character_id, emotional_res, distillation_res, correlation_id)
 
     # Broadcast dream completion on PubSub
@@ -47,7 +51,8 @@ defmodule SovereignSoulEngine.Memories.DreamLoop do
        %{
          character_id: character_id,
          emotional_deltas: emotional_res,
-         distilled_count: length(distillation_res)
+         distilled_count: length(distillation_res),
+         dream_residue: dream_residue
        }}
     )
 
@@ -55,7 +60,8 @@ defmodule SovereignSoulEngine.Memories.DreamLoop do
      %{
        character_id: character_id,
        emotional_decay: emotional_res,
-       distilled_memories: distillation_res
+       distilled_memories: distillation_res,
+       dream_residue: dream_residue
      }}
   end
 
@@ -213,4 +219,17 @@ defmodule SovereignSoulEngine.Memories.DreamLoop do
   end
 
   defp truncate_text(other, _), do: to_string(other)
+
+  defp apply_dream_deltas(character_id, deltas) do
+    if state = Souls.get_emotional_state_by_character(character_id) do
+      updated_attrs =
+        Enum.reduce(deltas, %{}, fn {dim, change}, acc ->
+          curr = Map.get(state, dim, 50) || 50
+          new_v = max(0, min(100, curr + change))
+          Map.put(acc, dim, new_v)
+        end)
+
+      Souls.update_emotional_state(state, updated_attrs)
+    end
+  end
 end

@@ -122,4 +122,26 @@ test.describe('Sovereign Soul Engine — Full Experience E2E', () => {
     await expect(page.locator('#chat-messages')).toContainText('Playwright test: We are ready to launch.');
   });
 
+  test('6. Neurochemistry HUD and dynamic psychological indicators render in chat', async ({ page }) => {
+    // Set a wide viewport so 2xl elements are visible
+    await page.setViewportSize({ width: 1600, height: 900 });
+    await page.goto(BASE + '/sse/chat');
+    await waitForLiveView(page);
+
+    // Verify Neurochemistry HUD is attached and contains hormonal readings
+    const neuroHud = page.locator('#neurochemistry-hud');
+    await expect(neuroHud).toBeAttached();
+    await expect(neuroHud).toContainText('C');
+    await expect(neuroHud).toContainText('O');
+    await expect(neuroHud).toContainText('D');
+    await expect(neuroHud).toContainText('S');
+
+    // Verify companion expression badge is present
+    const expressionBadge = page.locator('#companion-expression-badge');
+    await expect(expressionBadge).toBeVisible();
+
+    // Verify Galaxy Watch biometrics HUD displays
+    await expect(page.locator('text=BPM')).toBeVisible();
+  });
+
 });

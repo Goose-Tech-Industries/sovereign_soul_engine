@@ -113,6 +113,7 @@ defmodule SovereignSoulEngine.Souls.EmotionEngine do
       personality = Keyword.get(opts, :personality_modifiers, %{})
       existing_wounds = Keyword.get(opts, :existing_wounds, 0)
       repetition_count = Keyword.get(opts, :repetition_count, 0)
+      neurochem = Keyword.get(opts, :neurochemistry)
 
       intensity_factor = intensity / @default_intensity
       repetition_factor = 1.0 / (1.0 + 0.2 * repetition_count)
@@ -131,6 +132,13 @@ defmodule SovereignSoulEngine.Souls.EmotionEngine do
           effective =
             if harmful? do
               effective * wound_factor
+            else
+              effective
+            end
+
+          effective =
+            if neurochem do
+              SovereignSoulEngine.Souls.Neurochemistry.modulate_delta(dim, round(effective), neurochem)
             else
               effective
             end

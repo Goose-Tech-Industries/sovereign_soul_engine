@@ -21,6 +21,8 @@ defmodule SovereignSoulEngine.Souls.ConsequenceEngine do
   alias SovereignSoulEngine.Scenes.SoulEvent
   alias SovereignSoulEngine.Souls.EmotionalState
   alias SovereignSoulEngine.Souls.EmotionEngine
+  alias SovereignSoulEngine.Souls.SomaticState
+  alias SovereignSoulEngine.Souls.Neurochemistry
   alias SovereignSoulEngine.Relationships.Relationship
   alias SovereignSoulEngine.Relationships.RelationshipEngine
   alias SovereignSoulEngine.Memories.Memory
@@ -164,12 +166,26 @@ defmodule SovereignSoulEngine.Souls.ConsequenceEngine do
       |> Ecto.Multi.run(:emotional_state_after, fn repo,
                                                    %{emotional_state_before: state_before} ->
         current = state_to_map(state_before)
+        somatic = repo.get_by(SomaticState, character_id: target_id)
+
+        rel =
+          if params[:source_character_id] do
+            repo.get_by(Relationship,
+              source_character_id: target_id,
+              target_character_id: params[:source_character_id]
+            )
+          else
+            nil
+          end
+
+        neurochem = Neurochemistry.compute(state_before, somatic, rel)
 
         case EmotionEngine.process_event(current, params[:event_type],
                intensity: params[:event_intensity] || 50,
                personality_modifiers: params[:personality_modifiers] || %{},
                existing_wounds: params[:existing_wounds] || 0,
-               repetition_count: params[:repetition_count] || 0
+               repetition_count: params[:repetition_count] || 0,
+               neurochemistry: neurochem
              ) do
           {:ok, updated_map, _deltas} ->
             changes = map_to_emotional_changes(updated_map)

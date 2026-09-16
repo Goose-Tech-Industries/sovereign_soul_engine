@@ -11,7 +11,14 @@ defmodule SovereignSoulEngine.Souls.Generator do
   alias SovereignSoulEngine.Memories.{Memory, MemoryMerger}
   alias SovereignSoulEngine.Actions.ActionIntent
   alias SovereignSoulEngine.TheoryOfMind
-  alias SovereignSoulEngine.Souls.{EmotionalContagion, CognitiveLoad}
+  alias SovereignSoulEngine.Souls.{
+    EmotionalContagion,
+    CognitiveLoad,
+    NeurosisState,
+    PTSDFlashback,
+    DefenseMechanisms,
+    Neurochemistry
+  }
 
   require Logger
 
@@ -323,6 +330,36 @@ defmodule SovereignSoulEngine.Souls.Generator do
         do: Relationships.get_relationship(npc.id, player.id),
         else: nil
 
+    # Neurochemistry calculation
+    neurochem = Neurochemistry.compute(emotional_state, somatic_state, relationship_to_player)
+
+    neurochemistry_prompt = """
+    NEUROCHEMICAL BALANCE:
+    - Cortisol: #{neurochem.cortisol}/100 (Threat & Stress Response)
+    - Oxytocin: #{neurochem.oxytocin}/100 (Empathy & Social Bonding)
+    - Dopamine: #{neurochem.dopamine}/100 (Drive & Goal Seeking)
+    - Serotonin: #{neurochem.serotonin}/100 (Affect Regulation & Equilibrium)
+    - Hormonal Tone: #{neurochem.hormonal_tone}
+    """
+
+    # Involuntary Episodic PTSD Flashback detection
+    last_player_text = if last_player_message, do: last_player_message.content, else: ""
+    ptsd_flashback = PTSDFlashback.detect_flashback(memories, scene.context || %{}, last_player_text)
+
+    # Acute Neurosis State Machine evaluation
+    phobia_triggered? =
+      active_triggers != [] or
+        (last_player_text != "" and
+           Enum.any?(fears, fn f ->
+             String.contains?(String.downcase(last_player_text), String.downcase(f.fear_type || ""))
+           end))
+
+    wound_level = (relationship_to_player && relationship_to_player.wound) || 0
+    neurosis = NeurosisState.evaluate(emotional_state, somatic_state, wound_level, phobia_triggered?)
+
+    # Ego Defense Mechanisms evaluation
+    ego_defense = DefenseMechanisms.evaluate(emotional_state, somatic_state, profile, relationship_to_player)
+
     humor_context = compute_humor_context(profile, emotional_state, relationship_to_player)
 
     attachment_style = (profile && profile.attachment_style) || "secure"
@@ -565,6 +602,10 @@ defmodule SovereignSoulEngine.Souls.Generator do
     Personality Conditions & Trait Modifiers:
     #{traits_prompt}
 
+    #{neurochemistry_prompt}
+    #{if ptsd_flashback.triggered?, do: ptsd_flashback.prompt_directive <> "\n", else: ""}
+    #{if neurosis.state != :normal, do: neurosis.prompt_directive <> "\n", else: ""}
+    #{if ego_defense.defense != :none, do: ego_defense.prompt_directive <> "\n", else: ""}
     ═══════════════════════════════════════════
     DEEP PSYCHOLOGICAL PROFILE
     ═══════════════════════════════════════════
@@ -676,15 +717,31 @@ defmodule SovereignSoulEngine.Souls.Generator do
     }
     """
 
-    case ProviderCascade.respond(
-           %{
-             system: system_prompt,
-             messages: llm_messages
-           },
-           tenant: tenant
-         ) do
-      {:ok, response} ->
-        correlation_id = Ecto.UUID.generate()
+    response =
+      case ProviderCascade.respond(
+             %{
+               system: system_prompt,
+               messages: llm_messages
+             },
+             tenant: tenant
+           ) do
+        {:ok, resp} ->
+          resp
+
+        {:error, reason} ->
+          Logger.warning(
+            "LLM Cascade call failed (#{inspect(reason)}) — falling back to sovereign emotional generation"
+          )
+
+          %{
+            "public_speech" => fallback_speech(npc, player, nil, emotional_state),
+            "private_thought" => fallback_thought(npc, emotional_state, player, nil),
+            "conversation_state" => "continuing",
+            "tone" => "guarded"
+          }
+      end
+
+    correlation_id = Ecto.UUID.generate()
         action_res = response[:proposed_action] || response["proposed_action"]
 
         action_resolution =
@@ -942,6 +999,43 @@ defmodule SovereignSoulEngine.Souls.Generator do
                 "proposed_action",
                 action_resolution && action_resolution.proposed_action
               )
+              |> maybe_put_metadata(
+                "neurosis_state",
+                neurosis.state != :normal && to_string(neurosis.state)
+              )
+              |> maybe_put_metadata(
+                "ptsd_flashback",
+                ptsd_flashback.triggered? && ptsd_flashback.trigger_cue
+              )
+              |> maybe_put_metadata(
+                "active_defense",
+                ego_defense.defense != :none && to_string(ego_defense.defense)
+              )
+              |> maybe_put_metadata("cortisol", neurochem.cortisol)
+              |> maybe_put_metadata("oxytocin", neurochem.oxytocin)
+              |> maybe_put_metadata("dopamine", neurochem.dopamine)
+              |> maybe_put_metadata("serotonin", neurochem.serotonin)
+
+            # If PTSD flashback was triggered, reflect somatic surge and acute stress
+            if ptsd_flashback.triggered? do
+              if somatic_state do
+                Souls.update_somatic_state(somatic_state, %{
+                  fatigue: min(100, (somatic_state.fatigue || 0) + 15)
+                })
+              end
+
+              if current_emotional_state && current_emotional_state.id do
+                Souls.update_emotional_state(current_emotional_state, %{
+                  stress: min(100, max(current_emotional_state.stress || 20, ptsd_flashback.stress_surge))
+                })
+              end
+
+              Phoenix.PubSub.broadcast(
+                SovereignSoulEngine.PubSub,
+                "character:#{npc.id}:biometrics",
+                {:telemetry_received, %{telemetry: %{heart_rate: ptsd_flashback.heart_rate_surge}}}
+              )
+            end
 
             final_message =
               if map_size(metadata_updates) > 0 do
@@ -992,11 +1086,6 @@ defmodule SovereignSoulEngine.Souls.Generator do
 
             {:error, {failed_step, failed_value}}
         end
-
-      {:error, reason} ->
-        Logger.error("LLM Cascade call failed: #{inspect(reason)}")
-        {:error, reason}
-    end
   end
 
   defp extract_context_tags(triggers, history_messages, player_id) do
@@ -1766,12 +1855,28 @@ defmodule SovereignSoulEngine.Souls.Generator do
     if cleaned == "", do: text, else: cleaned
   end
 
-  defp fallback_speech(_npc, player, response) do
+  defp fallback_speech(_npc, player, response, emotional_state \\ nil) do
     thought = response && (response[:private_thought] || response["private_thought"])
     tone = (response && (response[:tone] || response["tone"])) || "guarded"
-    player_name = (player && player.name) || "Goose"
+    player_name = (player && player.name) || "friend"
+    stress = (emotional_state && emotional_state.stress) || 0
+    fear = (emotional_state && emotional_state.fear) || 0
+    anger = (emotional_state && emotional_state.anger) || 0
+    attachment = (emotional_state && emotional_state.attachment) || 0
 
     cond do
+      anger > 60 ->
+        "Mind your words, #{player_name}. My patience is wearing thin."
+
+      stress > 65 ->
+        "There is too much noise right now, #{player_name}. Speak clearly."
+
+      fear > 60 ->
+        "Keep your distance, #{player_name}. What is your purpose here?"
+
+      attachment > 60 ->
+        "I am listening, #{player_name}. What is on your mind?"
+
       is_binary(thought) and String.length(thought) > 10 and not String.contains?(String.downcase(thought), "required") ->
         "I hear you, #{player_name}. Let us see where this leads."
 
