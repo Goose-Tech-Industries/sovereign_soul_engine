@@ -150,303 +150,6 @@ defmodule SovereignSoulEngineWeb.ChatSauceLive do
   end
 
   @impl true
-  def handle_event("start_acp", _params, socket) do
-    success = AcpManager.start()
-    logs = AcpManager.get_logs()
-
-    socket =
-      socket
-      |> assign(:acp_running?, success)
-      |> assign(:acp_logs, logs)
-      |> assign(:success_message, if(success, do: "ACP Server started successfully!", else: nil))
-      |> assign(:error_message, if(not success, do: "Failed to start ACP Server.", else: nil))
-
-    {:noreply, socket}
-  end
-
-  @impl true
-  def handle_event("stop_acp", _params, socket) do
-    success = AcpManager.stop()
-    logs = AcpManager.get_logs()
-
-    socket =
-      socket
-      |> assign(:acp_running?, not success)
-      |> assign(:acp_logs, logs)
-      |> assign(:success_message, if(success, do: "ACP Server stopped.", else: nil))
-      |> assign(:error_message, if(not success, do: "Failed to stop ACP Server.", else: nil))
-
-    {:noreply, socket}
-  end
-
-  @impl true
-  def handle_event("restart_acp", _params, socket) do
-    success = AcpManager.restart()
-    logs = AcpManager.get_logs()
-
-    socket =
-      socket
-      |> assign(:acp_running?, success)
-      |> assign(:acp_logs, logs)
-      |> assign(:success_message, if(success, do: "ACP Server restarted.", else: nil))
-      |> assign(:error_message, if(not success, do: "Failed to restart ACP Server.", else: nil))
-
-    {:noreply, socket}
-  end
-
-  @impl true
-  def handle_event("refresh_logs", _params, socket) do
-    {:noreply, assign(socket, :acp_logs, AcpManager.get_logs())}
-  end
-
-  @impl true
-  def handle_event("create_character", %{"character" => char_params}, socket) do
-    # Ensure slug and kind defaults
-    char_params =
-      char_params
-      |> Map.put("kind", "npc")
-      |> Map.put("status", "active")
-      |> Map.put_new_lazy("slug", fn ->
-        char_params["name"]
-        |> String.downcase()
-        |> String.replace(~r/[^a-z0-9]+/, "-")
-        |> String.trim("-")
-      end)
-
-    case Characters.create_character(char_params) do
-      {:ok, _char} ->
-        # Successfully created
-        # Force start Soul & NPC systems for the new character if needed
-        # In SSE, Character insertion triggers necessary emotional profiles via DB triggers or app hooks
-        {:noreply,
-         socket
-         |> assign(:characters, Characters.list_characters())
-         |> assign(:success_message, "Character '#{char_params["name"]}' created successfully!")
-         |> assign(:error_message, nil)
-         |> assign(:new_char_form, to_form(Characters.change_character(%Characters.Character{})))}
-
-      {:error, changeset} ->
-        {:noreply,
-         socket
-         |> assign(:new_char_form, to_form(changeset))
-         |> assign(:error_message, "Validation failed. Please check inputs.")
-         |> assign(:success_message, nil)}
-    end
-  end
-
-  @impl true
-  def handle_event("create_relationship", %{"relationship" => rel_params}, socket) do
-    source_id = rel_params["source_character_id"]
-    target_id = rel_params["target_character_id"]
-
-    if source_id == target_id do
-      {:noreply,
-       socket
-       |> assign(:error_message, "Source and Target characters must be different.")
-       |> assign(:success_message, nil)}
-    else
-      case Relationships.get_relationship(source_id, target_id) do
-        nil ->
-          case Relationships.create_relationship(rel_params) do
-            {:ok, _rel} ->
-              {:noreply,
-               socket
-               |> assign(:relationships, Relationships.list_relationships())
-               |> assign(:success_message, "Relationship created successfully!")
-               |> assign(:error_message, nil)
-               |> assign(
-                 :new_rel_form,
-                 to_form(Relationships.change_relationship(%Relationships.Relationship{}))
-               )}
-
-            {:error, changeset} ->
-              {:noreply,
-               socket
-               |> assign(:new_rel_form, to_form(changeset))
-               |> assign(:error_message, "Failed to create relationship. Please check inputs.")
-               |> assign(:success_message, nil)}
-          end
-
-        existing_rel ->
-          case Relationships.update_relationship(existing_rel, rel_params) do
-            {:ok, _rel} ->
-              {:noreply,
-               socket
-               |> assign(:relationships, Relationships.list_relationships())
-               |> assign(:success_message, "Relationship updated successfully!")
-               |> assign(:error_message, nil)
-               |> assign(
-                 :new_rel_form,
-                 to_form(Relationships.change_relationship(%Relationships.Relationship{}))
-               )}
-
-            {:error, changeset} ->
-              {:noreply,
-               socket
-               |> assign(:new_rel_form, to_form(changeset))
-               |> assign(:error_message, "Failed to update relationship.")
-               |> assign(:success_message, nil)}
-          end
-      end
-    end
-  end
-
-  @impl true
-  def handle_event("delete_relationship", %{"id" => id}, socket) do
-    rel = Relationships.get_relationship!(id)
-
-    case Relationships.delete_relationship(rel) do
-      {:ok, _} ->
-        {:noreply,
-         socket
-         |> assign(:relationships, Relationships.list_relationships())
-         |> assign(:success_message, "Relationship deleted successfully!")
-         |> assign(:error_message, nil)}
-
-      _ ->
-        {:noreply,
-         socket
-         |> assign(:error_message, "Failed to delete relationship.")
-         |> assign(:success_message, nil)}
-    end
-  end
-
-  @impl true
-  def handle_event("select_edit_character", %{"id" => id}, socket) do
-    import Ecto.Query
-    char = Characters.get_character!(id)
-    # Fetch or create SoulProfile
-    profile =
-      SovereignSoulEngine.Souls.get_soul_profile_by_character(char.id) ||
-        case SovereignSoulEngine.Souls.create_soul_profile(%{character_id: char.id}) do
-          {:ok, p} -> p
-        end
-
-    fears =
-      SovereignSoulEngine.Repo.all(
-        from f in SovereignSoulEngine.Souls.SoulFear,
-          where: f.character_id == ^char.id,
-          order_by: [desc: f.inserted_at]
-      )
-
-    {:noreply,
-     socket
-     |> assign(:editing_character, char)
-     |> assign(:editing_character_profile, profile)
-     |> assign(:editing_character_fears, fears)}
-  end
-
-  @impl true
-  def handle_event("close_edit_character", _params, socket) do
-    {:noreply,
-     socket
-     |> assign(:editing_character, nil)
-     |> assign(:editing_character_profile, nil)
-     |> assign(:editing_character_fears, [])}
-  end
-
-  @impl true
-  def handle_event("add_fear", %{"fear_type" => fear_type}, socket) do
-    import Ecto.Query
-    char = socket.assigns.editing_character
-
-    if char && String.trim(fear_type) != "" do
-      {:ok, _fear} =
-        SovereignSoulEngine.Souls.create_soul_fear(%{
-          character_id: char.id,
-          fear_type: String.trim(fear_type),
-          severity: 70,
-          origin: "baked_in",
-          status: "active"
-        })
-
-      fears =
-        SovereignSoulEngine.Repo.all(
-          from f in SovereignSoulEngine.Souls.SoulFear,
-            where: f.character_id == ^char.id,
-            order_by: [desc: f.inserted_at]
-        )
-
-      {:noreply, assign(socket, :editing_character_fears, fears)}
-    else
-      {:noreply, socket}
-    end
-  end
-
-  @impl true
-  def handle_event("resolve_fear", %{"id" => fear_id}, socket) do
-    import Ecto.Query
-    char = socket.assigns.editing_character
-    fear = SovereignSoulEngine.Repo.get!(SovereignSoulEngine.Souls.SoulFear, fear_id)
-
-    {:ok, _} =
-      SovereignSoulEngine.Souls.update_soul_fear(fear, %{status: "resolved", severity: 0})
-
-    fears =
-      SovereignSoulEngine.Repo.all(
-        from f in SovereignSoulEngine.Souls.SoulFear,
-          where: f.character_id == ^char.id,
-          order_by: [desc: f.inserted_at]
-      )
-
-    {:noreply, assign(socket, :editing_character_fears, fears)}
-  end
-
-  @impl true
-  def handle_event("update_character", %{"character" => char_params}, socket) do
-    char = socket.assigns.editing_character
-    profile = socket.assigns.editing_character_profile
-    description = char_params["description"]
-
-    # Extract boolean checkboxes for the 10 personality traits
-    traits = %{
-      "depression" => char_params["traits_depression"] == "true",
-      "bipolar" => char_params["traits_bipolar"] == "true",
-      "ocd" => char_params["traits_ocd"] == "true",
-      "splitting" => char_params["traits_splitting"] == "true",
-      "adhd" => char_params["traits_adhd"] == "true",
-      "narcissism" => char_params["traits_narcissism"] == "true",
-      "impostor" => char_params["traits_impostor"] == "true",
-      "codependency" => char_params["traits_codependency"] == "true",
-      "addiction" => char_params["traits_addiction"] == "true",
-      "hypochondria" => char_params["traits_hypochondria"] == "true"
-    }
-
-    case Characters.update_character(char, %{description: description}) do
-      {:ok, _char} ->
-        # Update SoulProfile personality traits
-        if profile do
-          {:ok, _} =
-            SovereignSoulEngine.Souls.update_soul_profile(profile, %{personality_traits: traits})
-        end
-
-        # Broadcast that character context was updated
-        Phoenix.PubSub.broadcast(
-          SovereignSoulEngine.PubSub,
-          "scenes:list_updates",
-          {:scenes_updated, %{}}
-        )
-
-        {:noreply,
-         socket
-         |> assign(:editing_character, nil)
-         |> assign(:editing_character_profile, nil)
-         |> assign(:characters, Characters.list_characters())
-         |> assign(
-           :success_message,
-           "Character '#{char.name}' and personality traits updated successfully!"
-         )
-         |> assign(:error_message, nil)}
-
-      {:error, _changeset} ->
-        {:noreply,
-         socket
-         |> assign(:error_message, "Failed to update character description.")
-         |> assign(:success_message, nil)}
-    end
-  end
-
-  @impl true
   def render(assigns) do
     ~H"""
     <div class="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans antialiased">
@@ -1929,6 +1632,303 @@ defmodule SovereignSoulEngineWeb.ChatSauceLive do
     """
   end
 
+  @impl true
+  def handle_event("start_acp", _params, socket) do
+    success = AcpManager.start()
+    logs = AcpManager.get_logs()
+
+    socket =
+      socket
+      |> assign(:acp_running?, success)
+      |> assign(:acp_logs, logs)
+      |> assign(:success_message, if(success, do: "ACP Server started successfully!", else: nil))
+      |> assign(:error_message, if(not success, do: "Failed to start ACP Server.", else: nil))
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("stop_acp", _params, socket) do
+    success = AcpManager.stop()
+    logs = AcpManager.get_logs()
+
+    socket =
+      socket
+      |> assign(:acp_running?, not success)
+      |> assign(:acp_logs, logs)
+      |> assign(:success_message, if(success, do: "ACP Server stopped.", else: nil))
+      |> assign(:error_message, if(not success, do: "Failed to stop ACP Server.", else: nil))
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("restart_acp", _params, socket) do
+    success = AcpManager.restart()
+    logs = AcpManager.get_logs()
+
+    socket =
+      socket
+      |> assign(:acp_running?, success)
+      |> assign(:acp_logs, logs)
+      |> assign(:success_message, if(success, do: "ACP Server restarted.", else: nil))
+      |> assign(:error_message, if(not success, do: "Failed to restart ACP Server.", else: nil))
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("refresh_logs", _params, socket) do
+    {:noreply, assign(socket, :acp_logs, AcpManager.get_logs())}
+  end
+
+  @impl true
+  def handle_event("create_character", %{"character" => char_params}, socket) do
+    # Ensure slug and kind defaults
+    char_params =
+      char_params
+      |> Map.put("kind", "npc")
+      |> Map.put("status", "active")
+      |> Map.put_new_lazy("slug", fn ->
+        char_params["name"]
+        |> String.downcase()
+        |> String.replace(~r/[^a-z0-9]+/, "-")
+        |> String.trim("-")
+      end)
+
+    case Characters.create_character(char_params) do
+      {:ok, _char} ->
+        # Successfully created
+        # Force start Soul & NPC systems for the new character if needed
+        # In SSE, Character insertion triggers necessary emotional profiles via DB triggers or app hooks
+        {:noreply,
+         socket
+         |> assign(:characters, Characters.list_characters())
+         |> assign(:success_message, "Character '#{char_params["name"]}' created successfully!")
+         |> assign(:error_message, nil)
+         |> assign(:new_char_form, to_form(Characters.change_character(%Characters.Character{})))}
+
+      {:error, changeset} ->
+        {:noreply,
+         socket
+         |> assign(:new_char_form, to_form(changeset))
+         |> assign(:error_message, "Validation failed. Please check inputs.")
+         |> assign(:success_message, nil)}
+    end
+  end
+
+  @impl true
+  def handle_event("create_relationship", %{"relationship" => rel_params}, socket) do
+    source_id = rel_params["source_character_id"]
+    target_id = rel_params["target_character_id"]
+
+    if source_id == target_id do
+      {:noreply,
+       socket
+       |> assign(:error_message, "Source and Target characters must be different.")
+       |> assign(:success_message, nil)}
+    else
+      case Relationships.get_relationship(source_id, target_id) do
+        nil ->
+          case Relationships.create_relationship(rel_params) do
+            {:ok, _rel} ->
+              {:noreply,
+               socket
+               |> assign(:relationships, Relationships.list_relationships())
+               |> assign(:success_message, "Relationship created successfully!")
+               |> assign(:error_message, nil)
+               |> assign(
+                 :new_rel_form,
+                 to_form(Relationships.change_relationship(%Relationships.Relationship{}))
+               )}
+
+            {:error, changeset} ->
+              {:noreply,
+               socket
+               |> assign(:new_rel_form, to_form(changeset))
+               |> assign(:error_message, "Failed to create relationship. Please check inputs.")
+               |> assign(:success_message, nil)}
+          end
+
+        existing_rel ->
+          case Relationships.update_relationship(existing_rel, rel_params) do
+            {:ok, _rel} ->
+              {:noreply,
+               socket
+               |> assign(:relationships, Relationships.list_relationships())
+               |> assign(:success_message, "Relationship updated successfully!")
+               |> assign(:error_message, nil)
+               |> assign(
+                 :new_rel_form,
+                 to_form(Relationships.change_relationship(%Relationships.Relationship{}))
+               )}
+
+            {:error, changeset} ->
+              {:noreply,
+               socket
+               |> assign(:new_rel_form, to_form(changeset))
+               |> assign(:error_message, "Failed to update relationship.")
+               |> assign(:success_message, nil)}
+          end
+      end
+    end
+  end
+
+  @impl true
+  def handle_event("delete_relationship", %{"id" => id}, socket) do
+    rel = Relationships.get_relationship!(id)
+
+    case Relationships.delete_relationship(rel) do
+      {:ok, _} ->
+        {:noreply,
+         socket
+         |> assign(:relationships, Relationships.list_relationships())
+         |> assign(:success_message, "Relationship deleted successfully!")
+         |> assign(:error_message, nil)}
+
+      _ ->
+        {:noreply,
+         socket
+         |> assign(:error_message, "Failed to delete relationship.")
+         |> assign(:success_message, nil)}
+    end
+  end
+
+  @impl true
+  def handle_event("select_edit_character", %{"id" => id}, socket) do
+    import Ecto.Query
+    char = Characters.get_character!(id)
+    # Fetch or create SoulProfile
+    profile =
+      SovereignSoulEngine.Souls.get_soul_profile_by_character(char.id) ||
+        case SovereignSoulEngine.Souls.create_soul_profile(%{character_id: char.id}) do
+          {:ok, p} -> p
+        end
+
+    fears =
+      SovereignSoulEngine.Repo.all(
+        from f in SovereignSoulEngine.Souls.SoulFear,
+          where: f.character_id == ^char.id,
+          order_by: [desc: f.inserted_at]
+      )
+
+    {:noreply,
+     socket
+     |> assign(:editing_character, char)
+     |> assign(:editing_character_profile, profile)
+     |> assign(:editing_character_fears, fears)}
+  end
+
+  @impl true
+  def handle_event("close_edit_character", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:editing_character, nil)
+     |> assign(:editing_character_profile, nil)
+     |> assign(:editing_character_fears, [])}
+  end
+
+  @impl true
+  def handle_event("add_fear", %{"fear_type" => fear_type}, socket) do
+    import Ecto.Query
+    char = socket.assigns.editing_character
+
+    if char && String.trim(fear_type) != "" do
+      {:ok, _fear} =
+        SovereignSoulEngine.Souls.create_soul_fear(%{
+          character_id: char.id,
+          fear_type: String.trim(fear_type),
+          severity: 70,
+          origin: "baked_in",
+          status: "active"
+        })
+
+      fears =
+        SovereignSoulEngine.Repo.all(
+          from f in SovereignSoulEngine.Souls.SoulFear,
+            where: f.character_id == ^char.id,
+            order_by: [desc: f.inserted_at]
+        )
+
+      {:noreply, assign(socket, :editing_character_fears, fears)}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_event("resolve_fear", %{"id" => fear_id}, socket) do
+    import Ecto.Query
+    char = socket.assigns.editing_character
+    fear = SovereignSoulEngine.Repo.get!(SovereignSoulEngine.Souls.SoulFear, fear_id)
+
+    {:ok, _} =
+      SovereignSoulEngine.Souls.update_soul_fear(fear, %{status: "resolved", severity: 0})
+
+    fears =
+      SovereignSoulEngine.Repo.all(
+        from f in SovereignSoulEngine.Souls.SoulFear,
+          where: f.character_id == ^char.id,
+          order_by: [desc: f.inserted_at]
+      )
+
+    {:noreply, assign(socket, :editing_character_fears, fears)}
+  end
+
+  @impl true
+  def handle_event("update_character", %{"character" => char_params}, socket) do
+    char = socket.assigns.editing_character
+    profile = socket.assigns.editing_character_profile
+    description = char_params["description"]
+
+    # Extract boolean checkboxes for the 10 personality traits
+    traits = %{
+      "depression" => char_params["traits_depression"] == "true",
+      "bipolar" => char_params["traits_bipolar"] == "true",
+      "ocd" => char_params["traits_ocd"] == "true",
+      "splitting" => char_params["traits_splitting"] == "true",
+      "adhd" => char_params["traits_adhd"] == "true",
+      "narcissism" => char_params["traits_narcissism"] == "true",
+      "impostor" => char_params["traits_impostor"] == "true",
+      "codependency" => char_params["traits_codependency"] == "true",
+      "addiction" => char_params["traits_addiction"] == "true",
+      "hypochondria" => char_params["traits_hypochondria"] == "true"
+    }
+
+    case Characters.update_character(char, %{description: description}) do
+      {:ok, _char} ->
+        # Update SoulProfile personality traits
+        if profile do
+          {:ok, _} =
+            SovereignSoulEngine.Souls.update_soul_profile(profile, %{personality_traits: traits})
+        end
+
+        # Broadcast that character context was updated
+        Phoenix.PubSub.broadcast(
+          SovereignSoulEngine.PubSub,
+          "scenes:list_updates",
+          {:scenes_updated, %{}}
+        )
+
+        {:noreply,
+         socket
+         |> assign(:editing_character, nil)
+         |> assign(:editing_character_profile, nil)
+         |> assign(:characters, Characters.list_characters())
+         |> assign(
+           :success_message,
+           "Character '#{char.name}' and personality traits updated successfully!"
+         )
+         |> assign(:error_message, nil)}
+
+      {:error, _changeset} ->
+        {:noreply,
+         socket
+         |> assign(:error_message, "Failed to update character description.")
+         |> assign(:success_message, nil)}
+    end
+  end
+
   # ─── Tab routing ───────────────────────────────────────────────────────────
 
   @impl true
@@ -2045,64 +2045,6 @@ defmodule SovereignSoulEngineWeb.ChatSauceLive do
     end
   end
 
-  defp load_inspector_char(socket, id) do
-    char = Characters.get_character!(id)
-    emotional = Souls.get_emotional_state_by_character(id)
-    soul = Souls.get_soul_profile_by_character(id)
-    somatic = Souls.get_somatic_state_by_character(id)
-    grief_arcs = Souls.list_active_grief_arcs_for_character(id)
-    active_goals = Souls.list_active_goals_for_character(id)
-    {cog_score, _stressors} = SovereignSoulEngine.Souls.CognitiveLoad.compute(emotional, somatic, grief_arcs, active_goals)
-    socket
-    |> assign(:inspector_char, char)
-    |> assign(:inspector_emotional, emotional)
-    |> assign(:inspector_soul, soul)
-    |> assign(:inspector_somatic, somatic)
-    |> assign(:inspector_grief_arcs, grief_arcs)
-    |> assign(:inspector_active_goals, active_goals)
-    |> assign(:inspector_cog_score, cog_score)
-  end
-
-  defp load_inspector_tab(socket, "vitals", _id), do: socket
-
-  defp load_inspector_tab(socket, "beliefs", id) do
-    socket
-    |> assign(:inspector_beliefs, Souls.list_beliefs_for_character(id))
-    |> assign(:inspector_triggers, Souls.list_triggers_for_character(id))
-    |> assign(:inspector_moral_lines, Souls.list_moral_lines_for_character(id))
-    |> assign(:inspector_secrets, Souls.list_secrets_for_character(id))
-  end
-
-  defp load_inspector_tab(socket, "arcs", _id) do
-    id = socket.assigns.inspector_char.id
-    assign(socket, :inspector_forgiveness_arcs, Souls.list_active_forgiveness_arcs_for_character(id))
-  end
-
-  defp load_inspector_tab(socket, "goals", id) do
-    socket
-    |> assign(:inspector_desires, Souls.list_desires_for_character(id))
-  end
-
-  defp load_inspector_tab(socket, "memory", id) do
-    assign(socket, :inspector_memories, Memories.list_memories_for_character(id))
-  end
-
-  defp load_inspector_tab(socket, "theory_of_mind", id) do
-    knowledge = TheoryOfMind.list_what_knower_knows(id)
-    all_chars = Characters.list_characters() |> Enum.reject(&(&1.id == id))
-    grouped =
-      knowledge
-      |> Enum.group_by(& &1.subject_character_id)
-      |> Enum.map(fn {sid, entries} ->
-        {Enum.find(all_chars, &(&1.id == sid)), entries}
-      end)
-      |> Enum.reject(fn {c, _} -> is_nil(c) end)
-    socket
-    |> assign(:inspector_tom_grouped, grouped)
-    |> assign(:inspector_tom_all_chars, all_chars)
-  end
-
-  defp load_inspector_tab(socket, _tab, _id), do: socket
 
   # ─── NPC Wizard ────────────────────────────────────────────────────────────
 
@@ -2513,4 +2455,63 @@ defmodule SovereignSoulEngineWeb.ChatSauceLive do
         preload: [:character, :scene]
     )
   end
+
+  defp load_inspector_char(socket, id) do
+    char = Characters.get_character!(id)
+    emotional = Souls.get_emotional_state_by_character(id)
+    soul = Souls.get_soul_profile_by_character(id)
+    somatic = Souls.get_somatic_state_by_character(id)
+    grief_arcs = Souls.list_active_grief_arcs_for_character(id)
+    active_goals = Souls.list_active_goals_for_character(id)
+    {cog_score, _stressors} = SovereignSoulEngine.Souls.CognitiveLoad.compute(emotional, somatic, grief_arcs, active_goals)
+    socket
+    |> assign(:inspector_char, char)
+    |> assign(:inspector_emotional, emotional)
+    |> assign(:inspector_soul, soul)
+    |> assign(:inspector_somatic, somatic)
+    |> assign(:inspector_grief_arcs, grief_arcs)
+    |> assign(:inspector_active_goals, active_goals)
+    |> assign(:inspector_cog_score, cog_score)
+  end
+
+  defp load_inspector_tab(socket, "vitals", _id), do: socket
+
+  defp load_inspector_tab(socket, "beliefs", id) do
+    socket
+    |> assign(:inspector_beliefs, Souls.list_beliefs_for_character(id))
+    |> assign(:inspector_triggers, Souls.list_triggers_for_character(id))
+    |> assign(:inspector_moral_lines, Souls.list_moral_lines_for_character(id))
+    |> assign(:inspector_secrets, Souls.list_secrets_for_character(id))
+  end
+
+  defp load_inspector_tab(socket, "arcs", _id) do
+    id = socket.assigns.inspector_char.id
+    assign(socket, :inspector_forgiveness_arcs, Souls.list_active_forgiveness_arcs_for_character(id))
+  end
+
+  defp load_inspector_tab(socket, "goals", id) do
+    socket
+    |> assign(:inspector_desires, Souls.list_desires_for_character(id))
+  end
+
+  defp load_inspector_tab(socket, "memory", id) do
+    assign(socket, :inspector_memories, Memories.list_memories_for_character(id))
+  end
+
+  defp load_inspector_tab(socket, "theory_of_mind", id) do
+    knowledge = TheoryOfMind.list_what_knower_knows(id)
+    all_chars = Characters.list_characters() |> Enum.reject(&(&1.id == id))
+    grouped =
+      knowledge
+      |> Enum.group_by(& &1.subject_character_id)
+      |> Enum.map(fn {sid, entries} ->
+        {Enum.find(all_chars, &(&1.id == sid)), entries}
+      end)
+      |> Enum.reject(fn {c, _} -> is_nil(c) end)
+    socket
+    |> assign(:inspector_tom_grouped, grouped)
+    |> assign(:inspector_tom_all_chars, all_chars)
+  end
+
+  defp load_inspector_tab(socket, _tab, _id), do: socket
 end
