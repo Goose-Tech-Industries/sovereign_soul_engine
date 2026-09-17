@@ -17,7 +17,7 @@ defmodule SovereignSoulEngineWeb.Plugs.ApiAuth do
     with {:ok, key} <- fetch_bearer_key(conn) do
       if key == dev_key do
         assign(conn, :tenant, %Tenants.Tenant{
-          id: 0,
+          id: "00000000-0000-0000-0000-000000000000",
           name: "Twisted Dev",
           external_source: "twisted"
         })

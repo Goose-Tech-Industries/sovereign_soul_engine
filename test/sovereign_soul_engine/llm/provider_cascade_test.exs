@@ -9,12 +9,13 @@ defmodule SovereignSoulEngine.LLM.ProviderCascadeTest do
     FakeProvider.reset(pid)
 
     cascade_config = [providers: [FakeProvider], timeout_ms: 1_000]
+    initial_providers = Application.get_env(:sovereign_soul_engine, :llm_providers, [FakeProvider])
 
     on_exit(fn ->
-      Application.delete_env(:sovereign_soul_engine, :llm_providers)
+      Application.put_env(:sovereign_soul_engine, :llm_providers, initial_providers)
     end)
 
-    %{pid: pid, cascade_config: cascade_config}
+    %{pid: pid, cascade_config: cascade_config, initial_providers: initial_providers}
   end
 
   describe "cascade routing" do
@@ -64,8 +65,6 @@ defmodule SovereignSoulEngine.LLM.ProviderCascadeTest do
                ProviderCascade.respond(%{messages: []})
 
       assert response.tone == "aggressive"
-
-      Application.delete_env(:sovereign_soul_engine, :llm_providers)
     end
   end
 
@@ -409,20 +408,22 @@ defmodule SovereignSoulEngine.LLM.ProviderCascadeTest do
 
       assert is_map(health)
       assert {:ok, %{status: "healthy"}} = health["fake"]
-
-      Application.delete_env(:sovereign_soul_engine, :llm_providers)
     end
   end
 
   describe "configured_providers" do
-    test "returns default providers when not configured" do
+    test "returns default providers when not configured", %{initial_providers: initial} do
       Application.delete_env(:sovereign_soul_engine, :llm_providers)
 
-      providers = ProviderCascade.configured_providers()
+      try do
+        providers = ProviderCascade.configured_providers()
 
-      assert is_list(providers)
-      assert length(providers) == 6
-      assert SovereignSoulEngine.LLM.LocalProvider in providers
+        assert is_list(providers)
+        assert length(providers) == 6
+        assert SovereignSoulEngine.LLM.LocalProvider in providers
+      after
+        Application.put_env(:sovereign_soul_engine, :llm_providers, initial)
+      end
     end
 
     test "returns configured providers when set" do

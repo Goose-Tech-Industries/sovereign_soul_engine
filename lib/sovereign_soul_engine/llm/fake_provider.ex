@@ -45,6 +45,7 @@ defmodule SovereignSoulEngine.LLM.FakeProvider do
   """
   @spec set_fixture(pid() | atom(), atom()) :: :ok
   def set_fixture(server \\ __MODULE__, fixture) when is_atom(fixture) do
+    ensure_started(server)
     Agent.update(server, fn state -> %{state | mode: :fixture, fixture: fixture} end)
   end
 
@@ -55,6 +56,7 @@ defmodule SovereignSoulEngine.LLM.FakeProvider do
   """
   @spec set_raw(pid() | atom(), {:ok, map()} | {:error, String.t()}) :: :ok
   def set_raw(server \\ __MODULE__, result) do
+    ensure_started(server)
     Agent.update(server, fn state -> %{state | mode: :raw, raw_result: result} end)
   end
 
@@ -63,6 +65,7 @@ defmodule SovereignSoulEngine.LLM.FakeProvider do
   """
   @spec call_history(pid() | atom()) :: [map()]
   def call_history(server \\ __MODULE__) do
+    ensure_started(server)
     Agent.get(server, fn state -> state.call_history end)
   end
 
@@ -71,6 +74,7 @@ defmodule SovereignSoulEngine.LLM.FakeProvider do
   """
   @spec call_count(pid() | atom()) :: non_neg_integer()
   def call_count(server \\ __MODULE__) do
+    ensure_started(server)
     Agent.get(server, fn state -> length(state.call_history) end)
   end
 
@@ -79,7 +83,18 @@ defmodule SovereignSoulEngine.LLM.FakeProvider do
   """
   @spec reset(pid() | atom()) :: :ok
   def reset(server \\ __MODULE__) do
+    ensure_started(server)
     Agent.update(server, fn _ -> default_state() end)
+  end
+
+  defp ensure_started(server) do
+    if server == __MODULE__ and Process.whereis(__MODULE__) == nil do
+      case Agent.start_link(fn -> default_state() end, name: __MODULE__) do
+        {:ok, _pid} -> :ok
+        {:error, {:already_started, _pid}} -> :ok
+        _ -> :ok
+      end
+    end
   end
 
   # ── Provider Callbacks ───────────────────────────────────────

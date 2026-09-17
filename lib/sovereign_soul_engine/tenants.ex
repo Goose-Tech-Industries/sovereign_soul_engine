@@ -57,20 +57,30 @@ defmodule SovereignSoulEngine.Tenants do
   end
 
   @doc "Looks up the active tenant owning this plaintext key, or nil if it's missing/invalid/deactivated."
-  def authenticate(plaintext_key) do
+  def authenticate(plaintext_key) when is_binary(plaintext_key) and byte_size(plaintext_key) > 0 do
     key_hash = hash_key(plaintext_key)
     Repo.get_by(Tenant, api_key_hash: key_hash, active: true)
   end
+
+  def authenticate(_), do: nil
 
   def deactivate_tenant(%Tenant{} = tenant) do
     tenant |> Tenant.changeset(%{active: false}) |> Repo.update()
   end
 
   @doc "Atomic increment — safe under concurrent requests, no read-modify-write race."
-  def record_llm_call(%Tenant{id: id}) do
-    from(t in Tenant, where: t.id == ^id)
-    |> Repo.update_all(inc: [llm_call_count: 1])
+  def record_llm_call(%Tenant{id: id}) when is_binary(id) do
+    case Ecto.UUID.cast(id) do
+      {:ok, uuid} ->
+        from(t in Tenant, where: t.id == ^uuid)
+        |> Repo.update_all(inc: [llm_call_count: 1])
+
+      :error ->
+        {0, []}
+    end
   end
+
+  def record_llm_call(_), do: {0, []}
 
   @doc """
   Configures a tenant's own LLM provider key. Test-calls the real provider

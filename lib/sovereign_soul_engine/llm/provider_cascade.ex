@@ -63,7 +63,12 @@ defmodule SovereignSoulEngine.LLM.ProviderCascade do
         respond_via_provider(provider_module, input, timeout_ms, api_key: api_key)
 
       :not_configured ->
-        providers = Keyword.get(opts, :providers, configured_providers())
+        providers =
+          case Keyword.get(opts, :providers) || configured_providers() do
+            list when is_list(list) -> list
+            _ -> []
+          end
+
         try_providers(providers, input, timeout_ms)
 
       {:error, reason} ->
@@ -89,7 +94,10 @@ defmodule SovereignSoulEngine.LLM.ProviderCascade do
   """
   @spec configured_providers() :: [module()]
   def configured_providers do
-    Application.get_env(:sovereign_soul_engine, :llm_providers, @default_providers)
+    case Application.get_env(:sovereign_soul_engine, :llm_providers) do
+      list when is_list(list) and list != [] -> list
+      _ -> @default_providers
+    end
   end
 
   @doc """
@@ -111,6 +119,8 @@ defmodule SovereignSoulEngine.LLM.ProviderCascade do
     Logger.error("LLM cascade exhausted: all providers failed")
     {:error, "cascade_exhausted: all providers failed"}
   end
+
+  defp try_providers(nil, input, timeout_ms), do: try_providers([], input, timeout_ms)
 
   defp try_providers([provider | rest], input, timeout_ms) do
     provider_name = provider.provider_name()
