@@ -114,15 +114,30 @@ defmodule SovereignSoulEngine.Tenants do
 
   def resolve_byok(%Tenant{byok_provider: provider_name, byok_api_key_encrypted: encrypted}) do
     case ProviderCascade.provider_by_name(provider_name) do
-      nil -> :not_configured
-      provider_module -> {:ok, provider_module, decrypt(encrypted)}
+      nil ->
+        :not_configured
+
+      provider_module ->
+        case decrypt(encrypted) do
+          {:ok, plaintext} -> {:ok, provider_module, plaintext}
+          {:error, _} -> {:error, :decryption_failed}
+        end
     end
   end
 
+  @doc "Encrypts plaintext using the app's secret_key_base and byok context. Useful for tests and provisioning."
+  def encrypt_byok(plaintext), do: encrypt(plaintext)
+
+  @doc "Decrypts ciphertext using the app's secret_key_base and byok context. Returns `{:ok, plaintext}` or `{:error, :invalid_ciphertext}`."
+  def decrypt_byok(ciphertext), do: decrypt(ciphertext)
+
   defp encrypt(plaintext), do: Plug.Crypto.encrypt(secret_key_base(), @byok_encryption_context, plaintext)
+
   defp decrypt(ciphertext) do
-    {:ok, plaintext} = Plug.Crypto.decrypt(secret_key_base(), @byok_encryption_context, ciphertext)
-    plaintext
+    case Plug.Crypto.decrypt(secret_key_base(), @byok_encryption_context, ciphertext) do
+      {:ok, plaintext} -> {:ok, plaintext}
+      {:error, reason} -> {:error, reason}
+    end
   end
 
   defp secret_key_base do

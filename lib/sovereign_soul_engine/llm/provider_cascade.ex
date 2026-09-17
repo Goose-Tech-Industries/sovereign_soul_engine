@@ -65,6 +65,9 @@ defmodule SovereignSoulEngine.LLM.ProviderCascade do
       :not_configured ->
         providers = Keyword.get(opts, :providers, configured_providers())
         try_providers(providers, input, timeout_ms)
+
+      {:error, reason} ->
+        {:error, "byok_error: #{inspect(reason)}"}
     end
   end
 
