@@ -1,7 +1,7 @@
 defmodule SovereignSoulEngineWeb.SoulChannel do
   use Phoenix.Channel
 
-  alias SovereignSoulEngine.Relay.{Envelope, SeenSet}
+  alias SovereignSoulEngine.Relay.{Envelope, EncounterBridge, SeenSet}
 
   @world_topic "world:sovereign-society"
 
@@ -16,6 +16,7 @@ defmodule SovereignSoulEngineWeb.SoulChannel do
     case verify_and_route(envelope) do
       {:ok, topic} ->
         Phoenix.PubSub.broadcast(SovereignSoulEngine.PubSub, topic, {:envelope, envelope})
+        maybe_dispatch_encounter(envelope)
         {:reply, :ok, socket}
 
       {:error, reason} ->
@@ -44,5 +45,14 @@ defmodule SovereignSoulEngineWeb.SoulChannel do
 
       {:ok, topic}
     end
+  end
+
+  # Encounter lifecycle envelopes also drive the local MeshProtocol encounter.
+  defp maybe_dispatch_encounter(envelope) do
+    if EncounterBridge.encounter?(envelope) do
+      EncounterBridge.process_envelope(envelope)
+    end
+
+    :ok
   end
 end

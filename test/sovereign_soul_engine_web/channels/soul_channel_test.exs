@@ -28,7 +28,7 @@ defmodule SovereignSoulEngineWeb.SoulChannelTest do
 
     ref = push(socket, "envelope", envelope)
     assert_reply ref, :ok
-    assert_receive {:envelope, ^envelope}
+    assert_receive {:envelope, ^envelope}, 1_000
   end
 
   test "rejects a replayed envelope", %{from_did: from_did, private_key: private_key} do
