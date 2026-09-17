@@ -1252,7 +1252,7 @@ defmodule SovereignSoulEngineWeb.ChatLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="flex h-screen bg-base-100" id="chat-app">
+    <div data-theme="dark" class="flex h-screen bg-base-100 text-base-content" id="chat-app">
       <%!-- Sidebar --%>
       <aside class="w-80 shrink-0 border-r border-base-300 bg-base-200/50 flex flex-col">
         <div class="p-4 border-b border-base-300 flex flex-col gap-2.5">

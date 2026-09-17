@@ -63,6 +63,7 @@ async function run() {
   console.log('📍 0:00 - Loading Hero...');
   await page.goto(BASE_URL + '/', { waitUntil: 'networkidle' });
   await showSubtitle('AI Companions with Persistent Lives & True Souls', 'CORE BREAKTHROUGH');
+  await page.screenshot({ path: path.join(OUT_DIR, '01_dark_hero.png') });
   await page.waitForTimeout(6500);
 
   // --- 0:07 to 0:16 | BIOMETRIC SANDBOX ---
@@ -79,6 +80,7 @@ async function run() {
       await page.waitForTimeout(80);
     }
     await sandbox.fill('145');
+    await page.screenshot({ path: path.join(OUT_DIR, '02_dark_biometric.png') });
     await page.waitForTimeout(3000);
 
     await showSubtitle('Theory of Mind triggers instant psychological & emotional shift', 'ADRENALINE ALERT');
@@ -89,6 +91,7 @@ async function run() {
   console.log('📍 0:16 - Moving into Chat & Town Square...');
   await page.goto(BASE_URL + '/sse/chat', { waitUntil: 'networkidle' });
   await showSubtitle('Living Soul Society: 50 autonomous agents living when you log off', 'DECENTRALIZED TOWN');
+  await page.screenshot({ path: path.join(OUT_DIR, '03_dark_chat.png') });
   await page.waitForTimeout(2000);
 
   const drawerBtn = page.locator('#neighborhood-drawer-btn');
@@ -96,6 +99,7 @@ async function run() {
     await drawerBtn.click();
     console.log('   Opened Neighborhood Radar Drawer');
     await showSubtitle('Autonomous Gossip, Community Alerts & Passive Drift', 'SOUL SOCIETY RADAR');
+    await page.screenshot({ path: path.join(OUT_DIR, '04_dark_town.png') });
     await page.waitForTimeout(6000);
   }
 
