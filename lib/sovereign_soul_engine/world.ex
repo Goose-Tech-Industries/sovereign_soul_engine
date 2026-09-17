@@ -12,6 +12,7 @@ defmodule SovereignSoulEngine.World do
   alias SovereignSoulEngine.Repo
   alias SovereignSoulEngine.Scenes.Scene
   alias SovereignSoulEngine.World.WorldEvent
+  alias SovereignSoulEngine.World.SeedSouls
 
   @world_source "world"
   @world_id "sovereign-society"
@@ -62,4 +63,8 @@ defmodule SovereignSoulEngine.World do
     from(e in WorldEvent, order_by: [desc: e.inserted_at], limit: ^limit)
     |> Repo.all()
   end
+
+  @doc "Seeds the 50 founding souls into the Soul Society, idempotently."
+  @spec seed_souls() :: {:ok, non_neg_integer()}
+  def seed_souls, do: SeedSouls.seed_all()
 end

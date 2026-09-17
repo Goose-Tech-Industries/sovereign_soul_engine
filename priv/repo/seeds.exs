@@ -1762,7 +1762,7 @@ for char_id <- [maya.id, ravina.id, valeria.id, cyra.id] do
   end
 end
 
-IO.puts("  Done seeding!")
+IO.puts("  Done seeding standard fixtures!")
 IO.puts("")
 IO.puts("  Vael ID: #{vael.id}")
 IO.puts("  Goose ID: #{goose.id}")
@@ -1773,4 +1773,8 @@ IO.puts("  Ravina ID: #{ravina.id}")
 IO.puts("  Valeria ID: #{valeria.id}")
 IO.puts("  Cyra ID: #{cyra.id}")
 IO.puts("  Scene ID: #{scene.id}")
+
+IO.puts("\nSeeding 50 Soul Society founding souls...")
+{:ok, seed_count} = SovereignSoulEngine.World.seed_souls()
+IO.puts("  Seeded #{seed_count} founding souls into sovereign-society world scene.")
 

@@ -13,6 +13,7 @@ defmodule SovereignSoulEngine.Application do
       {DNSCluster,
        query: Application.get_env(:sovereign_soul_engine, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: SovereignSoulEngine.PubSub},
+      SovereignSoulEngineWeb.Presence,
       {Task.Supervisor, name: SovereignSoulEngine.TaskSupervisor},
       SovereignSoulEngine.Runtime.NPCRegistry,
       SovereignSoulEngine.Runtime.NPCSupervisor,

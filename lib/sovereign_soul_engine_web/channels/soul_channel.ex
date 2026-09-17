@@ -2,14 +2,20 @@ defmodule SovereignSoulEngineWeb.SoulChannel do
   use Phoenix.Channel
 
   alias SovereignSoulEngine.Relay.{Envelope, EncounterBridge, SeenSet}
+  alias SovereignSoulEngineWeb.Presence
 
   @world_topic "world:sovereign-society"
 
   @impl true
-  def join(@world_topic, _payload, socket), do: {:ok, socket}
-  def join("soul:" <> _did, _payload, socket), do: {:ok, socket}
-  def join("encounter:" <> _id, _payload, socket), do: {:ok, socket}
-  def join(_topic, _payload, _socket), do: {:error, %{reason: "forbidden"}}
+  def join(topic, payload, socket) do
+    if valid_topic?(topic) do
+      socket = assign(socket, :did, resolve_did(topic, payload))
+      send(self(), :after_join)
+      {:ok, socket}
+    else
+      {:error, %{reason: "forbidden"}}
+    end
+  end
 
   @impl true
   def handle_in("envelope", envelope, socket) do
@@ -28,6 +34,36 @@ defmodule SovereignSoulEngineWeb.SoulChannel do
   def handle_info({:envelope, envelope}, socket) do
     push(socket, "envelope", envelope)
     {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info(:after_join, socket) do
+    case Map.get(socket.assigns, :did) do
+      nil ->
+        :ok
+
+      did ->
+        {:ok, _} =
+          Presence.track(socket, did, %{
+            online_at: DateTime.utc_now(),
+            topic: socket.topic,
+            status: "present"
+          })
+
+        push(socket, "presence_state", Presence.list(socket))
+    end
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def terminate(_reason, socket) do
+    case Map.get(socket.assigns, :did) do
+      nil -> :ok
+      did -> Presence.untrack(socket, did)
+    end
+
+    :ok
   end
 
   # A verified, non-replayed envelope is routed to the recipient's personal topic
@@ -55,4 +91,21 @@ defmodule SovereignSoulEngineWeb.SoulChannel do
 
     :ok
   end
+
+  defp valid_topic?(@world_topic), do: true
+  defp valid_topic?("soul:" <> _), do: true
+  defp valid_topic?("encounter:" <> _), do: true
+  defp valid_topic?(_), do: false
+
+  # The DID is the soul's identity; it may arrive via the join payload or be
+  # derived from a `soul:<did>` topic.
+  defp resolve_did(topic, payload) do
+    case payload do
+      %{"did" => did} when is_binary(did) -> did
+      _ -> topic_did(topic)
+    end
+  end
+
+  defp topic_did("soul:" <> did), do: did
+  defp topic_did(_), do: nil
 end
