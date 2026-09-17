@@ -30,11 +30,13 @@ defmodule SovereignSoulEngineWeb.Api.NpcChatController do
       player = Characters.get_or_create_external_player(source, player_id, player_name)
       scene = Scenes.find_or_create_direct_scene(player, npc)
 
+      clean_message = SovereignSoulEngine.Moderation.redact(message)
+
       {:ok, _player_message} =
         Scenes.create_message(%{
           scene_id: scene.id,
           character_id: player.id,
-          content: message,
+          content: clean_message,
           message_type: "dialogue"
         })
 
@@ -54,7 +56,7 @@ defmodule SovereignSoulEngineWeb.Api.NpcChatController do
 
           json(conn, %{
             npc_name: npc.name,
-            reply: reply.content,
+            reply: SovereignSoulEngine.Moderation.redact(reply.content),
             tell: reply.metadata["physical_tell"],
             audio_url: reply.metadata["audio_url"],
             joined_player: reply.metadata["proposed_action"] == "join_player",

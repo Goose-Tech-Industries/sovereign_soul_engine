@@ -12,6 +12,8 @@ defmodule SovereignSoulEngine.Social.SocialFeed do
   alias SovereignSoulEngine.Characters.Character
   alias SovereignSoulEngine.Souls
   alias SovereignSoulEngine.LLM.ProviderCascade
+  alias SovereignSoulEngine.Privacy
+  alias SovereignSoulEngine.Moderation
 
   @pubsub_topic "social:feed"
 
@@ -49,11 +51,12 @@ defmodule SovereignSoulEngine.Social.SocialFeed do
   end
 
   @doc """
-  Creates a new social post and broadcasts it.
+  Creates a new social post and broadcasts it. Content is scrubbed by
+  `Moderation.redact/1` before it is persisted.
   """
   def create_post(attrs) do
     now = DateTime.truncate(DateTime.utc_now(), :second)
-    attrs = Map.put_new(attrs, :posted_at, now)
+    attrs = attrs |> Map.put_new(:posted_at, now) |> redact_content()
 
     %SocialPost{}
     |> SocialPost.changeset(attrs)
@@ -61,7 +64,13 @@ defmodule SovereignSoulEngine.Social.SocialFeed do
     |> case do
       {:ok, post} ->
         post = Repo.preload(post, :character)
-        Phoenix.PubSub.broadcast(SovereignSoulEngine.PubSub, @pubsub_topic, {:new_social_post, post})
+
+        Phoenix.PubSub.broadcast(
+          SovereignSoulEngine.PubSub,
+          @pubsub_topic,
+          {:new_social_post, post}
+        )
+
         {:ok, post}
 
       error ->
@@ -75,6 +84,16 @@ defmodule SovereignSoulEngine.Social.SocialFeed do
   """
   def generate_post(character_id, opts \\ []) do
     character = Characters.get_character!(character_id)
+
+    if Privacy.neighborhood_share_allowed?(character) and not Privacy.safe_word_active?(character) do
+      do_generate_post(character, opts)
+    else
+      {:error, :privacy_restricted}
+    end
+  end
+
+  defp do_generate_post(character, opts) do
+    character_id = character.id
     emotional_state = Souls.get_emotional_state_by_character(character_id)
     profile = Souls.get_soul_profile_by_character(character_id)
     desires = Souls.list_active_desires_for_character(character_id)
@@ -98,10 +117,13 @@ defmodule SovereignSoulEngine.Social.SocialFeed do
     """
 
     content =
-      case ProviderCascade.respond(%{
-             system: system_prompt,
-             messages: [%{role: "user", content: "Write your current public thought."}]
-           }, opts) do
+      case ProviderCascade.respond(
+             %{
+               system: system_prompt,
+               messages: [%{role: "user", content: "Write your current public thought."}]
+             },
+             opts
+           ) do
         {:ok, %{"public_speech" => tweet}} when is_binary(tweet) and tweet != "" ->
           clean_tweet(tweet, character)
 
@@ -137,7 +159,9 @@ defmodule SovereignSoulEngine.Social.SocialFeed do
   def generate_all_posts do
     companions =
       Characters.list_characters()
-      |> Enum.filter(&(&1.kind == "npc" and &1.status == "active" and &1.slug in ~w(maya ravina valeria cyra)))
+      |> Enum.filter(
+        &(&1.kind == "npc" and &1.status == "active" and &1.slug in ~w(maya ravina valeria cyra))
+      )
 
     Enum.map(companions, fn char ->
       generate_post(char.id)
@@ -146,7 +170,14 @@ defmodule SovereignSoulEngine.Social.SocialFeed do
 
   # ── Private Helpers ──────────────────────────────────────────────────
 
+  defp redact_content(%{content: content} = attrs) when is_binary(content) do
+    %{attrs | content: Moderation.redact(content)}
+  end
+
+  defp redact_content(attrs), do: attrs
+
   defp determine_mood(nil), do: "contemplative"
+
   defp determine_mood(state) do
     cond do
       (state.anger || 0) > 40 -> "frustrated"
@@ -186,16 +217,24 @@ defmodule SovereignSoulEngine.Social.SocialFeed do
 
   defp fallback_post(%Character{slug: "ravina"}, mood) do
     case mood do
-      "frustrated" -> "Some in The Bastion confuse courtesy with weakness. They rarely get the chance to repeat the mistake."
-      "wary" -> "Watch the ones who offer gifts without asking for price. The bill always arrives later."
-      _ -> "A quiet evening in the Mire. Leverage is best gathered while everyone else is sleeping."
+      "frustrated" ->
+        "Some in The Bastion confuse courtesy with weakness. They rarely get the chance to repeat the mistake."
+
+      "wary" ->
+        "Watch the ones who offer gifts without asking for price. The bill always arrives later."
+
+      _ ->
+        "A quiet evening in the Mire. Leverage is best gathered while everyone else is sleeping."
     end
   end
 
   defp fallback_post(%Character{slug: "maya"}, mood) do
     case mood do
-      "tense" -> "The fires burn late tonight. Too many unanswered questions hanging in the forge smoke."
-      _ -> "Steel doesn't lie, but the people who carry it certainly do. Back to work."
+      "tense" ->
+        "The fires burn late tonight. Too many unanswered questions hanging in the forge smoke."
+
+      _ ->
+        "Steel doesn't lie, but the people who carry it certainly do. Back to work."
     end
   end
 

@@ -87,4 +87,21 @@ defmodule SovereignSoulEngineWeb.SoulChannelTest do
     assert_reply push(socket_a, "envelope", envelope), :ok
     assert_push "envelope", ^envelope, 1_000
   end
+
+  test "rejects an envelope from a muted DID", %{from_did: from_did, private_key: private_key} do
+    SovereignSoulEngine.Moderation.mute_did(from_did)
+
+    envelope =
+      from_did
+      |> Envelope.build("world_event", nil, %{"hello" => "world"})
+      |> Envelope.sign(private_key)
+
+    {:ok, _reply, socket} =
+      socket(UserSocket, "soul:#{from_did}", %{})
+      |> subscribe_and_join("world:sovereign-society", %{})
+
+    assert_reply push(socket, "envelope", envelope), :error, %{reason: "muted"}
+
+    SovereignSoulEngine.Moderation.unmute_did(from_did)
+  end
 end

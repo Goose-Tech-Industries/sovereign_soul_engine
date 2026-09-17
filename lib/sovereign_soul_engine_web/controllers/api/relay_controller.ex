@@ -13,6 +13,11 @@ defmodule SovereignSoulEngineWeb.Api.RelayController do
 
   @world_topic "world:sovereign-society"
 
+  @doc "GET /sse/api/relay/peers — advertises this node's peers for transitive discovery."
+  def peers(conn, _params) do
+    json(conn, %{peers: Forwarder.peers()})
+  end
+
   def inbound(conn, %{"envelope" => envelope, "hops" => hops})
       when is_map(envelope) and is_integer(hops) do
     if authorized?(conn) do

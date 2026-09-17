@@ -71,6 +71,7 @@ defmodule SovereignSoulEngineWeb.SoulChannel do
   # when `to` is set, otherwise to the shared world topic.
   defp verify_and_route(envelope) do
     with :ok <- Envelope.validate_structure(envelope),
+         :ok <- SovereignSoulEngine.Moderation.screen(%{"from_did" => envelope["from"], "payload" => envelope["payload"]}),
          :ok <- Envelope.verify(envelope),
          :ok <- SeenSet.check_and_mark(envelope["from"], envelope["nonce"]),
          :ok <- Envelope.validate_prev(envelope["prev"]) do

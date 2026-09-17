@@ -24,9 +24,11 @@ defmodule SovereignSoulEngine.Application do
       SovereignSoulEngine.Wearables.SmartHomeBridge,
       SovereignSoulEngine.Neighborhood.Board,
       SovereignSoulEngine.Relay.SeenSet,
+      SovereignSoulEngine.Relay.Discovery,
       SovereignSoulEngine.World.Simulation,
       SovereignSoulEngine.World.TownMap,
       SovereignSoulEngine.Moderation,
+      SovereignSoulEngine.World.Population,
       # Start to serve requests, typically the last entry
       SovereignSoulEngineWeb.Endpoint
     ]

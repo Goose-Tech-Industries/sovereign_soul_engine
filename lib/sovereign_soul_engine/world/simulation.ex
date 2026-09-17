@@ -14,7 +14,17 @@ defmodule SovereignSoulEngine.World.Simulation do
 
   use GenServer
 
-  alias SovereignSoulEngine.{Characters, Identity, Memories, Relationships, Repo, Souls, World}
+  alias SovereignSoulEngine.{
+    Characters,
+    Identity,
+    Memories,
+    Privacy,
+    Relationships,
+    Repo,
+    Souls,
+    World
+  }
+
   alias SovereignSoulEngine.Relationships.Relationship
   alias SovereignSoulEngine.Scenes.SceneParticipant
   alias SovereignSoulEngine.Souls.IntentEngine
@@ -96,10 +106,15 @@ defmodule SovereignSoulEngine.World.Simulation do
     %{souls: length(souls), encounters: encounters}
   end
 
-  # A soul is eligible to meet when it is "in the square" (social intent) and has
-  # enough social stamina.
+  # A soul is eligible to meet when it is "in the square" (social intent), has
+  # enough social stamina, and has not opted out of world presence (or frozen via
+  # the safe word).
   defp eligible?(char) do
-    in_the_square?(char) and can_meet?(char)
+    in_the_square?(char) and can_meet?(char) and privacy_allows_world?(char)
+  end
+
+  defp privacy_allows_world?(char) do
+    Privacy.neighborhood_share_allowed?(char) and not Privacy.safe_word_active?(char)
   end
 
   defp in_the_square?(char) do

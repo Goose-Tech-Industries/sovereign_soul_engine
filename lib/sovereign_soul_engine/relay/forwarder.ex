@@ -7,8 +7,13 @@ defmodule SovereignSoulEngine.Relay.Forwarder do
   echoes when an envelope circles back to a node that already processed it.
   """
 
-  @doc "The list of peer relay base URLs."
-  def peers, do: Application.get_env(:sovereign_soul_engine, :relay_peers, [])
+  @doc "The statically configured peer base URLs."
+  def configured_peers, do: Application.get_env(:sovereign_soul_engine, :relay_peers, [])
+
+  @doc "The list of peer relay base URLs — configured plus transitively discovered."
+  def peers do
+    Enum.uniq(configured_peers() ++ discovered_peers())
+  end
 
   @doc "The maximum forwarding depth (hop budget)."
   def max_hops, do: Application.get_env(:sovereign_soul_engine, :relay_max_hops, 2)
@@ -49,5 +54,12 @@ defmodule SovereignSoulEngine.Relay.Forwarder do
 
   defp relay_secret do
     Application.get_env(:sovereign_soul_engine, :relay_secret)
+  end
+
+  defp discovered_peers do
+    case :ets.whereis(:sse_discovered_peers) do
+      :undefined -> []
+      _ -> :ets.tab2list(:sse_discovered_peers) |> Enum.map(fn {peer, _} -> peer end)
+    end
   end
 end

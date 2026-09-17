@@ -161,6 +161,7 @@ defmodule SovereignSoulEngineWeb.Router do
     post "/webhooks/telegram", TelegramWebhookController, :webhook
     post "/alexa", AlexaController, :handle
     post "/relay/inbound", RelayController, :inbound
+    get "/relay/peers", RelayController, :peers
     get "/world/feed", WorldController, :feed
 
     # Spatial Town Map & Twisted Paradox Tile Integration

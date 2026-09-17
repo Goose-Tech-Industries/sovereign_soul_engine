@@ -17,6 +17,8 @@ defmodule SovereignSoulEngine.Social.GossipNetwork do
   alias SovereignSoulEngine.Relationships.Relationship
   alias SovereignSoulEngine.Memories
   alias SovereignSoulEngine.Ledger.LedgerBuilder
+  alias SovereignSoulEngine.Privacy
+  alias SovereignSoulEngine.Moderation
 
   require Logger
 
@@ -43,74 +45,87 @@ defmodule SovereignSoulEngine.Social.GossipNetwork do
     if is_nil(speaker) or is_nil(listener) or is_nil(subject) do
       {:error, :character_not_found}
     else
-      rel_listener_to_speaker = Relationships.get_relationship(listener_id, speaker_id)
-      credibility = compute_credibility(rel_listener_to_speaker)
+      if Privacy.neighborhood_share_allowed?(listener) do
+        do_propagate(speaker, listener, subject, gossip_info, correlation_id)
+      else
+        {:error, :privacy_restricted}
+      end
+    end
+  end
 
-      event_type = normalize_event_type(gossip_info[:event_type])
-      summary = gossip_info[:summary] || "Shared a rumor about #{subject.name}"
-      deltas = calculate_gossip_deltas(event_type, credibility, gossip_info[:intensity] || 50)
+  defp do_propagate(speaker, listener, subject, gossip_info, correlation_id) do
+    listener_id = listener.id
+    speaker_id = speaker.id
+    subject_id = subject.id
 
-      # Apply relationship shift from listener to subject
-      {:ok, updated_rel} = apply_gossip_relationship(listener_id, subject_id, deltas)
+    rel_listener_to_speaker = Relationships.get_relationship(listener_id, speaker_id)
+    credibility = compute_credibility(rel_listener_to_speaker)
 
-      # Record second-hand memory in listener's vault
-      memory_attrs = %{
-        owner_character_id: listener_id,
-        subject_character_id: subject_id,
-        category: "relationship",
-        summary: "Word from #{speaker.name}: #{summary}",
-        details: %{
-          "account" => "Second-hand account heard from #{speaker.name}",
-          "credibility" => round(credibility * 100)
-        },
-        importance: max(10, min(80, round(50 * credibility))),
-        emotional_intensity: max(5, min(70, round(40 * credibility))),
-        valence: if(event_type in @harmful_events, do: -0.5, else: 0.5),
-        tags: ["gossip", "reputation", subject.slug, "second_hand"],
-        status: "active",
-        decay_rate: 1.2,
-        occurred_at: DateTime.utc_now()
-      }
+    event_type = normalize_event_type(gossip_info[:event_type])
+    summary = gossip_info[:summary] || "Shared a rumor about #{subject.name}"
+    summary = Moderation.redact(summary)
+    deltas = calculate_gossip_deltas(event_type, credibility, gossip_info[:intensity] || 50)
 
-      {:ok, memory} = Memories.create_memory(memory_attrs)
+    # Apply relationship shift from listener to subject
+    {:ok, updated_rel} = apply_gossip_relationship(listener_id, subject_id, deltas)
 
-      # Log to ledger
-      commit_gossip_ledger(
-        listener_id,
-        speaker_id,
-        subject_id,
-        summary,
-        deltas,
-        credibility,
-        correlation_id
-      )
+    # Record second-hand memory in listener's vault
+    memory_attrs = %{
+      owner_character_id: listener_id,
+      subject_character_id: subject_id,
+      category: "relationship",
+      summary: "Word from #{speaker.name}: #{summary}",
+      details: %{
+        "account" => "Second-hand account heard from #{speaker.name}",
+        "credibility" => round(credibility * 100)
+      },
+      importance: max(10, min(80, round(50 * credibility))),
+      emotional_intensity: max(5, min(70, round(40 * credibility))),
+      valence: if(event_type in @harmful_events, do: -0.5, else: 0.5),
+      tags: ["gossip", "reputation", subject.slug, "second_hand"],
+      status: "active",
+      decay_rate: 1.2,
+      occurred_at: DateTime.utc_now()
+    }
 
-      # PubSub broadcast
-      Phoenix.PubSub.broadcast(
-        SovereignSoulEngine.PubSub,
-        "character:#{listener_id}",
-        {:social_gossip_received,
-         %{
-           listener_id: listener_id,
-           speaker_id: speaker_id,
-           subject_id: subject_id,
-           credibility: credibility,
-           deltas: deltas,
-           memory_id: memory.id
-         }}
-      )
+    {:ok, memory} = Memories.create_memory(memory_attrs)
 
-      {:ok,
+    # Log to ledger
+    commit_gossip_ledger(
+      listener_id,
+      speaker_id,
+      subject_id,
+      summary,
+      deltas,
+      credibility,
+      correlation_id
+    )
+
+    # PubSub broadcast
+    Phoenix.PubSub.broadcast(
+      SovereignSoulEngine.PubSub,
+      "character:#{listener_id}",
+      {:social_gossip_received,
        %{
          listener_id: listener_id,
          speaker_id: speaker_id,
          subject_id: subject_id,
          credibility: credibility,
          deltas: deltas,
-         relationship: updated_rel,
-         memory: memory
+         memory_id: memory.id
        }}
-    end
+    )
+
+    {:ok,
+     %{
+       listener_id: listener_id,
+       speaker_id: speaker_id,
+       subject_id: subject_id,
+       credibility: credibility,
+       deltas: deltas,
+       relationship: updated_rel,
+       memory: memory
+     }}
   end
 
   @doc """

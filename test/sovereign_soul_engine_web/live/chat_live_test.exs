@@ -129,7 +129,7 @@ defmodule SovereignSoulEngineWeb.ChatLiveTest do
     conn: conn,
     scene1: scene
   } do
-    {:ok, view, _html} = live(conn, ~p"/sse/chat")
+    {:ok, view, _html} = live(conn, ~p"/sse/chat?scene_id=#{scene.id}")
 
     # Submit a message from the player
     view
@@ -184,7 +184,7 @@ defmodule SovereignSoulEngineWeb.ChatLiveTest do
   end
 
   test "edits and saves scenario context", %{conn: conn, scene1: scene} do
-    {:ok, view, _html} = live(conn, ~p"/sse/chat")
+    {:ok, view, _html} = live(conn, ~p"/sse/chat?scene_id=#{scene.id}")
 
     # Toggle scenario edit
     view

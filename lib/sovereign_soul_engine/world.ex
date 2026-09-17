@@ -87,6 +87,24 @@ defmodule SovereignSoulEngine.World do
   @spec seed_souls() :: {:ok, non_neg_integer()}
   def seed_souls, do: SeedSouls.seed_all()
 
+  @doc "All active NPC souls participating in the world scene."
+  @spec world_souls() :: [Scene.t()]
+  def world_souls do
+    case world_scene() do
+      nil ->
+        []
+
+      scene ->
+        from(sp in SceneParticipant,
+          join: c in assoc(sp, :character),
+          where: sp.scene_id == ^scene.id and c.kind == "npc" and c.status == "active",
+          select: c,
+          distinct: true
+        )
+        |> Repo.all()
+    end
+  end
+
   @doc """
   A live summary of the world: soul count, relationship count, and recent events.
   The observability surface the world feed (and any dashboard) reads.

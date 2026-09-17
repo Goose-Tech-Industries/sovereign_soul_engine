@@ -63,6 +63,13 @@ defmodule SovereignSoulEngineWeb.Api.RelayControllerTest do
     assert conn.status == 400
   end
 
+  test "advertises peers for transitive discovery" do
+    conn = get(build_conn(), "/sse/api/relay/peers")
+
+    assert %{"peers" => peers} = json_response(conn, 200)
+    assert is_list(peers)
+  end
+
   test "enforces the relay secret when one is configured", %{
     from_did: from_did,
     private_key: private_key

@@ -28,6 +28,7 @@ defmodule SovereignSoulEngineWeb.Api.VoiceProsodyController do
   def synthesize(conn, params) do
     character_slug = params["character_slug"] || params["slug"] || "goose"
     text = params["text"] || "I am feeling quite grounded tonight."
+    text = SovereignSoulEngine.Moderation.redact(text)
 
     case ProsodyEngine.synthesize_speech(text, character_slug) do
       {:ok, result} ->

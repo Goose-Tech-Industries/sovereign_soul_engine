@@ -54,6 +54,11 @@ defmodule SovereignSoulEngine.WorldTest do
     assert [%{kind: "encounter", from: "did:soul:zaaa"} | _] = feed.recent_events
   end
 
+  test "world_souls/0 returns the seeded population" do
+    World.seed_souls()
+    assert length(World.world_souls()) == 50
+  end
+
   test "compaction then purge leaves only the summary" do
     World.append_event(%{kind: "gossip", from_did: "did:soul:zaaa", payload: %{}})
     World.append_event(%{kind: "gossip", from_did: "did:soul:zbbb", payload: %{}})

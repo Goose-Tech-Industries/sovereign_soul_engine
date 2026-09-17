@@ -101,4 +101,24 @@ defmodule SovereignSoulEngine.World.SimulationTest do
     assert drifted.trust < 50
     assert drifted.affinity < 0
   end
+
+  test "step/1 excludes souls that opted out of world presence" do
+    maya = Characters.get_character_by_slug!("maya")
+    SovereignSoulEngine.Privacy.update_settings(maya.id, %{"neighborhood_share_allowed" => false})
+
+    {:ok, summary} = Simulation.step()
+
+    # 49 eligible souls -> 24 pairs; maya sits the tick out
+    assert length(summary.encounters) == 24
+    assert Enum.all?(summary.encounters, fn e -> e.a != "maya" and e.b != "maya" end)
+  end
+
+  test "step/1 excludes souls under safe-word freeze" do
+    maya = Characters.get_character_by_slug!("maya")
+    SovereignSoulEngine.Privacy.trigger_safe_word(maya.id)
+
+    {:ok, summary} = Simulation.step()
+
+    assert Enum.all?(summary.encounters, fn e -> e.a != "maya" and e.b != "maya" end)
+  end
 end
