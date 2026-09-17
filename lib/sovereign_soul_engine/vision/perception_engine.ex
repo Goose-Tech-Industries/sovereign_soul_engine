@@ -125,9 +125,23 @@ defmodule SovereignSoulEngine.Vision.PerceptionEngine do
           input
       end
 
-    # In production, this can send to Claude 3.5 Sonnet / GPT-4o Vision / Gemini Flash
-    # Here we build an authentic semantic extraction based on image content length and signature
-    generate_synthetic_or_analyzed_perception(clean_payload, source, player_name)
+    case try_live_multimodal_analysis(clean_payload) do
+      {:ok, analysis} ->
+        %{
+          scene_description: analysis["scene_description"] || "a clear view of the surrounding environment",
+          salient_objects: analysis["salient_objects"] || ["environment", "room"],
+          user_affect: analysis["user_affect"] || "calm and engaged",
+          lighting: analysis["lighting"] || "natural ambient light",
+          source: source,
+          analysis_mode: "live_multimodal_vision",
+          synthetic: false,
+          payload_bytes: byte_size(clean_payload),
+          timestamp: DateTime.utc_now()
+        }
+
+      :fallback ->
+        generate_synthetic_or_analyzed_perception(clean_payload, source, player_name)
+    end
   end
 
   defp analyze_visual_input(input, source, _player_name) when is_map(input) do
@@ -142,8 +156,49 @@ defmodule SovereignSoulEngine.Vision.PerceptionEngine do
       user_affect: affect,
       lighting: lighting,
       source: source,
+      analysis_mode: "structured_telemetry",
+      synthetic: false,
       timestamp: DateTime.utc_now()
     }
+  end
+
+  defp try_live_multimodal_analysis(b64_payload) do
+    gemini_key = System.get_env("GEMINI_API_KEY")
+
+    if is_binary(gemini_key) and byte_size(gemini_key) > 10 and is_binary(b64_payload) and byte_size(b64_payload) > 100 do
+      url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=#{gemini_key}"
+
+      prompt = "Analyze this image frame from user smart glasses or webcam. Output a single JSON object with exact keys: \"scene_description\" (concise narrative sentence), \"salient_objects\" (list of up to 4 strings), \"user_affect\" (emotional mood of person or scene), \"lighting\" (lighting style)."
+
+      body = %{
+        contents: [
+          %{
+            parts: [
+              %{text: prompt},
+              %{inlineData: %{mimeType: "image/jpeg", data: b64_payload}}
+            ]
+          }
+        ],
+        generationConfig: %{
+          response_mime_type: "application/json"
+        }
+      }
+
+      case Req.post(url, json: body, receive_timeout: 4000, retry: false) do
+        {:ok, %{status: 200, body: %{"candidates" => [%{"content" => %{"parts" => [%{"text" => json_str} | _]}} | _]}}} ->
+          case Jason.decode(json_str) do
+            {:ok, parsed} when is_map(parsed) -> {:ok, parsed}
+            _ -> :fallback
+          end
+
+        _ ->
+          :fallback
+      end
+    else
+      :fallback
+    end
+  rescue
+    _ -> :fallback
   end
 
   defp generate_synthetic_or_analyzed_perception(payload, source, player_name) do
@@ -179,6 +234,8 @@ defmodule SovereignSoulEngine.Vision.PerceptionEngine do
       user_affect: affect,
       lighting: lighting,
       source: source,
+      analysis_mode: "synthetic_simulation",
+      synthetic: true,
       payload_bytes: len,
       timestamp: DateTime.utc_now()
     }

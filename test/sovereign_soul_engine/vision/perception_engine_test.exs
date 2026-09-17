@@ -63,6 +63,8 @@ defmodule SovereignSoulEngine.Vision.PerceptionEngineTest do
       assert is_binary(perception.user_affect)
       assert is_list(perception.salient_objects)
       assert perception.source == "smart_glasses"
+      assert is_binary(perception.analysis_mode)
+      assert is_boolean(perception.synthetic)
 
       # Verify episodic memory was created
       memories = Memories.list_memories_for_character(npc.id)

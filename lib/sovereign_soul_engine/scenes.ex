@@ -154,6 +154,10 @@ defmodule SovereignSoulEngine.Scenes do
     |> Repo.insert()
   end
 
+  def get_message(id), do: Repo.get(SceneMessage, id)
+
+  def get_message!(id), do: Repo.get!(SceneMessage, id)
+
   def update_message(%SceneMessage{} = message, attrs) do
     message
     |> SceneMessage.changeset(attrs)
