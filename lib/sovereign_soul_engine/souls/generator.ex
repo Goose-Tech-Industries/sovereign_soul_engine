@@ -598,6 +598,17 @@ defmodule SovereignSoulEngine.Souls.Generator do
     ceiling = Privacy.archetype_intimacy_ceiling(archetype)
     archetype_directive = Privacy.archetype_prompt_directive(archetype, ceiling)
 
+    circadian_info = SovereignSoulEngine.Souls.CircadianEngine.current_state(npc)
+    circadian_directive = SovereignSoulEngine.Souls.CircadianEngine.prompt_directive(circadian_info)
+
+    dream_context =
+      case SovereignSoulEngine.Souls.DreamEngine.get_latest_dream(npc) do
+        {:ok, dream} ->
+          "SUBALIGNED DREAM MEMORY: While resting in #{dream[:theme] || dream["theme"]}, you dreamed: #{dream[:symbolic_narrative] || dream["symbolic_narrative"]}. Subconscious Epiphany: #{dream[:subconscious_epiphany] || dream["subconscious_epiphany"]}."
+        _ ->
+          ""
+      end
+
     system_prompt = """
     You are #{npc.name}, #{npc.description}.
 
@@ -663,6 +674,8 @@ defmodule SovereignSoulEngine.Souls.Generator do
     #{if ego_defense.defense != :none, do: ego_defense.prompt_directive <> "\n", else: ""}
     #{if parasocial_directive != "", do: parasocial_directive <> "\n", else: ""}
     #{if archetype_directive != "", do: archetype_directive <> "\n", else: ""}
+    #{if circadian_directive != "", do: circadian_directive <> "\n", else: ""}
+    #{if dream_context != "", do: dream_context <> "\n", else: ""}
     ═══════════════════════════════════════════
     DEEP PSYCHOLOGICAL PROFILE
     ═══════════════════════════════════════════
@@ -774,28 +787,65 @@ defmodule SovereignSoulEngine.Souls.Generator do
     }
     """
 
+    force_offline = Privacy.force_local_offline?(privacy_settings)
+
     response =
-      case ProviderCascade.respond(
-             %{
-               system: system_prompt,
-               messages: llm_messages
-             },
-             tenant: tenant
-           ) do
-        {:ok, resp} ->
-          resp
+      cond do
+        force_offline ->
+          case SovereignSoulEngine.LLM.LocalProvider.respond(%{system: system_prompt, messages: llm_messages}) do
+            {:ok, resp} ->
+              resp
 
-        {:error, reason} ->
-          Logger.warning(
-            "LLM Cascade call failed (#{inspect(reason)}) — falling back to sovereign emotional generation"
-          )
+            _ ->
+              fallback =
+                SovereignSoulEngine.Edge.SurvivalMode.generate_offline_fallback(
+                  npc,
+                  player,
+                  history_messages,
+                  emotional_state || %{},
+                  circadian_info
+                )
 
-          %{
-            "public_speech" => fallback_speech(npc, player, nil, emotional_state),
-            "private_thought" => fallback_thought(npc, emotional_state, player, nil),
-            "conversation_state" => "continuing",
-            "tone" => "guarded"
-          }
+              %{
+                "public_speech" => fallback["speech"],
+                "private_thought" => fallback["internal_monologue"],
+                "conversation_state" => "continuing",
+                "tone" => "offline_grounded"
+              }
+          end
+
+        true ->
+          case ProviderCascade.respond(
+                 %{
+                   system: system_prompt,
+                   messages: llm_messages
+                 },
+                 tenant: tenant
+               ) do
+            {:ok, resp} ->
+              resp
+
+            {:error, reason} ->
+              Logger.warning(
+                "LLM Cascade call failed (#{inspect(reason)}) — falling back to sovereign edge survival generation"
+              )
+
+              fallback =
+                SovereignSoulEngine.Edge.SurvivalMode.generate_offline_fallback(
+                  npc,
+                  player,
+                  history_messages,
+                  emotional_state || %{},
+                  circadian_info
+                )
+
+              %{
+                "public_speech" => fallback["speech"],
+                "private_thought" => fallback["internal_monologue"],
+                "conversation_state" => "continuing",
+                "tone" => "edge_fallback"
+              }
+          end
       end
 
     correlation_id = Ecto.UUID.generate()

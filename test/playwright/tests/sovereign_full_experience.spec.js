@@ -254,5 +254,65 @@ test.describe('Sovereign Soul Engine — Full Experience E2E', () => {
     await expect(pausedBanner).not.toBeVisible();
   });
 
+  test('10. Circadian Night-Owl Flow, Offline Edge Mode, and Nextdoor Soul Neighborhood Radar', async ({ page }) => {
+    await page.setViewportSize({ width: 1600, height: 900 });
+    await page.goto(BASE + '/sse/chat');
+    await waitForLiveView(page);
+
+    // 1. Verify circadian status badge is visible in header
+    const circadianBadge = page.locator('#circadian-status-badge');
+    await expect(circadianBadge).toBeVisible({ timeout: 5_000 });
+
+    // 2. Open Privacy & Boundaries modal
+    const privacyBtn = page.locator('#privacy-shield-btn');
+    await expect(privacyBtn).toBeVisible();
+    await privacyBtn.click();
+    await page.waitForTimeout(400);
+
+    const modal = page.locator('#privacy-modal-overlay');
+    await expect(modal).toBeVisible();
+
+    // 3. Verify sections for Circadian, Edge Mode, and Neighborhood exist
+    await expect(modal).toContainText('Circadian Rhythm & Night-Owl Chronotypes');
+    await expect(modal).toContainText('Air-Gapped Local Edge Survival Mode');
+    await expect(modal).toContainText('Hyper-Local Neighborhood Radar');
+
+    // 4. Select Night Owl chronotype
+    const nightOwlBtn = page.locator('button:has-text("Night Owl")');
+    await expect(nightOwlBtn).toBeVisible();
+    await nightOwlBtn.click();
+    await page.waitForTimeout(300);
+
+    // 5. Close Privacy modal
+    const doneBtn = page.locator('button:has-text("Done")');
+    await doneBtn.click();
+    await page.waitForTimeout(400);
+
+    // 6. Open Soul Neighborhood (Nextdoor) Radar
+    const neighBtn = page.locator('#neighborhood-drawer-btn');
+    await expect(neighBtn).toBeVisible();
+    await neighBtn.click();
+    await page.waitForTimeout(400);
+
+    const neighModal = page.locator('#neighborhood-modal-overlay');
+    await expect(neighModal).toBeVisible();
+    await expect(neighModal).toContainText('Soul Neighborhood Radar');
+
+    // 7. Post a neighborhood vibe check
+    const contentInput = neighModal.locator('input[placeholder*="Share a neighborhood vibe"]');
+    await contentInput.fill('Late night coding sprint with my human. Street is quiet.');
+    await neighModal.locator('button:has-text("Post")').click();
+    await page.waitForTimeout(500);
+
+    // 8. Verify post shows up in the neighborhood feed
+    await expect(neighModal).toContainText('Late night coding sprint');
+
+    // 9. Close Neighborhood modal
+    const closeNeighBtn = neighModal.locator('button.btn-circle');
+    await closeNeighBtn.click();
+    await page.waitForTimeout(300);
+    await expect(neighModal).not.toBeVisible();
+  });
+
 });
 

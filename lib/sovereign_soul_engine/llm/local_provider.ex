@@ -17,7 +17,7 @@ defmodule SovereignSoulEngine.LLM.LocalProvider do
   def health do
     url = base_url()
 
-    case Req.get("http://127.0.0.1:11434/api/tags", receive_timeout: 2000) do
+    case Req.get("http://127.0.0.1:11434/api/tags", receive_timeout: 500, retry: false) do
       {:ok, %{status: 200}} ->
         {:ok, %{status: "available", model: model_name(), endpoint: url}}
 
@@ -176,7 +176,7 @@ defmodule SovereignSoulEngine.LLM.LocalProvider do
   defp model_name do
     case Application.get_env(:sovereign_soul_engine, :local_llm_model) do
       nil ->
-        case Req.get("http://127.0.0.1:11434/api/tags", receive_timeout: 1000) do
+        case Req.get("http://127.0.0.1:11434/api/tags", receive_timeout: 500, retry: false) do
           {:ok, %{status: 200, body: %{"models" => models}}} ->
             names = Enum.map(models, & &1["name"])
 

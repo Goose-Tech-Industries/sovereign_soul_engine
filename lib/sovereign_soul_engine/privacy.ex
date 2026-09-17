@@ -50,7 +50,19 @@ defmodule SovereignSoulEngine.Privacy do
     # Relationship Archetype & Intimacy Ceilings
     # Options: "adaptive", "platonic_mentor", "witty_companion", "romantic_partner", "stoic_guardian", "creative_copilot"
     "relationship_archetype" => "adaptive",
-    "intimacy_ceiling" => 100
+    "intimacy_ceiling" => 100,
+
+    # Circadian Rhythm & Chronotype (Night Owl, Early Bird, Balanced, Adaptive Sync)
+    "chronotype" => "night_owl",
+    "circadian_enabled" => true,
+
+    # Air-Gapped Local Edge Survival Mode
+    "force_local_offline" => false,
+    "offline_fallback" => true,
+
+    # Hyper-Local "Nextdoor" Neighborhood Radar & Soul Society
+    "neighborhood_share_allowed" => true,
+    "neighborhood_zone" => "Cedar Grove"
   }
 
   @doc """
@@ -73,6 +85,13 @@ defmodule SovereignSoulEngine.Privacy do
     character = resolve_character(character_id_or_slug)
     get_settings(character)
   end
+
+  def get_settings(map) when is_map(map) do
+    user_settings = Map.get(map, "privacy_settings", map)
+    Map.merge(@default_settings, stringify_keys(user_settings))
+  end
+
+  def get_settings(_), do: @default_settings
 
   @doc """
   Updates privacy settings for a character and broadcasts the update.
@@ -310,6 +329,72 @@ defmodule SovereignSoulEngine.Privacy do
       _ ->
         "RELATIONSHIP ARCHETYPE: ADAPTIVE. Fluid emotional dynamics based on organic conversational history."
     end
+  end
+
+  # ── Circadian & Chronotype Governance ──────────────────────────────────────
+
+  @doc """
+  Returns the user-configured chronotype ("night_owl", "early_bird", "balanced", "adaptive_sync").
+  """
+  def get_chronotype(character_or_settings) do
+    settings =
+      if is_map(character_or_settings) and Map.has_key?(character_or_settings, "chronotype"),
+        do: character_or_settings,
+        else: get_settings(character_or_settings)
+
+    settings["chronotype"] || "night_owl"
+  end
+
+  @doc """
+  Checks if the circadian neurochemical rhythm is enabled.
+  """
+  def circadian_enabled?(character_or_settings) do
+    settings =
+      if is_map(character_or_settings) and Map.has_key?(character_or_settings, "circadian_enabled"),
+        do: character_or_settings,
+        else: get_settings(character_or_settings)
+
+    Map.get(settings, "circadian_enabled", true)
+  end
+
+  # ── Edge Survival & Air-Gap Governance ─────────────────────────────────────
+
+  @doc """
+  Checks whether force local offline mode is enabled.
+  """
+  def force_local_offline?(character_or_settings) do
+    settings =
+      if is_map(character_or_settings) and Map.has_key?(character_or_settings, "force_local_offline"),
+        do: character_or_settings,
+        else: get_settings(character_or_settings)
+
+    Map.get(settings, "force_local_offline", false)
+  end
+
+  # ── Hyper-Local Neighborhood Radar Governance ──────────────────────────────
+
+  @doc """
+  Checks if the soul is permitted to participate in the local neighborhood radar / Nextdoor feed.
+  """
+  def neighborhood_share_allowed?(character_or_settings) do
+    settings =
+      if is_map(character_or_settings) and Map.has_key?(character_or_settings, "neighborhood_share_allowed"),
+        do: character_or_settings,
+        else: get_settings(character_or_settings)
+
+    Map.get(settings, "neighborhood_share_allowed", true)
+  end
+
+  @doc """
+  Returns the assigned neighborhood zone string.
+  """
+  def neighborhood_zone(character_or_settings) do
+    settings =
+      if is_map(character_or_settings) and Map.has_key?(character_or_settings, "neighborhood_zone"),
+        do: character_or_settings,
+        else: get_settings(character_or_settings)
+
+    settings["neighborhood_zone"] || "Cedar Grove"
   end
 
   # ── Internal Helpers ────────────────────────────────────────────────────────

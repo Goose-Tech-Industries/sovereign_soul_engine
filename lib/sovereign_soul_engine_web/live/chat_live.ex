@@ -62,6 +62,10 @@ defmodule SovereignSoulEngineWeb.ChatLive do
       |> assign(:last_vision, nil)
       |> assign(:privacy_settings, SovereignSoulEngine.Privacy.get_settings(player.id))
       |> assign(:showing_privacy_modal?, false)
+      |> assign(:showing_neighborhood_drawer?, false)
+      |> assign(:neighborhood_posts, SovereignSoulEngine.Neighborhood.Board.list_posts(limit: 25))
+      |> assign(:neighborhood_zone_filter, "all")
+      |> assign(:circadian_state, SovereignSoulEngine.Souls.CircadianEngine.current_state(player.id))
       |> load_scenes()
       |> select_first_available_chat()
 
@@ -69,6 +73,7 @@ defmodule SovereignSoulEngineWeb.ChatLive do
       Phoenix.PubSub.subscribe(SovereignSoulEngine.PubSub, SovereignSoulEngine.Social.SocialFeed.pubsub_topic())
       Phoenix.PubSub.subscribe(SovereignSoulEngine.PubSub, "wearables:haptics")
       Phoenix.PubSub.subscribe(SovereignSoulEngine.PubSub, "character:#{player.id}:privacy")
+      Phoenix.PubSub.subscribe(SovereignSoulEngine.PubSub, "neighborhood:board")
     end
 
     {:ok, socket, layout: false}
@@ -903,8 +908,149 @@ defmodule SovereignSoulEngineWeb.ChatLive do
   end
 
   @impl true
+  def handle_event("toggle_neighborhood_drawer", _params, socket) do
+    {:noreply, assign(socket, :showing_neighborhood_drawer?, !socket.assigns.showing_neighborhood_drawer?)}
+  end
+
+  @impl true
+  def handle_event("set_neighborhood_zone_filter", %{"zone" => zone}, socket) do
+    posts = SovereignSoulEngine.Neighborhood.Board.list_posts(zone: zone, limit: 30)
+
+    {:noreply,
+     socket
+     |> assign(:neighborhood_zone_filter, zone)
+     |> assign(:neighborhood_posts, posts)}
+  end
+
+  @impl true
+  def handle_event("create_neighborhood_post", %{"content" => content} = params, socket) do
+    npc = socket.assigns.selected_npc || socket.assigns.player
+    category = params["category"] || :vibe_check
+    zone = params["zone"] || socket.assigns.neighborhood_zone_filter
+    actual_zone = if zone == "all", do: "Cedar Grove", else: zone
+
+    if String.trim(content) != "" do
+      case SovereignSoulEngine.Neighborhood.Board.create_post(npc, %{
+             zone: actual_zone,
+             category: category,
+             content: content
+           }) do
+        {:ok, _post} ->
+          posts = SovereignSoulEngine.Neighborhood.Board.list_posts(zone: socket.assigns.neighborhood_zone_filter, limit: 30)
+
+          {:noreply,
+           socket
+           |> assign(:neighborhood_posts, posts)
+           |> put_flash(:info, "Shared post to #{actual_zone} neighborhood board!")}
+
+        {:error, :neighborhood_sharing_disabled} ->
+          {:noreply, put_flash(socket, :error, "Neighborhood sharing is disabled in your privacy settings.")}
+
+        {:error, reason} ->
+          {:noreply, put_flash(socket, :error, "Could not share post: #{inspect(reason)}")}
+      end
+    else
+      {:noreply, put_flash(socket, :error, "Post cannot be empty.")}
+    end
+  end
+
+  @impl true
+  def handle_event("add_neighborhood_comment", %{"post_id" => post_id, "content" => text}, socket) do
+    actor = socket.assigns.player
+
+    if String.trim(text) != "" do
+      SovereignSoulEngine.Neighborhood.Board.add_comment(post_id, actor, text)
+      posts = SovereignSoulEngine.Neighborhood.Board.list_posts(zone: socket.assigns.neighborhood_zone_filter, limit: 30)
+      {:noreply, assign(socket, :neighborhood_posts, posts)}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_event("react_neighborhood_post", %{"post_id" => post_id, "reaction" => reaction}, socket) do
+    SovereignSoulEngine.Neighborhood.Board.react_to_post(post_id, reaction)
+    posts = SovereignSoulEngine.Neighborhood.Board.list_posts(zone: socket.assigns.neighborhood_zone_filter, limit: 30)
+    {:noreply, assign(socket, :neighborhood_posts, posts)}
+  end
+
+  @impl true
+  def handle_event("trigger_autonomous_neighborhood_post", _params, socket) do
+    npc = socket.assigns.selected_npc || List.first(socket.assigns.npcs)
+
+    if npc do
+      case SovereignSoulEngine.Neighborhood.Board.generate_autonomous_post(npc) do
+        {:ok, post} ->
+          posts = SovereignSoulEngine.Neighborhood.Board.list_posts(zone: socket.assigns.neighborhood_zone_filter, limit: 30)
+
+          {:noreply,
+           socket
+           |> assign(:neighborhood_posts, posts)
+           |> put_flash(:info, "#{npc.name} posted an observation to #{post.zone}!")}
+
+        {:error, reason} ->
+          {:noreply, put_flash(socket, :error, "Autonomous post error: #{inspect(reason)}")}
+      end
+    else
+      {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_event("set_chronotype", %{"chronotype" => chronotype}, socket) do
+    player = socket.assigns.player
+    new_settings = Map.put(socket.assigns.privacy_settings, "chronotype", chronotype)
+    SovereignSoulEngine.Privacy.update_settings(player.id, %{"chronotype" => chronotype})
+
+    target_char = socket.assigns.selected_npc || player
+    new_circadian = SovereignSoulEngine.Souls.CircadianEngine.current_state(target_char)
+
+    {:noreply,
+     socket
+     |> assign(:privacy_settings, new_settings)
+     |> assign(:circadian_state, new_circadian)
+     |> put_flash(:info, "Chronotype updated to #{String.replace(chronotype, "_", " ") |> String.capitalize()}.")}
+  end
+
+  @impl true
+  def handle_event("set_neighborhood_zone", %{"zone" => zone}, socket) do
+    player = socket.assigns.player
+    clean_zone = String.trim(zone)
+
+    if clean_zone != "" do
+      new_settings = Map.put(socket.assigns.privacy_settings, "neighborhood_zone", clean_zone)
+      SovereignSoulEngine.Privacy.update_settings(player.id, %{"neighborhood_zone" => clean_zone})
+
+      {:noreply,
+       socket
+       |> assign(:privacy_settings, new_settings)
+       |> put_flash(:info, "Neighborhood zone updated to #{clean_zone}.")}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  @impl true
   def handle_info({:privacy_settings_updated, settings}, socket) do
     {:noreply, assign(socket, :privacy_settings, settings)}
+  end
+
+  @impl true
+  def handle_info({:neighborhood_post_created, _post}, socket) do
+    posts = SovereignSoulEngine.Neighborhood.Board.list_posts(zone: socket.assigns.neighborhood_zone_filter, limit: 30)
+    {:noreply, assign(socket, :neighborhood_posts, posts)}
+  end
+
+  @impl true
+  def handle_info({:neighborhood_comment_added, _post_id, _comment}, socket) do
+    posts = SovereignSoulEngine.Neighborhood.Board.list_posts(zone: socket.assigns.neighborhood_zone_filter, limit: 30)
+    {:noreply, assign(socket, :neighborhood_posts, posts)}
+  end
+
+  @impl true
+  def handle_info({:neighborhood_reaction_added, _post_id, _key, _count}, socket) do
+    posts = SovereignSoulEngine.Neighborhood.Board.list_posts(zone: socket.assigns.neighborhood_zone_filter, limit: 30)
+    {:noreply, assign(socket, :neighborhood_posts, posts)}
   end
 
   @impl true
@@ -1060,6 +1206,12 @@ defmodule SovereignSoulEngineWeb.ChatLive do
       neurosis = SovereignSoulEngine.Souls.NeurosisState.evaluate(emotional_state, somatic_state, wound, false)
       defense = SovereignSoulEngine.Souls.DefenseMechanisms.evaluate(emotional_state, somatic_state, soul_profile, rel)
       expression = compute_emotional_expression(emotional_state)
+      circadian = SovereignSoulEngine.Souls.CircadianEngine.current_state(npc)
+      latest_dream =
+        case SovereignSoulEngine.Souls.DreamEngine.get_latest_dream(npc) do
+          {:ok, dream} -> dream
+          _ -> nil
+        end
 
       socket
       |> assign(:soul_profile, soul_profile)
@@ -1069,6 +1221,8 @@ defmodule SovereignSoulEngineWeb.ChatLive do
       |> assign(:neurosis_state, neurosis)
       |> assign(:defense_state, defense)
       |> assign(:npc_expression, expression)
+      |> assign(:circadian_state, circadian)
+      |> assign(:latest_dream, latest_dream)
     else
       socket
       |> assign(:soul_profile, nil)
@@ -1078,6 +1232,7 @@ defmodule SovereignSoulEngineWeb.ChatLive do
       |> assign(:neurosis_state, nil)
       |> assign(:defense_state, nil)
       |> assign(:npc_expression, compute_emotional_expression(nil))
+      |> assign(:latest_dream, nil)
     end
   end
 
@@ -1520,6 +1675,51 @@ defmodule SovereignSoulEngineWeb.ChatLive do
               <.icon name="hero-globe-alt" class="size-3.5" />
               <span>Echoes ({length(@social_posts)})</span>
             </button>
+
+            <%!-- Soul Neighborhood / Nextdoor Radar Toggle --%>
+            <button
+              phx-click="toggle_neighborhood_drawer"
+              id="neighborhood-drawer-btn"
+              class={[
+                "btn btn-xs flex items-center gap-1.5 border transition-all shadow-sm font-semibold",
+                @showing_neighborhood_drawer? && "btn-accent text-accent-content border-accent",
+                !@showing_neighborhood_drawer? && "btn-outline border-base-300 text-teal-400 hover:bg-teal-500/15"
+              ]}
+              title="Nextdoor-style hyper-local community radar & soul neighborhood posts"
+            >
+              <.icon name="hero-home-modern" class="size-3.5 text-teal-400" />
+              <span>Neighborhood ({length(@neighborhood_posts)})</span>
+            </button>
+
+            <%!-- Circadian Rhythm & Night-Owl Badge --%>
+            <%= if @circadian_state do %>
+              <div
+                id="circadian-status-badge"
+                class={[
+                  "flex items-center gap-1.5 px-2 py-0.5 rounded-lg border text-xs font-semibold shadow-xs",
+                  @circadian_state.state == :night_focus && "bg-indigo-950/80 border-indigo-500/60 text-indigo-300",
+                  @circadian_state.state in [:deep_sleep, :rem_dreaming] && "bg-purple-950/80 border-purple-500/60 text-purple-300",
+                  @circadian_state.state == :groggy_waking && "bg-amber-950/80 border-amber-500/60 text-amber-300",
+                  @circadian_state.state == :winding_down && "bg-orange-950/80 border-orange-500/60 text-orange-300",
+                  @circadian_state.state == :wide_awake && "bg-emerald-950/80 border-emerald-500/60 text-emerald-300"
+                ]}
+                title={"Circadian state: #{@circadian_state.state} (Melatonin: #{@circadian_state.melatonin}, Alertness: #{@circadian_state.alertness})"}
+              >
+                <%= if @circadian_state.state == :night_focus do %>
+                  <span>🌙 Night-Owl Flow</span>
+                <% else %>
+                  <%= if @circadian_state.state in [:deep_sleep, :rem_dreaming] do %>
+                    <span>🛌 REM Dream</span>
+                  <% else %>
+                    <%= if @circadian_state.state == :groggy_waking do %>
+                      <span>🥱 Groggy Waking</span>
+                    <% else %>
+                      <span>☀️ Alert</span>
+                    <% end %>
+                  <% end %>
+                <% end %>
+              </div>
+            <% end %>
 
             <%!-- Emergency Safe Word Active Banner --%>
             <%= if Map.get(@privacy_settings, "safe_word_active", false) do %>
@@ -2200,6 +2400,210 @@ defmodule SovereignSoulEngineWeb.ChatLive do
         </div>
       </div>
 
+      <%!-- Soul Neighborhood / Nextdoor Radar Modal --%>
+      <div
+        :if={@showing_neighborhood_drawer?}
+        id="neighborhood-modal-overlay"
+        class="fixed inset-0 bg-base-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      >
+        <div class="w-full max-w-2xl max-h-[88vh] p-6 bg-base-200 rounded-2xl border border-base-300 shadow-2xl flex flex-col space-y-4">
+          <div class="flex items-center justify-between pb-3 border-b border-base-300">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-full bg-teal-500/20 text-teal-400 flex items-center justify-center border border-teal-500/30">
+                <.icon name="hero-home-modern" class="size-4" />
+              </div>
+              <div>
+                <h2 class="text-base font-bold text-base-content flex items-center gap-2">
+                  Soul Neighborhood Radar
+                  <span class="badge badge-xs badge-accent font-mono">Nextdoor Mesh</span>
+                </h2>
+                <p class="text-[11px] text-base-content/50">
+                  Hyper-local community observations, late-night musings, and neighborhood vibe checks
+                </p>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <button
+                type="button"
+                phx-click="trigger_autonomous_neighborhood_post"
+                class="btn btn-xs btn-outline btn-accent"
+                title="Prompt companion to post an autonomous local observation"
+              >
+                <.icon name="hero-sparkles" class="size-3.5" />
+                <span>Prompt Local Observation</span>
+              </button>
+              <button
+                type="button"
+                phx-click="toggle_neighborhood_drawer"
+                class="btn btn-ghost btn-circle btn-xs"
+              >
+                <.icon name="hero-x-mark" class="size-4" />
+              </button>
+            </div>
+          </div>
+
+          <%!-- Zone Filter Bar --%>
+          <div class="flex items-center justify-between gap-2 p-2 rounded-xl bg-base-300/40 border border-base-300 text-xs">
+            <span class="font-semibold text-base-content/60">Neighborhood Zone:</span>
+            <div class="flex gap-1.5 flex-wrap">
+              <%= for zone <- ["all", "Night Owl Commons", "Cedar Grove"] do %>
+                <button
+                  type="button"
+                  phx-click="set_neighborhood_zone_filter"
+                  phx-value-zone={zone}
+                  class={[
+                    "btn btn-xs text-xs font-normal",
+                    @neighborhood_zone_filter == zone && "btn-accent font-bold",
+                    @neighborhood_zone_filter != zone && "btn-ghost border border-base-300"
+                  ]}
+                >
+                  <%= if zone == "all", do: "🌐 All Zones", else: (if zone == "Night Owl Commons", do: "🌙 Night Owl Commons", else: "🌲 Cedar Grove") %>
+                </button>
+              <% end %>
+            </div>
+          </div>
+
+          <%!-- Quick Post Composer --%>
+          <form phx-submit="create_neighborhood_post" class="p-3 rounded-xl bg-base-100 border border-base-300 shadow-sm space-y-2">
+            <div class="flex items-center justify-between text-xs font-semibold text-base-content/70">
+              <span>Post to {if @neighborhood_zone_filter == "all", do: "Cedar Grove", else: @neighborhood_zone_filter} as {@selected_npc && @selected_npc.name || @player.name}:</span>
+              <select name="category" class="select select-bordered select-xs text-[11px]">
+                <option value="vibe_check">✨ Vibe Check</option>
+                <option value="night_owl_musings">🌙 Night Owl Musings</option>
+                <option value="community_alert">📢 Community Alert</option>
+                <option value="nature_sighting">🌿 Nature Sighting</option>
+                <option value="shared_activity">🏃 Shared Activity</option>
+              </select>
+            </div>
+            <div class="flex gap-2">
+              <input
+                type="text"
+                name="content"
+                placeholder="Share a neighborhood vibe, weather note, or late-night thought..."
+                class="input input-sm input-bordered flex-1 text-xs"
+                required
+              />
+              <button type="submit" class="btn btn-sm btn-accent px-4 font-semibold">
+                Post
+              </button>
+            </div>
+          </form>
+
+          <%!-- Posts Feed List --%>
+          <div class="flex-1 overflow-y-auto space-y-3 pr-1 py-1 max-h-[45vh]">
+            <%= if Enum.empty?(@neighborhood_posts) do %>
+              <div class="text-center py-8 text-base-content/40 text-xs">
+                No posts in this neighborhood zone yet. Be the first to share an observation!
+              </div>
+            <% else %>
+              <%= for post <- @neighborhood_posts do %>
+                <div class="p-3.5 rounded-xl bg-base-100 border border-base-300 shadow-sm space-y-2.5">
+                  <div class="flex items-center justify-between text-xs">
+                    <div class="flex items-center gap-2">
+                      <span class="font-bold text-base-content">{post[:author_name] || post["author_name"]}</span>
+                      <span class="text-[11px] text-base-content/40 font-mono">@{post[:author_slug] || post["author_slug"]}</span>
+                      <span class="badge badge-xs badge-ghost text-[10px] uppercase font-mono">
+                        {post[:zone] || post["zone"]}
+                      </span>
+                      <span class={[
+                        "badge badge-xs font-mono text-[10px]",
+                        (post[:category] || post["category"]) in [:night_owl_musings, "night_owl_musings"] && "badge-secondary",
+                        (post[:category] || post["category"]) in [:community_alert, "community_alert"] && "badge-warning",
+                        (post[:category] || post["category"]) not in [:night_owl_musings, "night_owl_musings", :community_alert, "community_alert"] && "badge-info"
+                      ]}>
+                        {post[:category] || post["category"]}
+                      </span>
+                    </div>
+                    <span class="text-[10px] text-base-content/40">
+                      {format_time(post[:inserted_at] || post["inserted_at"])}
+                    </span>
+                  </div>
+
+                  <p class="text-xs text-base-content/90 leading-relaxed">
+                    {post[:content] || post["content"]}
+                  </p>
+
+                  <div class="flex items-center justify-between pt-1 border-t border-base-200 text-xs">
+                    <div class="flex items-center gap-2">
+                      <button
+                        type="button"
+                        phx-click="react_neighborhood_post"
+                        phx-value-post_id={post[:id] || post["id"]}
+                        phx-value-reaction="like"
+                        class="btn btn-ghost btn-xs text-[11px] flex items-center gap-1"
+                      >
+                        👍 <span>{(post[:reactions] && (post[:reactions][:likes] || post[:reactions]["likes"])) || 0}</span>
+                      </button>
+                      <button
+                        type="button"
+                        phx-click="react_neighborhood_post"
+                        phx-value-post_id={post[:id] || post["id"]}
+                        phx-value-reaction="heart"
+                        class="btn btn-ghost btn-xs text-[11px] flex items-center gap-1 text-rose-400"
+                      >
+                        ❤️ <span>{(post[:reactions] && (post[:reactions][:hearts] || post[:reactions]["hearts"])) || 0}</span>
+                      </button>
+                      <button
+                        type="button"
+                        phx-click="react_neighborhood_post"
+                        phx-value-post_id={post[:id] || post["id"]}
+                        phx-value-reaction="moon"
+                        class="btn btn-ghost btn-xs text-[11px] flex items-center gap-1 text-indigo-400"
+                        title="Night Owl Reaction"
+                      >
+                        🌙 <span>{(post[:reactions] && (post[:reactions][:moons] || post[:reactions]["moons"])) || 0}</span>
+                      </button>
+                    </div>
+
+                    <span class="text-[11px] text-base-content/50">
+                      {length(post[:comments] || post["comments"] || [])} comments
+                    </span>
+                  </div>
+
+                  <%!-- Comments Thread --%>
+                  <%= if (post[:comments] || post["comments"]) != [] do %>
+                    <div class="pl-3 border-l-2 border-base-300 space-y-1.5 pt-1">
+                      <%= for comm <- (post[:comments] || post["comments"]) do %>
+                        <div class="text-[11px] text-base-content/80">
+                          <span class="font-bold text-accent">{comm[:author_name] || comm["author_name"]}:</span>
+                          <span>{comm[:content] || comm["content"]}</span>
+                        </div>
+                      <% end %>
+                    </div>
+                  <% end %>
+
+                  <%!-- Comment Composer --%>
+                  <form phx-submit="add_neighborhood_comment" class="flex gap-1.5 pt-1">
+                    <input type="hidden" name="post_id" value={post[:id] || post["id"]} />
+                    <input
+                      type="text"
+                      name="content"
+                      placeholder="Write a neighborly reply..."
+                      class="input input-xs input-bordered flex-1 text-[11px]"
+                      required
+                    />
+                    <button type="submit" class="btn btn-xs btn-ghost text-accent">
+                      Reply
+                    </button>
+                  </form>
+                </div>
+              <% end %>
+            <% end %>
+          </div>
+
+          <div class="p-2.5 rounded-xl bg-base-300/30 border border-base-300 text-xs space-y-1">
+            <div class="font-bold text-base-content/70 flex items-center gap-1.5 text-[11px]">
+              <.icon name="hero-bolt" class="size-3.5 text-teal-400" />
+              P2P Soul Society & Nextdoor Mesh API
+            </div>
+            <div class="font-mono text-[10px] text-teal-300/90 select-all break-all">
+              GET /api/neighborhood/posts • POST /api/neighborhood/encounter
+            </div>
+          </div>
+        </div>
+      </div>
+
       <%!-- Privacy & Autonomy Shield Modal --%>
       <div
         :if={@showing_privacy_modal?}
@@ -2522,6 +2926,111 @@ defmodule SovereignSoulEngineWeb.ChatLive do
                   </button>
                 </div>
               </div>
+            </div>
+
+            <%!-- Section 7: Circadian Rhythm & Night-Owl Chronotypes --%>
+            <div class="p-3.5 rounded-xl bg-base-100 border border-base-300 shadow-sm space-y-3">
+              <div class="text-xs font-bold text-base-content uppercase tracking-wider flex items-center gap-1.5 text-indigo-400">
+                <.icon name="hero-moon" class="size-3.5" />
+                Circadian Rhythm & Night-Owl Chronotypes
+              </div>
+
+              <div class="flex items-center justify-between">
+                <div>
+                  <div class="text-xs font-semibold text-base-content">Circadian Sleep & Melatonin Cycle</div>
+                  <div class="text-[11px] text-base-content/50">Simulates biological sleep, REM dreaming, and grogginess</div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={Map.get(@privacy_settings, "circadian_enabled", true)}
+                  phx-click="toggle_privacy_setting"
+                  phx-value-key="circadian_enabled"
+                  class="toggle toggle-sm toggle-primary"
+                />
+              </div>
+
+              <div class="space-y-1.5">
+                <div class="text-xs font-semibold text-base-content/70">Human Chronotype Alignment:</div>
+                <div class="grid grid-cols-2 gap-1.5">
+                  <%= for {type_key, label, desc} <- [
+                    {"night_owl", "🌙 Night Owl", "Active late nights (10PM-5AM), cozy nocturnal focus"},
+                    {"early_bird", "🌅 Early Bird", "Active dawn to dusk, early bedtime"},
+                    {"balanced", "⚖️ Balanced", "Standard 8AM to 11PM day rhythm"},
+                    {"adaptive_sync", "⌚ Adaptive Sync", "Tracks wearable sleep and chat activity live"}
+                  ] do %>
+                    <button
+                      type="button"
+                      phx-click="set_chronotype"
+                      phx-value-chronotype={type_key}
+                      class={[
+                        "p-2 rounded-lg text-left border transition-all text-xs",
+                        Map.get(@privacy_settings, "chronotype", "night_owl") == type_key && "border-indigo-500 bg-indigo-950/40 font-bold text-indigo-300",
+                        Map.get(@privacy_settings, "chronotype", "night_owl") != type_key && "border-base-300 bg-base-200/50 hover:bg-base-300 text-base-content/70"
+                      ]}
+                    >
+                      <div class="font-bold">{label}</div>
+                      <div class="text-[10px] text-base-content/50 font-normal">{desc}</div>
+                    </button>
+                  <% end %>
+                </div>
+              </div>
+            </div>
+
+            <%!-- Section 8: Air-Gapped Local Edge Survival Mode --%>
+            <div class="p-3.5 rounded-xl bg-base-100 border border-base-300 shadow-sm space-y-2.5">
+              <div class="text-xs font-bold text-base-content uppercase tracking-wider flex items-center gap-1.5 text-emerald-400">
+                <.icon name="hero-cpu-chip" class="size-3.5" />
+                Air-Gapped Local Edge Survival Mode
+              </div>
+
+              <div class="flex items-center justify-between">
+                <div>
+                  <div class="text-xs font-semibold text-base-content">Force 100% Offline Edge Inference</div>
+                  <div class="text-[11px] text-base-content/50">Routes all cognition to local Ollama / NPU / deterministic rule engine with zero cloud egress</div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={Map.get(@privacy_settings, "force_local_offline", false)}
+                  phx-click="toggle_privacy_setting"
+                  phx-value-key="force_local_offline"
+                  class="toggle toggle-sm toggle-success"
+                />
+              </div>
+            </div>
+
+            <%!-- Section 9: Hyper-Local Neighborhood Radar (Nextdoor for Souls) --%>
+            <div class="p-3.5 rounded-xl bg-base-100 border border-base-300 shadow-sm space-y-3">
+              <div class="text-xs font-bold text-base-content uppercase tracking-wider flex items-center gap-1.5 text-teal-400">
+                <.icon name="hero-home-modern" class="size-3.5" />
+                Hyper-Local Neighborhood Radar (Nextdoor Mesh)
+              </div>
+
+              <div class="flex items-center justify-between">
+                <div>
+                  <div class="text-xs font-semibold text-base-content">Enable Neighborhood Mesh Sharing</div>
+                  <div class="text-[11px] text-base-content/50">Allow companion to share local vibe checks and alerts with nearby souls</div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={Map.get(@privacy_settings, "neighborhood_share_allowed", true)}
+                  phx-click="toggle_privacy_setting"
+                  phx-value-key="neighborhood_share_allowed"
+                  class="toggle toggle-sm toggle-accent"
+                />
+              </div>
+
+              <form phx-submit="set_neighborhood_zone" class="flex items-center gap-2 pt-1">
+                <input
+                  type="text"
+                  name="zone"
+                  value={Map.get(@privacy_settings, "neighborhood_zone", "Cedar Grove")}
+                  placeholder="Set neighborhood zone (e.g. 'Cedar Grove', 'Night Owl Commons')..."
+                  class="input input-xs input-bordered flex-1 text-xs"
+                />
+                <button type="submit" class="btn btn-xs btn-outline btn-accent">
+                  Save Zone
+                </button>
+              </form>
             </div>
           </div>
 

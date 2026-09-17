@@ -76,6 +76,30 @@ defmodule SovereignSoulEngineWeb.Router do
     # Selective Amnesia & Memory Purging
     post "/memories/purge", MemoryPurgeController, :purge
     get "/memories/inspect", MemoryPurgeController, :inspect_memories
+
+    # Circadian Rhythm & Night Owl Chronotypes
+    get "/circadian/status", CircadianController, :status
+    post "/circadian/chronotype", CircadianController, :update_chronotype
+
+    # Subconscious REM Dream Engine
+    get "/souls/dream", DreamController, :show
+    post "/souls/dream", DreamController, :trigger
+
+    # Real-Time Emotional Acoustic Prosody Pipeline
+    get "/voice/prosody", VoiceProsodyController, :prosody
+    post "/voice/synthesize", VoiceProsodyController, :synthesize
+
+    # Air-Gapped Local Edge Survival Mode
+    get "/edge/status", EdgeController, :status
+    post "/edge/toggle", EdgeController, :toggle
+
+    # Hyper-Local "Nextdoor" Neighborhood Board & P2P Soul Society
+    get "/neighborhood/posts", NeighborhoodController, :posts
+    post "/neighborhood/posts", NeighborhoodController, :create
+    post "/neighborhood/posts/:id/comment", NeighborhoodController, :comment
+    post "/neighborhood/posts/:id/react", NeighborhoodController, :react
+    post "/neighborhood/generate", NeighborhoodController, :autonomous_post
+    post "/neighborhood/encounter", NeighborhoodController, :encounter
   end
 
   # Public external access for Polsia / Twitter / RSS, Telegram Webhooks, Alexa, and Portable Souls
@@ -100,6 +124,30 @@ defmodule SovereignSoulEngineWeb.Router do
     post "/robotics/telemetry", RoboticsController, :telemetry
     post "/memories/purge", MemoryPurgeController, :purge
     get "/memories/inspect", MemoryPurgeController, :inspect_memories
+
+    # Circadian Rhythm & Night Owl Chronotypes
+    get "/circadian/status", CircadianController, :status
+    post "/circadian/chronotype", CircadianController, :update_chronotype
+
+    # Subconscious REM Dream Engine
+    get "/souls/dream", DreamController, :show
+    post "/souls/dream", DreamController, :trigger
+
+    # Real-Time Emotional Acoustic Prosody Pipeline
+    get "/voice/prosody", VoiceProsodyController, :prosody
+    post "/voice/synthesize", VoiceProsodyController, :synthesize
+
+    # Air-Gapped Local Edge Survival Mode
+    get "/edge/status", EdgeController, :status
+    post "/edge/toggle", EdgeController, :toggle
+
+    # Hyper-Local "Nextdoor" Neighborhood Board & P2P Soul Society
+    get "/neighborhood/posts", NeighborhoodController, :posts
+    post "/neighborhood/posts", NeighborhoodController, :create
+    post "/neighborhood/posts/:id/comment", NeighborhoodController, :comment
+    post "/neighborhood/posts/:id/react", NeighborhoodController, :react
+    post "/neighborhood/generate", NeighborhoodController, :autonomous_post
+    post "/neighborhood/encounter", NeighborhoodController, :encounter
   end
 
   # Public webhook ingress under /sse prefix

@@ -20,6 +20,7 @@ defmodule SovereignSoulEngine.Application do
       SovereignSoulEngine.Social.NPCScheduler,
       SovereignSoulEngine.TheoryOfMind.ProactiveDispatcher,
       SovereignSoulEngine.Wearables.SmartHomeBridge,
+      SovereignSoulEngine.Neighborhood.Board,
       # Start to serve requests, typically the last entry
       SovereignSoulEngineWeb.Endpoint
     ]
