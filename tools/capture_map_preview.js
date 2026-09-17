@@ -12,10 +12,10 @@ const path = require('path');
   await page.goto('http://localhost:8561/sse/map', { waitUntil: 'networkidle' });
   await page.waitForTimeout(1500);
 
-  // Click on "old_ironworks" to show inspector details for Maya's foundry
-  const ironworksNode = page.locator("g[phx-value-slug='old_ironworks']");
-  if (await ironworksNode.isVisible()) {
-    await ironworksNode.click();
+  // Click on "high_palace" to show inspector details for the High Sovereign Palace
+  const palaceNode = page.locator("g[phx-value-slug='high_palace']");
+  if (await palaceNode.isVisible()) {
+    await palaceNode.click({ force: true });
     await page.waitForTimeout(1000);
   }
 

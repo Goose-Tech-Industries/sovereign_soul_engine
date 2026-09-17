@@ -1719,10 +1719,10 @@ defmodule SovereignSoulEngineWeb.ChatLive do
               navigate={~p"/sse/map"}
               id="town-map-nav-btn"
               class="btn btn-xs flex items-center gap-1.5 border border-amber-500/40 text-amber-400 hover:bg-amber-500/15 transition-all shadow-sm font-semibold"
-              title="Explore the 12 districts of Feannag's Rest interactive map"
+              title="Explore the 13 regions of Feannag's Rest interactive map"
             >
               <.icon name="hero-map" class="size-3.5 text-amber-400" />
-              <span>Map (12)</span>
+              <span>Map (13)</span>
             </.link>
 
             <%!-- Circadian Rhythm & Night-Owl Badge --%>

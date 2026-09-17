@@ -26,6 +26,7 @@ defmodule SovereignSoulEngine.Application do
       SovereignSoulEngine.Relay.SeenSet,
       SovereignSoulEngine.World.Simulation,
       SovereignSoulEngine.World.TownMap,
+      SovereignSoulEngine.Moderation,
       # Start to serve requests, typically the last entry
       SovereignSoulEngineWeb.Endpoint
     ]

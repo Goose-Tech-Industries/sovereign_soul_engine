@@ -1,14 +1,18 @@
 defmodule SovereignSoulEngineWeb.Api.TownControllerTest do
   use SovereignSoulEngineWeb.ConnCase
 
-  test "GET /sse/api/town/map returns 12 districts with Twisted metadata", %{conn: conn} do
+  test "GET /sse/api/town/map returns 13 regions with Twisted metadata", %{conn: conn} do
     conn = get(conn, "/sse/api/town/map")
     assert json = json_response(conn, 200)
 
     assert json["town_name"] == "Feannag's Rest"
     assert json["region_name"] == "Gleann Caorach"
-    assert json["district_count"] == 12
-    assert length(json["districts"]) == 12
+    assert json["district_count"] == 13
+    assert length(json["districts"]) == 13
+
+    palace = Enum.find(json["districts"], &(&1["slug"] == "high_palace"))
+    assert palace["tile_id"] == "region:1:tile:12:12"
+    assert palace["zone_type"] == "palace"
 
     crows = Enum.find(json["districts"], &(&1["slug"] == "crows_keep"))
     assert crows["tile_id"] == "region:1:tile:12:15"

@@ -30,7 +30,18 @@ config :sovereign_soul_engine,
   relay_peers: (System.get_env("RELAY_PEERS") || "") |> String.split(",", trim: true),
   relay_max_hops: String.to_integer(System.get_env("RELAY_MAX_HOPS") || "2"),
   relay_secret: System.get_env("RELAY_SECRET"),
-  max_remote_souls: String.to_integer(System.get_env("MAX_REMOTE_SOULS") || "1000")
+  max_remote_souls: String.to_integer(System.get_env("MAX_REMOTE_SOULS") || "1000"),
+  moderation_blocked_terms:
+    (System.get_env("MODERATION_BLOCKED_TERMS") || "") |> String.split(",", trim: true)
+
+# Error tracking — inert unless SENTRY_DSN is set. Use Req (already a dep) as
+# the HTTP client instead of the default Hackney.
+config :sentry,
+  dsn: System.get_env("SENTRY_DSN"),
+  client: Sentry.ReqClient,
+  environment_name: config_env(),
+  enable_source_code_context: true,
+  root_source_code_path: File.cwd!()
 
 if config_env() == :prod do
   database_url =

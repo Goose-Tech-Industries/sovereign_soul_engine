@@ -4,13 +4,22 @@ defmodule SovereignSoulEngine.World.TownMapTest do
   alias SovereignSoulEngine.World.TownMap
 
   describe "Feannag's Rest TownMap context" do
-    test "get_map/0 returns the 12 canonical districts and metadata" do
+    test "get_map/0 returns the 13 canonical regions and metadata" do
       map = TownMap.get_map()
 
       assert map.town_name == "Feannag's Rest"
       assert map.region_name == "Gleann Caorach"
-      assert map.district_count == 12
-      assert length(map.districts) == 12
+      assert map.district_count == 13
+      assert length(map.districts) == 13
+
+      palace = Enum.find(map.districts, &(&1.slug == "high_palace"))
+      assert palace != nil
+      assert palace.gaelic_name == "Lùchairt an Àrd-Rìgh"
+      assert palace.tile_id == "region:1:tile:12:12"
+      assert palace.zone_type == :palace
+      assert palace.danger_level == 1
+      assert is_list(palace.connections)
+      assert length(palace.connections) == 12
 
       crows_keep = Enum.find(map.districts, &(&1.slug == "crows_keep"))
       assert crows_keep != nil

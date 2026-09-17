@@ -13,6 +13,7 @@ defmodule SovereignSoulEngine.World do
   alias SovereignSoulEngine.Scenes.Scene
   alias SovereignSoulEngine.Scenes.SceneParticipant
   alias SovereignSoulEngine.Relationships.Relationship
+  alias SovereignSoulEngine.Moderation
   alias SovereignSoulEngine.World.WorldEvent
   alias SovereignSoulEngine.World.SeedSouls
 
@@ -50,15 +51,26 @@ defmodule SovereignSoulEngine.World do
   end
 
   @doc "Appends a world event to the ledger. Returns `{:ok, event}` or `{:error, changeset}`."
-  @spec append_event(map()) :: {:ok, WorldEvent.t()} | {:error, Ecto.Changeset.t()}
+  @spec append_event(map()) :: {:ok, WorldEvent.t()} | {:error, term()}
   def append_event(attrs) do
-    case %WorldEvent{} |> WorldEvent.changeset(attrs) |> Repo.insert() do
-      {:ok, event} ->
-        Phoenix.PubSub.broadcast(SovereignSoulEngine.PubSub, "world:feed", {:world_event, event})
-        {:ok, event}
+    case Moderation.screen(attrs) do
+      :ok ->
+        case %WorldEvent{} |> WorldEvent.changeset(attrs) |> Repo.insert() do
+          {:ok, event} ->
+            Phoenix.PubSub.broadcast(
+              SovereignSoulEngine.PubSub,
+              "world:feed",
+              {:world_event, event}
+            )
 
-      error ->
-        error
+            {:ok, event}
+
+          error ->
+            error
+        end
+
+      {:error, reason} ->
+        {:error, {:moderated, reason}}
     end
   end
 

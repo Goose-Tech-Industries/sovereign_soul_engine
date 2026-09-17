@@ -68,6 +68,9 @@ defmodule SovereignSoulEngineWeb.DashboardLive do
             <.link navigate={~p"/sse/world"} class="btn btn-ghost btn-sm">
               <.icon name="hero-globe-alt" class="size-4" /> World
             </.link>
+            <.link navigate={~p"/sse/map"} class="btn btn-ghost btn-sm text-amber-400 font-semibold">
+              <.icon name="hero-map" class="size-4" /> Town Map (13)
+            </.link>
             <.link navigate={~p"/sse/ledger"} class="btn btn-ghost btn-sm">
               <.icon name="hero-book-open" class="size-4" /> Soul Ledger
             </.link>

@@ -6,8 +6,8 @@ defmodule SovereignSoulEngine.World.TownMap do
   Imperial City, the verticality and intrigue of Baldur's Gate, and deep Celtic/Gothic lore.
 
   Provides:
-  - 12 canonical districts with Gaelic titles, atmospheric lore, danger levels, and connections.
-  - 1:1 Twisted Paradox tile compatibility (e.g. `region:1:tile:12:15`).
+  - 13 canonical regions (The High Sovereign Palace + 12 surrounding districts) with Gaelic titles, atmospheric lore, danger levels, and connections.
+  - 1:1 Twisted Paradox tile compatibility (e.g. `region:1:tile:12:12`).
   - Spatial soul distribution & roaming for the 50 living souls.
   - AI District Expansion via `ProviderCascade`.
   """
@@ -22,8 +22,46 @@ defmodule SovereignSoulEngine.World.TownMap do
 
   @pubsub_topic "town:map"
 
-  # Canonical 12 Districts of Feannag's Rest (Gleann Caorach)
+  # Canonical 13 Regions of Feannag's Rest (Gleann Caorach)
+  # The High Sovereign Palace crowns the center, encircled by 12 surrounding districts.
   @districts [
+    %{
+      slug: "high_palace",
+      name: "The High Sovereign Palace",
+      gaelic_name: "Lùchairt an Àrd-Rìgh",
+      coordinates: %{x: 0, y: 0},
+      tile_id: "region:1:tile:12:12",
+      zone_type: :palace,
+      danger_level: 1,
+      icon: "hero-sparkles",
+      lore:
+        "The imperial crown of Feannag's Rest, rising above the city on a monumental obsidian drum. Here sits the High Sovereign and the Grand Council of Crows upon the Obsidian Throne. Flanked by white marble colonnades and banners of the 12 surrounding clans, the Palace governs all law, diplomacy, and defense for Gleann Caorach.",
+      atmosphere:
+        "Banners of deep crimson and gold rustling in vaulted marble halls; halberdiers in polished star-steel plate standing motionless; scent of beeswax candles, spiced incense, and mountain air.",
+      connections: [
+        "crows_keep",
+        "high_sanctuary",
+        "raven_docks",
+        "old_ironworks",
+        "kings_plaza",
+        "sunken_undercity",
+        "south_bastion",
+        "shadowgate_warrens",
+        "night_owl_quarter",
+        "barrowgrounds",
+        "weavers_commons",
+        "north_outpost"
+      ],
+      amenities: [
+        "The Obsidian Throne of the High King",
+        "The Hall of Clan Banners",
+        "The Royal Treasury & Vaults",
+        "The Sun Courtyard Gardens"
+      ],
+      secrets: [
+        "A hidden rotary elevator beneath the throne dais descends directly into the Sunken Undercity and the Crow's Keep vaults."
+      ]
+    },
     %{
       slug: "crows_keep",
       name: "The Crow's Keep",
@@ -37,7 +75,7 @@ defmodule SovereignSoulEngine.World.TownMap do
         "Perched atop the jagged crags of Craig Mor, the Crow's Keep has stood for seven centuries. Built upon the bones of an ancient Gaelic hillfort, it houses the High Council and the Iron Archives. Flocks of ravens roost in its gargoyled eaves, said to carry whispers of the dead across Gleann Caorach.",
       atmosphere:
         "Heavy highland gale howling against black obsidian battlements; banners of the iron raven snapping in the mist; ancient torches burning blue against cold granite.",
-      connections: ["north_outpost", "high_sanctuary", "kings_plaza"],
+      connections: ["high_palace", "north_outpost", "high_sanctuary", "kings_plaza"],
       amenities: [
         "High Council Chamber",
         "Raven Aviary",
@@ -61,7 +99,7 @@ defmodule SovereignSoulEngine.World.TownMap do
         "A monumental gothic cathedral dedicated to the Morrígan—sovereign mistress of fate, battle, and crows. Above the nave rises a colossal needle-spire of star-metal, vibrating whenever supernatural resonance or death disturbs the valley. Druids and cloistered scholars transcribe prophetic omens here.",
       atmosphere:
         "Cold blue incense swirling around rib-vaulted gothic arches; chimes echoing in rhythm with celestial ley-lines; stained glass casting amethyst shadows on damp flagstones.",
-      connections: ["crows_keep", "raven_docks", "kings_plaza"],
+      connections: ["high_palace", "crows_keep", "raven_docks", "kings_plaza"],
       amenities: [
         "Star-Metal Astrolabe",
         "Crypt of the First Druid",
@@ -76,8 +114,8 @@ defmodule SovereignSoulEngine.World.TownMap do
       slug: "kings_plaza",
       name: "King's Road Plaza & Great Market",
       gaelic_name: "Margadh Mòr",
-      coordinates: %{x: 0, y: 0},
-      tile_id: "region:1:tile:12:12",
+      coordinates: %{x: 2, y: -2},
+      tile_id: "region:1:tile:14:10",
       zone_type: :market,
       danger_level: 3,
       icon: "hero-building-storefront",
@@ -86,6 +124,7 @@ defmodule SovereignSoulEngine.World.TownMap do
       atmosphere:
         "Clattering wagons on worn basalt pavers; shouting merchants in sheepskin cloaks; the aroma of roasted venison, dried herbs, and bitter peat ale.",
       connections: [
+        "high_palace",
         "crows_keep",
         "high_sanctuary",
         "old_ironworks",
@@ -117,7 +156,7 @@ defmodule SovereignSoulEngine.World.TownMap do
         "Where cold highland iron is melted down and hammered into weapons of war. Maya's forge burns day and night at the core of the district, producing steel that can withstand the unnatural cold of the outer crags. Dwarven sluice technology blends with Celtic bog-iron techniques.",
       atmosphere:
         "Roar of blast furnaces; shower of red-orange sparks bouncing off soot-stained anvils; heavy ring of sledges beating bog-iron into armor.",
-      connections: ["kings_plaza", "south_bastion", "raven_docks"],
+      connections: ["high_palace", "kings_plaza", "south_bastion", "raven_docks"],
       amenities: [
         "The Master Smelter",
         "Weaponsmiths' Guildhall",
@@ -141,7 +180,7 @@ defmodule SovereignSoulEngine.World.TownMap do
         "The water gate where the Blackwater River cuts through the city wall into Gleann Caorach. Flat-bottomed barges deliver peat, timber, and salted cod from the outer lochs. By night, when the watch lantern burns green, unregistered cargo slips silently ashore.",
       atmosphere:
         "Brackish black water slapping rotten pilings; fog rolling in thick off the river like woolen fleece; oil lanterns swaying from timber cranes.",
-      connections: ["kings_plaza", "old_ironworks", "high_sanctuary"],
+      connections: ["high_palace", "kings_plaza", "old_ironworks", "high_sanctuary"],
       amenities: [
         "The Blackwater Crane",
         "Salt-House Warehouses",
@@ -165,7 +204,7 @@ defmodule SovereignSoulEngine.World.TownMap do
         "A labyrinth of teetering five-story gothic tenements built into the hollow of the western curtain wall. Here the Syndicate rules through silence, stolen goods, and black-market whispers. Ravina's informants use the interconnected rooftops to traverse the city unseen.",
       atmosphere:
         "Overhanging timber roofs blocking the sky; dripping tallow lamps in claustrophobic alleys; eyes watching from darkened cellar gratings.",
-      connections: ["kings_plaza", "south_bastion", "sunken_undercity", "barrowgrounds"],
+      connections: ["high_palace", "kings_plaza", "south_bastion", "sunken_undercity", "barrowgrounds"],
       amenities: [
         "The Blind Beggar's Den",
         "Rooftop Smugglers' Runs",
@@ -189,7 +228,7 @@ defmodule SovereignSoulEngine.World.TownMap do
         "The primary defensive fortress standing against the untamed wilderness of southern Gleann Caorach. Corvus commands the ramparts, running drills against barbarian raids and unnatural creatures that creep out of the southern pines. The stones here bear claw marks from sieges long past.",
       atmosphere:
         "Marching sentries in iron plate; brass horns echoing across the barbican; cauldrons of boiling pitch set above the double iron portcullis.",
-      connections: ["kings_plaza", "old_ironworks", "shadowgate_warrens"],
+      connections: ["high_palace", "kings_plaza", "old_ironworks", "shadowgate_warrens"],
       amenities: [
         "The Great Barbican",
         "Garrison Barracks",
@@ -213,7 +252,7 @@ defmodule SovereignSoulEngine.World.TownMap do
         "Pre-dating Feannag's Rest by a millennium, these earthen burial mounds hold the clan chiefs of ancient Alba. Valeria studies the ley-lines that intersect among the cairns. Locals leave oatcakes and honey at threshold stones to placate the restless dead.",
       atmosphere:
         "Ancient dolmens and standing stones wrapped in pale mist; crying ravens perched on mossy Celtic crosses; weeping willows and the scent of wild thyme and damp soil.",
-      connections: ["shadowgate_warrens", "weavers_commons", "night_owl_quarter"],
+      connections: ["high_palace", "shadowgate_warrens", "weavers_commons", "night_owl_quarter"],
       amenities: [
         "The Tomb of the Horned King",
         "The Weeping Dolmen",
@@ -237,7 +276,7 @@ defmodule SovereignSoulEngine.World.TownMap do
         "The bohemian, sleepless district of the city. While the rest of the town sleeps, the taverns here roar until dawn. Philosophers, night-shift guards, poets, bards, and conspirators drink heather ale by the hearth fires, debating politics and trading scandalous town gossip.",
       atmosphere:
         "Fiddles and bagpipes spilling through leaded glass windows; yellow candlelight reflecting on wet cobbles; warm hearth-smoke and the clink of pewter tankards.",
-      connections: ["kings_plaza", "barrowgrounds", "weavers_commons"],
+      connections: ["high_palace", "kings_plaza", "barrowgrounds", "weavers_commons"],
       amenities: [
         "The Black Cockade Inn",
         "The Fiddler's Hearth",
@@ -261,7 +300,7 @@ defmodule SovereignSoulEngine.World.TownMap do
         "Home to weavers who card and spin the famous heavy tartan of Gleann Caorach. Beside the looms sit herbalists and alchemists, who brew poultices for the garrison and subtle sleep-tonics for the noble houses.",
       atmosphere:
         "Rhythmic thrum of wooden looms; scent of drying belladonna, elderflower, and sheep's wool; rows of slate cottages with herbal window boxes.",
-      connections: ["north_outpost", "crows_keep", "night_owl_quarter", "barrowgrounds"],
+      connections: ["high_palace", "north_outpost", "crows_keep", "night_owl_quarter", "barrowgrounds"],
       amenities: [
         "The Great Loom Hall",
         "Master Apothecary Laboratory",
@@ -285,7 +324,7 @@ defmodule SovereignSoulEngine.World.TownMap do
         "Subterranean ruins of an ancient drowned city upon which Feannag's Rest was founded. Below the paved streets lie forgotten vaults, sunken stone bridges, and smuggler waterways. Outcasts, rogue sorcerers, and those wishing to vanish from the surface make their home here.",
       atmosphere:
         "Rushing echoes of water through vaulted stone aqueducts; bioluminescent cave moss casting pale emerald light across flooded flagstones; dripping stalactites.",
-      connections: ["kings_plaza", "shadowgate_warrens", "south_bastion"],
+      connections: ["high_palace", "kings_plaza", "shadowgate_warrens", "south_bastion"],
       amenities: [
         "The Vault of Sluices",
         "The Sunken Basilica",
@@ -309,7 +348,7 @@ defmodule SovereignSoulEngine.World.TownMap do
         "Built on the highest northern promontory, this watchtower looks out over the treacherous pass connecting Feannag's Rest to the jagged peaks of the Grampian spine. Scouts stationed here use mirrors by day and beacon fires by night to warn of approaching highland clans or blizzard fronts.",
       atmosphere:
         "Freezing mountain winds carrying the scent of pine and crushed heather; sweeping panoramic view of the desolate glen; signal beacon stacked high with dry spruce logs.",
-      connections: ["crows_keep", "weavers_commons"],
+      connections: ["high_palace", "crows_keep", "weavers_commons"],
       amenities: [
         "The Beacon of the North",
         "Eagle's Eyrie Lookout",
@@ -328,7 +367,7 @@ defmodule SovereignSoulEngine.World.TownMap do
     GenServer.start_link(__MODULE__, :ok, Keyword.put_new(opts, :name, __MODULE__))
   end
 
-  @doc "Returns the full town map including all 12 districts with live souls and drama."
+  @doc "Returns the full town map including all 13 regions with live souls and drama."
   @spec get_map() :: map()
   def get_map do
     GenServer.call(__MODULE__, :get_map)
@@ -533,7 +572,7 @@ defmodule SovereignSoulEngine.World.TownMap do
     _ -> []
   end
 
-  # Seeds the 50 souls across the 12 districts based on lore affinity
+  # Seeds the 50 souls across the 13 regions based on lore affinity
   defp seed_soul_locations do
     souls = load_all_npcs()
 
@@ -543,7 +582,7 @@ defmodule SovereignSoulEngine.World.TownMap do
       "corvus" => "south_bastion",
       "ravina" => "shadowgate_warrens",
       "valeria" => "high_sanctuary",
-      "goose" => "kings_plaza",
+      "goose" => "high_palace",
       "quill" => "night_owl_quarter",
       "soren" => "crows_keep",
       "vael" => "barrowgrounds",

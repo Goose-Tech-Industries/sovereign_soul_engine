@@ -14,26 +14,32 @@ defmodule SovereignSoulEngineWeb.MapLive do
   alias SovereignSoulEngine.World.TownMap
 
   @road_connections [
-    {"crows_keep", "north_outpost"},
+    # Royal Radial Boulevards (High Sovereign Palace spokes)
+    {"high_palace", "crows_keep"},
+    {"high_palace", "high_sanctuary"},
+    {"high_palace", "raven_docks"},
+    {"high_palace", "old_ironworks"},
+    {"high_palace", "kings_plaza"},
+    {"high_palace", "sunken_undercity"},
+    {"high_palace", "south_bastion"},
+    {"high_palace", "shadowgate_warrens"},
+    {"high_palace", "night_owl_quarter"},
+    {"high_palace", "barrowgrounds"},
+    {"high_palace", "weavers_commons"},
+    {"high_palace", "north_outpost"},
+    # Outer Ring Road (encircling the 12 districts)
+    {"north_outpost", "crows_keep"},
     {"crows_keep", "high_sanctuary"},
-    {"crows_keep", "kings_plaza"},
-    {"north_outpost", "weavers_commons"},
-    {"high_sanctuary", "kings_plaza"},
     {"high_sanctuary", "raven_docks"},
-    {"weavers_commons", "night_owl_quarter"},
-    {"weavers_commons", "barrowgrounds"},
-    {"night_owl_quarter", "kings_plaza"},
-    {"night_owl_quarter", "barrowgrounds"},
-    {"barrowgrounds", "shadowgate_warrens"},
-    {"kings_plaza", "raven_docks"},
-    {"kings_plaza", "old_ironworks"},
-    {"kings_plaza", "sunken_undercity"},
-    {"kings_plaza", "shadowgate_warrens"},
     {"raven_docks", "old_ironworks"},
-    {"old_ironworks", "south_bastion"},
-    {"shadowgate_warrens", "south_bastion"},
-    {"shadowgate_warrens", "sunken_undercity"},
-    {"sunken_undercity", "south_bastion"}
+    {"old_ironworks", "kings_plaza"},
+    {"kings_plaza", "sunken_undercity"},
+    {"sunken_undercity", "south_bastion"},
+    {"south_bastion", "shadowgate_warrens"},
+    {"shadowgate_warrens", "night_owl_quarter"},
+    {"night_owl_quarter", "barrowgrounds"},
+    {"barrowgrounds", "weavers_commons"},
+    {"weavers_commons", "north_outpost"}
   ]
 
   @impl true
@@ -43,7 +49,7 @@ defmodule SovereignSoulEngineWeb.MapLive do
     end
 
     map_data = TownMap.get_map()
-    selected_district = TownMap.get_district("kings_plaza")
+    selected_district = TownMap.get_district("high_palace") || TownMap.get_district("kings_plaza")
 
     socket =
       socket
@@ -52,7 +58,7 @@ defmodule SovereignSoulEngineWeb.MapLive do
       |> assign(:region_name, map_data.region_name)
       |> assign(:districts, map_data.districts)
       |> assign(:total_souls, map_data.total_souls)
-      |> assign(:selected_slug, "kings_plaza")
+      |> assign(:selected_slug, (if selected_district, do: selected_district.slug, else: "high_palace"))
       |> assign(:selected_district, selected_district)
       |> assign(:ai_prompt, "")
       |> assign(:is_generating_ai?, false)
@@ -171,20 +177,25 @@ defmodule SovereignSoulEngineWeb.MapLive do
 
   # --- SVG Coordinates & Helpers ----------------------------------------------
 
-  defp node_coords("kings_plaza"), do: {500, 400}
-  defp node_coords("crows_keep"), do: {500, 110}
-  defp node_coords("north_outpost"), do: {330, 110}
-  defp node_coords("high_sanctuary"), do: {730, 220}
-  defp node_coords("weavers_commons"), do: {260, 240}
-  defp node_coords("night_owl_quarter"), do: {370, 310}
-  defp node_coords("barrowgrounds"), do: {140, 320}
-  defp node_coords("raven_docks"), do: {850, 400}
-  defp node_coords("sunken_undercity"), do: {500, 490}
-  defp node_coords("old_ironworks"), do: {730, 500}
-  defp node_coords("shadowgate_warrens"), do: {270, 500}
-  defp node_coords("south_bastion"), do: {500, 680}
-  defp node_coords(_), do: {500, 400}
+  # Center Sovereign Citadel
+  defp node_coords("high_palace"), do: {500, 390}
 
+  # Concentric Circle of 12 Surrounding Districts (Clockwise from 12 o'clock)
+  defp node_coords("crows_keep"), do: {500, 110}
+  defp node_coords("high_sanctuary"), do: {640, 150}
+  defp node_coords("raven_docks"), do: {750, 250}
+  defp node_coords("old_ironworks"), do: {780, 390}
+  defp node_coords("kings_plaza"), do: {750, 530}
+  defp node_coords("sunken_undercity"), do: {640, 630}
+  defp node_coords("south_bastion"), do: {500, 670}
+  defp node_coords("shadowgate_warrens"), do: {360, 630}
+  defp node_coords("night_owl_quarter"), do: {250, 530}
+  defp node_coords("barrowgrounds"), do: {220, 390}
+  defp node_coords("weavers_commons"), do: {250, 250}
+  defp node_coords("north_outpost"), do: {360, 150}
+  defp node_coords(_), do: {500, 390}
+
+  defp zone_color(:palace), do: "#fbbf24"
   defp zone_color(:citadel), do: "#f59e0b"
   defp zone_color(:sacred), do: "#06b6d4"
   defp zone_color(:market), do: "#10b981"
@@ -198,6 +209,21 @@ defmodule SovereignSoulEngineWeb.MapLive do
   defp zone_color(:undercity), do: "#14b8a6"
   defp zone_color(:outpost), do: "#64748b"
   defp zone_color(_), do: "#94a3b8"
+
+  defp district_monogram("high_palace"), do: "👑"
+  defp district_monogram("crows_keep"), do: "CRW"
+  defp district_monogram("high_sanctuary"), do: "SAN"
+  defp district_monogram("kings_plaza"), do: "MRK"
+  defp district_monogram("old_ironworks"), do: "IRN"
+  defp district_monogram("raven_docks"), do: "DCK"
+  defp district_monogram("shadowgate_warrens"), do: "SHD"
+  defp district_monogram("south_bastion"), do: "BST"
+  defp district_monogram("barrowgrounds"), do: "BRW"
+  defp district_monogram("night_owl_quarter"), do: "OWL"
+  defp district_monogram("weavers_commons"), do: "WVR"
+  defp district_monogram("sunken_undercity"), do: "SNK"
+  defp district_monogram("north_outpost"), do: "NTH"
+  defp district_monogram(slug), do: String.slice(slug, 0, 3) |> String.upcase()
 
   defp danger_badge_class(danger) when danger >= 7, do: "badge-error"
   defp danger_badge_class(danger) when danger >= 4, do: "badge-warning"
@@ -226,7 +252,7 @@ defmodule SovereignSoulEngineWeb.MapLive do
               <span class="text-xs font-normal text-base-content/50 font-serif italic">({@region_name})</span>
             </h1>
             <p class="text-[11px] text-base-content/50 font-medium tracking-wide">
-              The Dark Walled City of the Crows • 12 Living Districts • Celtic Gothic Lore
+              The Dark Walled City of the Crows • 13 Living Regions (High Palace + 12 Surrounding Districts) • Celtic Gothic Lore
             </p>
           </div>
         </div>
@@ -297,29 +323,50 @@ defmodule SovereignSoulEngineWeb.MapLive do
             <%!-- Compass Rose in upper left --%>
             <use href="#compass-rose" x="80" y="80" />
 
-            <%!-- Outer Wall & River Decorators --%>
+            <%!-- Concentric City Walls (Elder Scrolls Imperial City Architecture) --%>
+            <%!-- Inner Sovereign Citadel Moat & Wall around High Palace --%>
+            <circle
+              cx="500"
+              cy="390"
+              r="115"
+              fill="rgba(251, 191, 36, 0.03)"
+              stroke="rgba(251, 191, 36, 0.25)"
+              stroke-width="2.5"
+              stroke-dasharray="6,6"
+            />
+            <%!-- Outer Ring Avenue Guideline --%>
+            <circle
+              cx="500"
+              cy="390"
+              r="280"
+              fill="none"
+              stroke="rgba(148, 163, 184, 0.12)"
+              stroke-width="2"
+              stroke-dasharray="8,6"
+            />
+            <%!-- Great Mountain Curtain Wall --%>
             <path
               d="M 120 700 C 350 780, 650 780, 880 700 C 950 500, 950 250, 880 120 C 650 40, 350 40, 120 120 C 50 250, 50 500, 120 700 Z"
               fill="none"
-              stroke="rgba(148, 163, 184, 0.12)"
-              stroke-width="3"
-              stroke-dasharray="8,6"
+              stroke="rgba(148, 163, 184, 0.15)"
+              stroke-width="3.5"
+              stroke-dasharray="10,6"
             />
             
-            <%!-- Blackwater River winding from top-right to docks --%>
+            <%!-- Blackwater River winding from northeast through Raven Docks & Foundry --%>
             <path
-              d="M 980 200 Q 860 300, 850 400 T 980 600"
+              d="M 960 110 Q 760 170, 750 250 T 780 390 T 890 620 T 960 720"
               fill="none"
-              stroke="rgba(56, 189, 248, 0.25)"
-              stroke-width="18"
+              stroke="rgba(56, 189, 248, 0.22)"
+              stroke-width="20"
               stroke-linecap="round"
             />
             <path
-              d="M 980 200 Q 860 300, 850 400 T 980 600"
+              d="M 960 110 Q 760 170, 750 250 T 780 390 T 890 620 T 960 720"
               fill="none"
-              stroke="rgba(14, 165, 233, 0.4)"
-              stroke-width="6"
-              stroke-dasharray="12,8"
+              stroke="rgba(14, 165, 233, 0.35)"
+              stroke-width="7"
+              stroke-dasharray="14,8"
             />
 
             <%!-- Road Connections between Districts --%>
@@ -380,10 +427,10 @@ defmodule SovereignSoulEngineWeb.MapLive do
                 <circle
                   cx="0"
                   cy="0"
-                  r={if is_selected, do: 34, else: 30}
+                  r={if district.slug == "high_palace", do: (if is_selected, do: 40, else: 36), else: (if is_selected, do: 34, else: 30)}
                   fill="#0f172a"
                   stroke={if is_selected, do: color, else: "rgba(148, 163, 184, 0.4)"}
-                  stroke-width={if is_selected, do: 3, else: 1.5}
+                  stroke-width={if is_selected, do: 3.5, else: 1.5}
                   class="group-hover:stroke-amber-400 transition-all shadow-xl"
                 />
 
@@ -391,9 +438,9 @@ defmodule SovereignSoulEngineWeb.MapLive do
                 <circle
                   cx="0"
                   cy="0"
-                  r={if is_selected, do: 28, else: 24}
+                  r={if district.slug == "high_palace", do: (if is_selected, do: 32, else: 28), else: (if is_selected, do: 28, else: 24)}
                   fill={color}
-                  fill-opacity="0.18"
+                  fill-opacity={if district.slug == "high_palace", do: "0.28", else: "0.18"}
                 />
 
                 <%!-- District Short Title / Monogram --%>
@@ -401,12 +448,12 @@ defmodule SovereignSoulEngineWeb.MapLive do
                   x="0"
                   y="-4"
                   fill="#ffffff"
-                  font-size="12"
+                  font-size={if district.slug == "high_palace", do: "14", else: "11"}
                   font-weight="bold"
                   text-anchor="middle"
                   class="pointer-events-none"
                 >
-                  {String.slice(district.name, 0, 3)}
+                  {district_monogram(district.slug)}
                 </text>
 
                 <%!-- Soul Count Badge inside Node --%>
@@ -465,7 +512,8 @@ defmodule SovereignSoulEngineWeb.MapLive do
 
           <%!-- Legend Footer --%>
           <div class="absolute bottom-4 left-6 hidden sm:flex items-center gap-3 px-3 py-1.5 rounded-xl bg-base-900/80 backdrop-blur-md border border-base-800 text-[11px] text-base-content/60 shadow-lg">
-            <span class="font-bold text-white uppercase text-[9px] tracking-wider">Districts:</span>
+            <span class="font-bold text-white uppercase text-[9px] tracking-wider">Regions:</span>
+            <span class="flex items-center gap-1"><span class="size-2 rounded-full bg-amber-400"></span> Palace</span>
             <span class="flex items-center gap-1"><span class="size-2 rounded-full bg-amber-500"></span> Citadel</span>
             <span class="flex items-center gap-1"><span class="size-2 rounded-full bg-cyan-500"></span> Sacred</span>
             <span class="flex items-center gap-1"><span class="size-2 rounded-full bg-emerald-500"></span> Market</span>
