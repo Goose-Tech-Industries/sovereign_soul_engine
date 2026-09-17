@@ -104,4 +104,13 @@ defmodule SovereignSoulEngine.Social.MeshProtocolTest do
   test "encounter/2 returns error for non-existent characters" do
     assert {:error, :character_not_found} = MeshProtocol.encounter("ghost_slug_xyz", "shadow_slug_abc")
   end
+
+  test "verify_packet?/5 authenticates valid packet signatures and rejects tampered ones", %{char_a: a, char_b: b} do
+    {:ok, encounter} = MeshProtocol.encounter(a, b)
+
+    assert MeshProtocol.verify_packet?(encounter.id, a.id, b.id, encounter.resonance, encounter.signature)
+    refute MeshProtocol.verify_packet?(encounter.id, a.id, b.id, encounter.resonance + 1, encounter.signature)
+    refute MeshProtocol.verify_packet?(encounter.id, a.id, b.id, encounter.resonance, "forged_signature_hex_0000000000000000000000000000000000000000000000")
+  end
 end
+

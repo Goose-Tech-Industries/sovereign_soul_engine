@@ -9,7 +9,8 @@ defmodule SovereignSoulEngine.Social.MeshProtocol do
      OCEAN trait vector distance, and neurochemical compatibility.
   3. Dynamically generates Theory-of-Mind greetings modulated by persona speech style,
      neurochemistry, and resonance depth.
-  4. Cryptographically signs the encounter packet to prevent adversarial spoofing.
+  4. Cryptographically signs the encounter packet using HMAC-SHA256 derived from the
+     sovereign node's secret_key_base or SOVEREIGN_MESH_SECRET environment variable.
   5. Records qualitative impressions in each soul's Theory of Mind graph.
   """
 
@@ -21,7 +22,6 @@ defmodule SovereignSoulEngine.Social.MeshProtocol do
   alias SovereignSoulEngine.Repo
 
   @pubsub_topic "social:mesh:encounters"
-  @signing_secret "sovereign_mesh_ed25519_hmac_v1_secret"
 
   @doc """
   Processes an encounter between two souls.
@@ -254,10 +254,34 @@ defmodule SovereignSoulEngine.Social.MeshProtocol do
 
   # ── Cryptographic Signature ────────────────────────────────────────────────
 
+  @doc """
+  Verifies the cryptographic HMAC-SHA256 signature of a mesh encounter packet.
+  Returns true if authentic, false otherwise.
+  """
+  def verify_packet?(encounter_id, soul_a_id, soul_b_id, resonance, signature) do
+    expected = sign_packet(encounter_id, soul_a_id, soul_b_id, resonance)
+    Plug.Crypto.secure_compare(expected, signature)
+  rescue
+    _ -> false
+  end
+
   defp sign_packet(encounter_id, soul_a_id, soul_b_id, resonance) do
     payload = "#{encounter_id}:#{soul_a_id}:#{soul_b_id}:#{resonance}"
-    :crypto.mac(:hmac, :sha256, @signing_secret, payload)
+    :crypto.mac(:hmac, :sha256, signing_secret(), payload)
     |> Base.encode16(case: :lower)
+  end
+
+  defp signing_secret do
+    System.get_env("SOVEREIGN_MESH_SECRET") ||
+      endpoint_secret() ||
+      :crypto.hash(:sha256, "sovereign_mesh_node_secret_entropy")
+  end
+
+  defp endpoint_secret do
+    case Application.get_env(:sovereign_soul_engine, SovereignSoulEngineWeb.Endpoint) do
+      endpoint_cfg when is_list(endpoint_cfg) -> Keyword.get(endpoint_cfg, :secret_key_base)
+      _ -> nil
+    end
   end
 
   # ── Theory of Mind Knowledge Storage ──────────────────────────────────────
