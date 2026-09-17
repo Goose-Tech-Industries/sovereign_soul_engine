@@ -35,15 +35,19 @@ defmodule SovereignSoulEngine.Voice do
   @doc """
   Generates speech for a given `SceneMessage` asynchronously under Task.Supervisor,
   attaches the audio URL to the message's metadata, and broadcasts the update.
+
+  Accepts the same options as `speak_message/3` — most importantly a `:generate`
+  function for hermetic testing (see below).
   """
-  @spec speak_message_async(SceneMessage.t(), Character.t() | nil) :: {:ok, pid()} | {:error, any()}
-  def speak_message_async(message, character) do
+  @spec speak_message_async(SceneMessage.t(), Character.t() | nil, keyword()) ::
+          {:ok, pid()} | {:error, any()}
+  def speak_message_async(message, character, opts \\ []) do
     caller_pid = self()
 
     task_fn = fn ->
       try do
         try_allow_sandbox(caller_pid)
-        speak_message(message, character)
+        speak_message(message, character, opts)
       rescue
         _ -> :ok
       catch
@@ -66,25 +70,33 @@ defmodule SovereignSoulEngine.Voice do
   @spec speak_message(SceneMessage.t(), Character.t() | nil) ::
           {:ok, SceneMessage.t()} | {:error, any()}
   def speak_message(%SceneMessage{} = message, character) do
-    if configured?() and is_binary(message.content) and String.trim(message.content) != "" do
+    speak_message(message, character, [])
+  end
+
+  @doc """
+  Synchronous speech generation with injectable options.
+
+  A `:generate` function may be injected for hermetic testing; it receives
+  `(content, character, message_id)` and must return
+  `{:ok, %{audio_url: url}}` or `{:error, reason}`. When `:generate` is present
+  the `configured?/0` gate is bypassed so tests never reach the network.
+  """
+  @spec speak_message(SceneMessage.t(), Character.t() | nil, keyword()) ::
+          {:ok, SceneMessage.t()} | {:error, any()}
+  def speak_message(%SceneMessage{} = message, character, opts) do
+    generate = Keyword.get(opts, :generate, &default_generate/3)
+    injectable? = Keyword.has_key?(opts, :generate)
+
+    if (injectable? or configured?()) and is_binary(message.content) and
+         String.trim(message.content) != "" do
       voice_id = resolve_voice_id(character)
 
-      gen_result =
-        if ElevenLabs.configured?() do
-          ElevenLabs.generate_speech(message.content, voice_id: voice_id, filename: "msg_#{message.id}")
-        else
-          LocalTTS.generate_speech(message.content, character: character, filename: "msg_#{message.id}")
-        end
-
-      case gen_result do
+      case generate.(message.content, character, message.id) do
         {:ok, %{audio_url: audio_url}} ->
           update_message_audio_metadata(message, voice_id, audio_url)
 
         {:error, reason} ->
-          Logger.warning(
-            "Speech generation failed for message #{message.id}: #{inspect(reason)}"
-          )
-
+          Logger.warning("Speech generation failed for message #{message.id}: #{inspect(reason)}")
           {:error, reason}
       end
     else
@@ -92,7 +104,22 @@ defmodule SovereignSoulEngine.Voice do
     end
   end
 
-  defp update_message_audio_metadata(%SceneMessage{id: id, scene_id: scene_id}, voice_id, audio_url) do
+  defp default_generate(content, character, message_id) do
+    if ElevenLabs.configured?() do
+      ElevenLabs.generate_speech(content,
+        voice_id: resolve_voice_id(character),
+        filename: "msg_#{message_id}"
+      )
+    else
+      LocalTTS.generate_speech(content, character: character, filename: "msg_#{message_id}")
+    end
+  end
+
+  defp update_message_audio_metadata(
+         %SceneMessage{id: id, scene_id: scene_id},
+         voice_id,
+         audio_url
+       ) do
     try do
       fresh_message = Repo.get(SceneMessage, id)
 
@@ -130,11 +157,17 @@ defmodule SovereignSoulEngine.Voice do
 
       e in Ecto.StaleEntryError ->
         Logger.debug("Stale entry on audio metadata update, retrying once: #{inspect(e)}")
+
         case Repo.get(SceneMessage, id) do
-          nil -> {:error, :message_not_found}
+          nil ->
+            {:error, :message_not_found}
+
           refreshed ->
             current_meta = refreshed.metadata || %{}
-            Scenes.update_message(refreshed, %{metadata: Map.put(current_meta, "audio_url", audio_url)})
+
+            Scenes.update_message(refreshed, %{
+              metadata: Map.put(current_meta, "audio_url", audio_url)
+            })
         end
     catch
       :exit, _reason ->

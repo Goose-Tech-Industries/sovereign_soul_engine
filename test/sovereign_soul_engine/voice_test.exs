@@ -44,7 +44,45 @@ defmodule SovereignSoulEngine.VoiceTest do
     assert {:error, :not_configured_or_empty} = Voice.speak_message(empty_msg, char)
   end
 
-  test "speak_message_async/2 spawns supervised unlinked task without crashing caller", %{character: char, message: msg} do
-    assert {:ok, _pid} = Voice.speak_message_async(msg, char)
+  test "speak_message/3 with injected generator attaches audio hermetically", %{
+    character: char,
+    message: msg
+  } do
+    fake_generate = fn _content, _character, _message_id ->
+      {:ok, %{audio_url: "/fake/audio.mp3"}}
+    end
+
+    assert {:ok, updated} = Voice.speak_message(msg, char, generate: fake_generate)
+
+    assert updated.metadata["audio_url"] == "/fake/audio.mp3"
+    assert updated.metadata["voice_status"] == "ready"
+  end
+
+  test "speak_message/3 with injected generator surfaces generation errors", %{
+    character: char,
+    message: msg
+  } do
+    assert {:error, :stubbed_failure} =
+             Voice.speak_message(msg, char,
+               generate: fn _c, _ch, _id -> {:error, :stubbed_failure} end
+             )
+  end
+
+  test "speak_message_async/3 spawns supervised unlinked task and attaches audio without a network call",
+       %{
+         character: char,
+         message: msg
+       } do
+    {:ok, pid} =
+      Voice.speak_message_async(msg, char,
+        generate: fn _c, _ch, _id -> {:ok, %{audio_url: "/fake/async.mp3"}} end
+      )
+
+    ref = Process.monitor(pid)
+    assert_receive {:DOWN, ^ref, :process, ^pid, :normal}, 2_000
+
+    updated = Scenes.get_message(msg.id)
+    assert updated.metadata["audio_url"] == "/fake/async.mp3"
+    assert updated.metadata["voice_status"] == "ready"
   end
 end
