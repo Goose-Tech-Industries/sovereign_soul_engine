@@ -41,8 +41,14 @@ defmodule SovereignSoulEngine.Voice do
     caller_pid = self()
 
     task_fn = fn ->
-      try_allow_sandbox(caller_pid)
-      speak_message(message, character)
+      try do
+        try_allow_sandbox(caller_pid)
+        speak_message(message, character)
+      rescue
+        _ -> :ok
+      catch
+        :exit, _ -> :ok
+      end
     end
 
     case Process.whereis(SovereignSoulEngine.TaskSupervisor) do
@@ -130,15 +136,21 @@ defmodule SovereignSoulEngine.Voice do
             current_meta = refreshed.metadata || %{}
             Scenes.update_message(refreshed, %{metadata: Map.put(current_meta, "audio_url", audio_url)})
         end
+    catch
+      :exit, _reason ->
+        Logger.debug("Caller exited or DB connection checked in during sandbox async voice task")
+        {:ok, %SceneMessage{id: id, scene_id: scene_id}}
     end
   end
 
   defp try_allow_sandbox(caller_pid) do
-    if Code.ensure_loaded?(Ecto.Adapters.SQL.Sandbox) do
+    if Code.ensure_loaded?(Ecto.Adapters.SQL.Sandbox) and Process.alive?(caller_pid) do
       try do
         Ecto.Adapters.SQL.Sandbox.allow(SovereignSoulEngine.Repo, caller_pid, self())
       rescue
         _ -> :ok
+      catch
+        :exit, _ -> :ok
       end
     end
   end
