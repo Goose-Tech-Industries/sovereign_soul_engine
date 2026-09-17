@@ -5,20 +5,27 @@ defmodule SovereignSoulEngine.World.Simulation do
   A step regenerates social stamina, matches the pilot cohort of souls who are
   "in the square" (their `IntentEngine` disposition is social), and runs
   deterministic encounters: `MeshProtocol` resonance → relationship update →
-  memory → signed world event. The LLM is reserved for high-salience moments via
-  the `:llm` option, which routes a high-resonance pair through
-  `NPCConversation`.
+  memory → three-party gossip → signed world event. A passive drift pass then
+  adjusts every cohort relationship by value/wound compatibility.
 
-  This is the counterpart to `NPCScheduler`: that drives the general NPC
-  population (drift + occasional LLM conversation); this drives the always-on
-  world scene with zero inference cost.
+  The LLM is reserved for high-salience moments via the `:llm` option, which
+  routes a high-resonance pair through `NPCConversation`.
   """
 
   use GenServer
 
-  alias SovereignSoulEngine.{Characters, Identity, Memories, Relationships, Souls, World}
+  alias SovereignSoulEngine.{Characters, Identity, Memories, Relationships, Repo, Souls, World}
+  alias SovereignSoulEngine.Relationships.Relationship
   alias SovereignSoulEngine.Souls.IntentEngine
-  alias SovereignSoulEngine.Social.{MeshProtocol, NPCConversation}
+
+  alias SovereignSoulEngine.Social.{
+    GossipNetwork,
+    MeshProtocol,
+    NPCConversation,
+    SocialDriftEngine
+  }
+
+  import Ecto.Query, warn: false
 
   @pilot_slugs ~w(maya ravina valeria corvus quill soren)
   @stamina_threshold 30
@@ -74,13 +81,16 @@ defmodule SovereignSoulEngine.World.Simulation do
 
   defp do_step(opts) do
     souls = load_pilot()
+    cohort_ids = Enum.map(souls, & &1.id)
     regenerate_stamina(souls)
 
     encounters =
       souls
       |> Enum.filter(&eligible?/1)
       |> pair_up()
-      |> Enum.map(fn {a, b} -> encounter(a, b, opts) end)
+      |> Enum.map(fn {a, b} -> encounter(a, b, cohort_ids, opts) end)
+
+    run_drift(souls)
 
     %{souls: length(souls), encounters: encounters}
   end
@@ -139,7 +149,7 @@ defmodule SovereignSoulEngine.World.Simulation do
 
   # --- Hermetic encounter -----------------------------------------------------
 
-  defp encounter(a, b, opts) do
+  defp encounter(a, b, cohort_ids, opts) do
     cond do
       not can_meet?(a) or not can_meet?(b) ->
         %{a: a.slug, b: b.slug, outcome: :insufficient_stamina}
@@ -150,6 +160,7 @@ defmodule SovereignSoulEngine.World.Simulation do
 
         apply_relationship(a, b, delta)
         record_memory(a, b, resonance)
+        gossip_between(a, b, cohort_ids)
         drain_stamina(a)
         drain_stamina(b)
         record_world_event(a, b, resonance)
@@ -241,6 +252,116 @@ defmodule SovereignSoulEngine.World.Simulation do
     :ok
   end
 
+  # --- Three-party gossip -----------------------------------------------------
+
+  # When A meets B, A shares their most salient opinion about a third party C.
+  defp gossip_between(a, b, cohort_ids) do
+    gossip_one(a, b, cohort_ids)
+    gossip_one(b, a, cohort_ids)
+    :ok
+  end
+
+  defp gossip_one(speaker, listener, cohort_ids) do
+    case most_salient_third_party(speaker, listener, cohort_ids) do
+      nil ->
+        :ok
+
+      {subject, event_type, intensity} ->
+        GossipNetwork.propagate(speaker.id, listener.id, subject.id, %{
+          event_type: event_type,
+          summary: gossip_summary(event_type, subject),
+          intensity: intensity
+        })
+    end
+  end
+
+  defp most_salient_third_party(speaker, listener, cohort_ids) do
+    speaker.id
+    |> Relationships.list_relationships_for_source()
+    |> Enum.filter(fn rel ->
+      rel.target_character_id in cohort_ids and rel.target_character_id != listener.id
+    end)
+    |> Enum.map(fn rel -> {rel, salience_and_type(rel)} end)
+    |> Enum.reject(fn {_rel, {salience, _type}} -> is_nil(salience) end)
+    |> Enum.max_by(fn {_rel, {salience, _type}} -> salience end, fn -> nil end)
+    |> case do
+      nil ->
+        nil
+
+      {rel, {_salience, event_type}} ->
+        subject = Characters.get_character(rel.target_character_id)
+        {subject, event_type, gossip_intensity(rel)}
+    end
+  end
+
+  defp salience_and_type(rel) do
+    anger = rel.anger || 0
+    fear = rel.fear || 0
+    affinity = rel.affinity || 0
+    wound = rel.wound || 0
+
+    cond do
+      wound >= 60 -> {wound + anger, :betrayed_me}
+      anger >= 60 -> {anger, :insulted_me}
+      fear >= 60 -> {fear, :threatened_me}
+      affinity <= -40 -> {abs(affinity), :betrayed_me}
+      affinity >= 60 -> {affinity, :praised_me}
+      true -> {nil, nil}
+    end
+  end
+
+  defp gossip_intensity(rel) do
+    max(max(rel.anger || 0, rel.fear || 0), abs(rel.affinity || 0))
+  end
+
+  defp gossip_summary(:insulted_me, subject), do: "#{subject.name} has been difficult lately"
+  defp gossip_summary(:betrayed_me, subject), do: "#{subject.name} cannot be trusted"
+  defp gossip_summary(:threatened_me, subject), do: "#{subject.name} is dangerous"
+  defp gossip_summary(:praised_me, subject), do: "#{subject.name} has earned great respect"
+
+  # --- Passive drift ----------------------------------------------------------
+
+  defp run_drift(souls) do
+    ids = Enum.map(souls, & &1.id)
+
+    rels =
+      Repo.all(
+        from r in Relationship,
+          where: r.source_character_id in ^ids and r.target_character_id in ^ids
+      )
+
+    profiles =
+      ids
+      |> Enum.map(fn id -> {id, Souls.get_soul_profile_by_character(id)} end)
+      |> Enum.reject(fn {_id, p} -> is_nil(p) end)
+      |> Map.new()
+
+    Enum.each(rels, fn rel ->
+      profile_a = Map.get(profiles, rel.source_character_id)
+      profile_b = Map.get(profiles, rel.target_character_id)
+
+      if profile_a && profile_b do
+        deltas = SocialDriftEngine.compute_drift(profile_a, profile_b, rel)
+        apply_drift(rel, deltas)
+      end
+    end)
+  end
+
+  defp apply_drift(rel, deltas) do
+    new_trust = clamp(rel.trust + Map.get(deltas, :trust, 0), 0, 100)
+    new_affinity = clamp(rel.affinity + Map.get(deltas, :affinity, 0), -100, 100)
+    new_anger = clamp(rel.anger + Map.get(deltas, :anger, 0), 0, 100)
+
+    if new_trust != rel.trust or new_affinity != rel.affinity or new_anger != rel.anger do
+      Relationships.update_relationship(rel, %{
+        trust: new_trust,
+        affinity: new_affinity,
+        anger: new_anger
+      })
+    end
+  end
+
   defp clamp_dim(:affinity, v), do: v |> max(-100) |> min(100)
   defp clamp_dim(_dim, v), do: v |> max(0) |> min(100)
+  defp clamp(v, min, max), do: v |> max(min) |> min(max)
 end

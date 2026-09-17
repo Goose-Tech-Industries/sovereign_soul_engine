@@ -49,4 +49,45 @@ defmodule SovereignSoulEngine.World.SimulationTest do
   test "step/1 with llm: true does not raise (high-salience path is fire-and-forget)" do
     assert {:ok, _summary} = Simulation.step(llm: true)
   end
+
+  test "three-party gossip ripples a grudge to a soul who has never met the subject" do
+    maya = Characters.get_character_by_slug!("maya")
+    corvus = Characters.get_character_by_slug!("corvus")
+    soren = Characters.get_character_by_slug!("soren")
+
+    # Maya nurses a grudge against Soren.
+    Relationships.create_relationship(%{
+      source_character_id: maya.id,
+      target_character_id: soren.id,
+      anger: 70,
+      affinity: -50
+    })
+
+    assert {:ok, _summary} = Simulation.step()
+
+    # Maya meets Corvus this tick and gossips about Soren; Corvus now distrusts Soren.
+    rel = Relationships.get_relationship(corvus.id, soren.id)
+    assert rel != nil
+    assert rel.affinity < 0
+  end
+
+  test "passive drift adjusts a wounded relationship" do
+    maya = Characters.get_character_by_slug!("maya")
+    ravina = Characters.get_character_by_slug!("ravina")
+
+    {:ok, rel} =
+      Relationships.create_relationship(%{
+        source_character_id: maya.id,
+        target_character_id: ravina.id,
+        wound: 80,
+        trust: 50,
+        affinity: 0
+      })
+
+    assert {:ok, _summary} = Simulation.step()
+
+    drifted = Relationships.get_relationship!(rel.id)
+    assert drifted.trust < 50
+    assert drifted.affinity < 0
+  end
 end

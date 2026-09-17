@@ -60,7 +60,7 @@ defmodule SovereignSoulEngineWeb.SoulChannelTest do
       socket(UserSocket, "soul:#{did}", %{})
       |> subscribe_and_join("world:sovereign-society", %{"did" => did})
 
-    assert_push "presence_state", _state
+    assert_push "presence_state", _state, 1_000
     assert Map.has_key?(Presence.list("world:sovereign-society"), did)
   end
 
