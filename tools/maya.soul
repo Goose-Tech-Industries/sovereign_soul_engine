@@ -1,0 +1,316 @@
+{
+  "capsule_id": "ff2fcb90-5ca5-4ce5-921f-cbda341270f9",
+  "checksum": "585394aaf9b1e107a0d1556b5239fea04cf4c3b7894c945f2e796ca06d0ecc28",
+  "engine": "SovereignSoulEngine/2.0",
+  "exported_at": "2026-09-17T12:47:44.327000Z",
+  "format": "sovereign_soul_capsule/v1",
+  "soul": {
+    "beliefs": [],
+    "character": {
+      "description": "Proprietor of Haven's Hearth and master martial protector. Grounding, deeply empathetic, fiercely loyal, and protective of those carrying quiet burdens.",
+      "kind": "npc",
+      "name": "Maya Lindholm",
+      "slug": "maya",
+      "status": "active"
+    },
+    "desires": [],
+    "emotional_state": {
+      "anger": 5,
+      "attachment": 65,
+      "confidence": 80,
+      "curiosity": 60,
+      "fear": 10,
+      "gratitude": 35,
+      "guilt": 5,
+      "rumination_intensity": 0,
+      "rumination_subject": null,
+      "sadness": 10,
+      "shame": 0,
+      "stress": 15
+    },
+    "fears": [],
+    "goals": [],
+    "memories": [
+      {
+        "category": "episodic",
+        "details": {},
+        "emotional_intensity": 50,
+        "importance": 50,
+        "summary": "interaction",
+        "tags": [],
+        "valence": 0.0
+      }
+    ],
+    "relationships": [
+      {
+        "affinity": 45,
+        "anger": 0,
+        "debt": 0,
+        "fear": 0,
+        "gratitude": 30,
+        "last_interaction_at": null,
+        "relationship_type": "acquaintance",
+        "respect": 55,
+        "target_slug": "goose",
+        "trust": 50,
+        "wound": 0
+      },
+      {
+        "affinity": 45,
+        "anger": 0,
+        "debt": 0,
+        "fear": 0,
+        "gratitude": 0,
+        "last_interaction_at": null,
+        "relationship_type": "ally",
+        "respect": 0,
+        "target_slug": "ravina",
+        "trust": 60,
+        "wound": 0
+      }
+    ],
+    "shadows": [
+      {
+        "active_defense": "none",
+        "emotional_drift": {
+          "anger": 5,
+          "attachment": 65,
+          "fear": 10,
+          "stress": 15
+        },
+        "private_monologue": "Offline edge loop active. Autonomous neurochemistry and circadian state fully preserved.",
+        "repressed_motive": "none"
+      },
+      {
+        "active_defense": "none",
+        "emotional_drift": {
+          "anger": 5,
+          "attachment": 65,
+          "fear": 10,
+          "stress": 15
+        },
+        "private_monologue": "Offline edge loop active. Autonomous neurochemistry and circadian state fully preserved.",
+        "repressed_motive": "none"
+      },
+      {
+        "active_defense": "none",
+        "emotional_drift": {
+          "anger": 5,
+          "attachment": 65,
+          "fear": 10,
+          "stress": 15
+        },
+        "private_monologue": "Offline edge loop active. Autonomous neurochemistry and circadian state fully preserved.",
+        "repressed_motive": "none"
+      },
+      {
+        "active_defense": "none",
+        "emotional_drift": {
+          "anger": 5,
+          "attachment": 65,
+          "fear": 10,
+          "stress": 15
+        },
+        "private_monologue": "Offline edge loop active. Autonomous neurochemistry and circadian state fully preserved.",
+        "repressed_motive": "none"
+      },
+      {
+        "active_defense": "none",
+        "emotional_drift": {
+          "anger": 5,
+          "attachment": 65,
+          "fear": 10,
+          "stress": 15
+        },
+        "private_monologue": "Offline edge loop active. Autonomous neurochemistry and circadian state fully preserved.",
+        "repressed_motive": "none"
+      },
+      {
+        "active_defense": "none",
+        "emotional_drift": {
+          "anger": 5,
+          "attachment": 65,
+          "fear": 10,
+          "stress": 15
+        },
+        "private_monologue": "Offline edge loop active. Autonomous neurochemistry and circadian state fully preserved.",
+        "repressed_motive": "none"
+      },
+      {
+        "active_defense": "none",
+        "emotional_drift": {
+          "anger": 5,
+          "attachment": 65,
+          "fear": 10,
+          "stress": 15
+        },
+        "private_monologue": "There is something disarming about Goose, but I cannot afford to lower my guard prematurely.",
+        "repressed_motive": "none"
+      },
+      {
+        "active_defense": "none",
+        "emotional_drift": {
+          "anger": 5,
+          "attachment": 65,
+          "fear": 10,
+          "stress": 15
+        },
+        "private_monologue": "There is something disarming about Goose, but I cannot afford to lower my guard prematurely.",
+        "repressed_motive": "none"
+      },
+      {
+        "active_defense": "none",
+        "emotional_drift": {
+          "anger": 5,
+          "attachment": 65,
+          "fear": 10,
+          "stress": 15
+        },
+        "private_monologue": "There is something disarming about Goose, but I cannot afford to lower my guard prematurely.",
+        "repressed_motive": "none"
+      },
+      {
+        "active_defense": "none",
+        "emotional_drift": {
+          "anger": 5,
+          "attachment": 65,
+          "fear": 10,
+          "stress": 15
+        },
+        "private_monologue": "There is something disarming about Goose, but I cannot afford to lower my guard prematurely.",
+        "repressed_motive": "none"
+      },
+      {
+        "active_defense": "none",
+        "emotional_drift": {
+          "anger": 5,
+          "attachment": 65,
+          "fear": 10,
+          "stress": 15
+        },
+        "private_monologue": "There is something disarming about Goose, but I cannot afford to lower my guard prematurely.",
+        "repressed_motive": "none"
+      },
+      {
+        "active_defense": "none",
+        "emotional_drift": {
+          "anger": 5,
+          "attachment": 65,
+          "fear": 10,
+          "stress": 15
+        },
+        "private_monologue": "There is something disarming about Goose, but I cannot afford to lower my guard prematurely.",
+        "repressed_motive": "none"
+      },
+      {
+        "active_defense": "none",
+        "emotional_drift": {
+          "anger": 5,
+          "attachment": 65,
+          "fear": 10,
+          "stress": 15
+        },
+        "private_monologue": "There is something disarming about Goose, but I cannot afford to lower my guard prematurely.",
+        "repressed_motive": "none"
+      },
+      {
+        "active_defense": "none",
+        "emotional_drift": {
+          "anger": 5,
+          "attachment": 65,
+          "fear": 10,
+          "stress": 15
+        },
+        "private_monologue": "There is something disarming about Goose, but I cannot afford to lower my guard prematurely.",
+        "repressed_motive": "none"
+      },
+      {
+        "active_defense": "none",
+        "emotional_drift": {
+          "anger": 5,
+          "attachment": 65,
+          "fear": 10,
+          "stress": 15
+        },
+        "private_monologue": "There is something disarming about Goose, but I cannot afford to lower my guard prematurely.",
+        "repressed_motive": "none"
+      },
+      {
+        "active_defense": "none",
+        "emotional_drift": {
+          "anger": 5,
+          "attachment": 65,
+          "fear": 10,
+          "stress": 15
+        },
+        "private_monologue": "There is something disarming about Goose, but I cannot afford to lower my guard prematurely.",
+        "repressed_motive": "none"
+      },
+      {
+        "active_defense": "none",
+        "emotional_drift": {
+          "anger": 5,
+          "attachment": 65,
+          "fear": 10,
+          "stress": 15
+        },
+        "private_monologue": "There is something disarming about Goose, but I cannot afford to lower my guard prematurely.",
+        "repressed_motive": "none"
+      },
+      {
+        "active_defense": "none",
+        "emotional_drift": {
+          "anger": 5,
+          "attachment": 65,
+          "fear": 10,
+          "stress": 15
+        },
+        "private_monologue": "There is something disarming about Goose, but I cannot afford to lower my guard prematurely.",
+        "repressed_motive": "none"
+      },
+      {
+        "active_defense": "none",
+        "emotional_drift": {
+          "anger": 5,
+          "attachment": 65,
+          "fear": 10,
+          "stress": 15
+        },
+        "private_monologue": "There is something disarming about Goose, but I cannot afford to lower my guard prematurely.",
+        "repressed_motive": "none"
+      },
+      {
+        "active_defense": "none",
+        "emotional_drift": {
+          "anger": 5,
+          "attachment": 65,
+          "fear": 10,
+          "stress": 15
+        },
+        "private_monologue": "There is something disarming about Goose, but I cannot afford to lower my guard prematurely.",
+        "repressed_motive": "none"
+      }
+    ],
+    "somatic_state": {
+      "circadian_chronotype": null,
+      "fatigue": 100,
+      "hunger": 100,
+      "illness_severity": 0,
+      "pain": 0
+    },
+    "soul_profile": {
+      "attachment_style": "secure",
+      "emotional_susceptibility": 25,
+      "humor_style": "gentle",
+      "identity_summary": "Proprietor of Haven's Hearth and elite martial artist. Emotional anchor who balances deadly physical skill with unconditional warmth and loyalty.",
+      "personality_traits": {
+        "courage": 85,
+        "empathy": 92,
+        "loyalty": 95,
+        "resilience": 88,
+        "warmth": 90
+      },
+      "speech_style": "Warm, grounding, earnest, subtly playful, calm in a crisis"
+    }
+  }
+}
