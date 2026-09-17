@@ -162,6 +162,13 @@ defmodule SovereignSoulEngineWeb.Router do
     post "/alexa", AlexaController, :handle
     post "/relay/inbound", RelayController, :inbound
     get "/world/feed", WorldController, :feed
+
+    # Spatial Town Map & Twisted Paradox Tile Integration
+    get "/town/map", TownController, :map
+    get "/town/districts/:slug", TownController, :district
+    post "/town/districts/:slug/expand", TownController, :expand_district
+    post "/town/simulate_movements", TownController, :simulate_movements
+    post "/town/move_soul", TownController, :move_soul
   end
 
   scope "/", SovereignSoulEngineWeb do
@@ -176,7 +183,9 @@ defmodule SovereignSoulEngineWeb.Router do
 
     live_session :default do
       live "/", DashboardLive, :index
+      live "/world", WorldLive, :index
       live "/chat", ChatLive, :index
+      live "/map", MapLive, :index
       live "/chat/sauce", ChatSauceLive, :index
       live "/characters/:id", CharacterLive, :show
       live "/scenes/:id", SceneLive, :show

@@ -23,6 +23,15 @@ end
 config :sovereign_soul_engine, SovereignSoulEngineWeb.Endpoint,
   http: [port: String.to_integer(System.get_env("PORT", "8561"))]
 
+# Peer-to-peer Soul Society relay (RFC-0002 §3). Read at boot so releases can
+# configure peers/secret without a rebuild. Forwarding is hop-limited; an
+# optional shared secret authenticates peers; a cap bounds remote-soul growth.
+config :sovereign_soul_engine,
+  relay_peers: (System.get_env("RELAY_PEERS") || "") |> String.split(",", trim: true),
+  relay_max_hops: String.to_integer(System.get_env("RELAY_MAX_HOPS") || "2"),
+  relay_secret: System.get_env("RELAY_SECRET"),
+  max_remote_souls: String.to_integer(System.get_env("MAX_REMOTE_SOULS") || "1000")
+
 if config_env() == :prod do
   database_url =
     System.get_env("DATABASE_URL") ||
@@ -52,6 +61,17 @@ if config_env() == :prod do
       environment variable SECRET_KEY_BASE is missing.
       You can generate one by calling: mix phx.gen.secret
       """
+
+  # A shared relay secret is mandatory once peers are configured in production,
+  # otherwise any node could relay envelopes into the cluster.
+  peers = (System.get_env("RELAY_PEERS") || "") |> String.split(",", trim: true)
+
+  if peers != [] and is_nil(System.get_env("RELAY_SECRET")) do
+    raise "RELAY_SECRET is required when RELAY_PEERS is set in production"
+  end
+
+  # In production, WebSocket connections must present a valid tenant API key.
+  config :sovereign_soul_engine, :require_connect_auth, true
 
   host = System.get_env("PHX_HOST") || "example.com"
 

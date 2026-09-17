@@ -1292,6 +1292,13 @@ defmodule SovereignSoulEngineWeb.ChatLive do
               >
                 <.icon name="hero-cpu-chip" class="size-3.5" /> ACP
               </.link>
+              <.link
+                navigate={~p"/sse/map"}
+                class="btn btn-ghost btn-xs text-teal-400 font-semibold flex items-center gap-1"
+                title="Feannag's Rest Living Map"
+              >
+                <.icon name="hero-map" class="size-3.5" /> Map
+              </.link>
               <button
                 phx-click="start_new_group"
                 class="btn btn-ghost btn-xs text-primary font-semibold flex items-center gap-1"
@@ -1706,6 +1713,17 @@ defmodule SovereignSoulEngineWeb.ChatLive do
               <.icon name="hero-home-modern" class="size-3.5 text-teal-400" />
               <span>Neighborhood ({length(@neighborhood_posts)})</span>
             </button>
+
+            <%!-- Feannag's Rest Town Map Link --%>
+            <.link
+              navigate={~p"/sse/map"}
+              id="town-map-nav-btn"
+              class="btn btn-xs flex items-center gap-1.5 border border-amber-500/40 text-amber-400 hover:bg-amber-500/15 transition-all shadow-sm font-semibold"
+              title="Explore the 12 districts of Feannag's Rest interactive map"
+            >
+              <.icon name="hero-map" class="size-3.5 text-amber-400" />
+              <span>Map (12)</span>
+            </.link>
 
             <%!-- Circadian Rhythm & Night-Owl Badge --%>
             <%= if @circadian_state do %>

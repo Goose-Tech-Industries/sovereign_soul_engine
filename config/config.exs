@@ -11,15 +11,6 @@ config :sovereign_soul_engine,
   ecto_repos: [SovereignSoulEngine.Repo],
   generators: [timestamp_type: :utc_datetime]
 
-# Peer-to-peer Soul Society relay (RFC-0002 §3). Peers are comma-separated base
-# URLs; forwarding is hop-limited by relay_max_hops. An optional shared secret
-# authenticates peers; a cap bounds remote-soul materialization.
-config :sovereign_soul_engine,
-  relay_peers: (System.get_env("RELAY_PEERS") || "") |> String.split(",", trim: true),
-  relay_max_hops: String.to_integer(System.get_env("RELAY_MAX_HOPS") || "2"),
-  relay_secret: System.get_env("RELAY_SECRET"),
-  max_remote_souls: String.to_integer(System.get_env("MAX_REMOTE_SOULS") || "1000")
-
 # Configure the endpoint
 config :sovereign_soul_engine, SovereignSoulEngineWeb.Endpoint,
   url: [host: "localhost"],

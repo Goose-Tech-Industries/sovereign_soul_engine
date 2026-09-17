@@ -57,14 +57,17 @@ defmodule SovereignSoulEngineWeb.DashboardLive do
         <%!-- Header --%>
         <header class="flex items-center justify-between">
           <div>
-            <h1 class="text-3xl font-bold tracking-tight text-base-content">
-              Sovereign Soul Engine
-            </h1>
+            <h1 class="text-3xl font-bold tracking-tight text-base-content">Sovereign Soul Engine</h1>
+            
             <p class="mt-1 text-sm text-base-content/60">
               Soul Core — Deterministic Character Runtime
             </p>
           </div>
+          
           <div class="flex gap-3">
+            <.link navigate={~p"/sse/world"} class="btn btn-ghost btn-sm">
+              <.icon name="hero-globe-alt" class="size-4" /> World
+            </.link>
             <.link navigate={~p"/sse/ledger"} class="btn btn-ghost btn-sm">
               <.icon name="hero-book-open" class="size-4" /> Soul Ledger
             </.link>
@@ -73,12 +76,12 @@ defmodule SovereignSoulEngineWeb.DashboardLive do
             </.link>
           </div>
         </header>
-
-        <%!-- Characters Section --%>
+         <%!-- Characters Section --%>
         <section>
           <div class="flex items-center justify-between mb-4">
             <h2 class="text-xl font-semibold text-base-content">Characters</h2>
           </div>
+          
           <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <%= for character <- @characters do %>
               <.link
@@ -88,8 +91,10 @@ defmodule SovereignSoulEngineWeb.DashboardLive do
                 <div class="flex items-start justify-between">
                   <div>
                     <h3 class="font-semibold text-base-content">{character.name}</h3>
+                    
                     <p class="text-sm text-base-content/60 mt-0.5">{character.description}</p>
                   </div>
+                  
                   <span class={[
                     "text-xs px-2 py-0.5 rounded-full font-medium",
                     kind_badge_class(character.kind)
@@ -97,6 +102,7 @@ defmodule SovereignSoulEngineWeb.DashboardLive do
                     {character.kind}
                   </span>
                 </div>
+                
                 <div class="flex items-center gap-3 mt-3 text-xs text-base-content/50">
                   <span class={[
                     "inline-block w-2 h-2 rounded-full",
@@ -104,22 +110,22 @@ defmodule SovereignSoulEngineWeb.DashboardLive do
                     character.status == "inactive" && "bg-gray-400",
                     character.status == "archived" && "bg-red-400"
                   ]}>
-                  </span>
-                  {character.status}
+                  </span> {character.status}
                 </div>
               </.link>
             <% end %>
           </div>
         </section>
-
-        <%!-- Scenes Section --%>
+         <%!-- Scenes Section --%>
         <section>
           <div class="flex items-center justify-between mb-4">
             <h2 class="text-xl font-semibold text-base-content">Scenes</h2>
           </div>
+          
           <div :if={@scenes == []} class="text-sm text-base-content/50 italic">
             No scenes yet. Create characters above, then seed a scene from the console.
           </div>
+          
           <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <%= for scene <- @scenes do %>
               <.link
@@ -127,7 +133,9 @@ defmodule SovereignSoulEngineWeb.DashboardLive do
                 class="block p-4 rounded-xl border border-base-300 bg-base-200/50 hover:bg-base-200 transition-colors"
               >
                 <h3 class="font-semibold text-base-content">{scene.title}</h3>
+                
                 <p class="text-sm text-base-content/60 mt-0.5">{scene.location}</p>
+                
                 <div class="flex items-center gap-3 mt-3 text-xs text-base-content/50">
                   <span class={[
                     "inline-block w-2 h-2 rounded-full",
@@ -136,40 +144,41 @@ defmodule SovereignSoulEngineWeb.DashboardLive do
                     scene.status == "completed" && "bg-blue-400",
                     !(scene.status in ["active", "pending", "completed"]) && "bg-gray-400"
                   ]}>
-                  </span>
-                  {scene.status}
+                  </span> {scene.status}
                 </div>
               </.link>
             <% end %>
           </div>
         </section>
-
-        <%!-- Recent Ledger --%>
+         <%!-- Recent Ledger --%>
         <section>
           <div class="flex items-center justify-between mb-4">
             <h2 class="text-xl font-semibold text-base-content">Recent Soul Ledger</h2>
+            
             <.link navigate={~p"/sse/ledger"} class="text-sm text-primary hover:underline">
               View all
             </.link>
           </div>
+          
           <div :if={@ledger_entries == []} class="text-sm text-base-content/50 italic">
             No ledger entries yet. Inject events from a scene to generate entries.
           </div>
+          
           <div class="space-y-2">
             <%= for entry <- @ledger_entries do %>
               <div class="p-3 rounded-lg border border-base-300 bg-base-200/30">
                 <div class="flex items-start justify-between gap-4">
                   <div class="min-w-0">
                     <p class="text-sm font-medium text-base-content truncate">{entry.label}</p>
+                    
                     <p class="text-xs text-base-content/60 mt-0.5 truncate">{entry.summary}</p>
                   </div>
+                  
                   <div class="shrink-0 text-right">
                     <span class="text-xs px-2 py-0.5 rounded bg-base-300 text-base-content/70">
                       {entry.entry_type}
                     </span>
-                    <p class="text-xs text-base-content/40 mt-1">
-                      {format_time(entry.inserted_at)}
-                    </p>
+                    <p class="text-xs text-base-content/40 mt-1">{format_time(entry.inserted_at)}</p>
                   </div>
                 </div>
               </div>

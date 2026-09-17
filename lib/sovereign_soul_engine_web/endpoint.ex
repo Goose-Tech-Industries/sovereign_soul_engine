@@ -16,7 +16,7 @@ defmodule SovereignSoulEngineWeb.Endpoint do
     longpoll: [connect_info: [session: @session_options]]
 
   socket "/sse/socket", SovereignSoulEngineWeb.UserSocket,
-    websocket: true,
+    websocket: [connect_info: [:peer_data]],
     longpoll: false
 
   # Serve static files from "priv/static" directory.

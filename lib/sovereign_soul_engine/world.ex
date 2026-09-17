@@ -52,9 +52,14 @@ defmodule SovereignSoulEngine.World do
   @doc "Appends a world event to the ledger. Returns `{:ok, event}` or `{:error, changeset}`."
   @spec append_event(map()) :: {:ok, WorldEvent.t()} | {:error, Ecto.Changeset.t()}
   def append_event(attrs) do
-    %WorldEvent{}
-    |> WorldEvent.changeset(attrs)
-    |> Repo.insert()
+    case %WorldEvent{} |> WorldEvent.changeset(attrs) |> Repo.insert() do
+      {:ok, event} ->
+        Phoenix.PubSub.broadcast(SovereignSoulEngine.PubSub, "world:feed", {:world_event, event})
+        {:ok, event}
+
+      error ->
+        error
+    end
   end
 
   @doc "Lists recent world events, newest first."

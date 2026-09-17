@@ -1,0 +1,11 @@
+.git
+.gitignore
+_build
+deps
+assets/node_modules
+.env
+.env.*
+test
+docs
+*.md
+.elixir_ls

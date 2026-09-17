@@ -1,0 +1,31 @@
+# fly.toml — Fly.io deploy config (TEMPLATE — fill in before deploying).
+#
+#   fly launch   (or edit app/PHX_HOST/SECRET_KEY_BASE below, then `fly deploy`)
+#
+# Required secrets (set via `fly secrets set KEY=value`):
+#   SECRET_KEY_BASE     mix phx.gen.secret
+#   DATABASE_URL        ecto://USER:PASS@HOST:5432/sovereign_soul_engine
+#   RELAY_SECRET        (only if RELAY_PEERS is non-empty — peers authenticate with it)
+#   PHX_HOST            sovereign-soul-engine.fly.dev
+
+app = "sovereign-soul-engine"
+primary_region = "iad"
+
+[build]
+
+[env]
+  PHX_HOST = "sovereign-soul-engine.fly.dev"
+  PORT = "8080"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+[[vm]]
+  memory = "1gb"
+  cpu_kind = "shared"
+  cpus = 1
