@@ -60,7 +60,12 @@ defmodule SovereignSoulEngine.Souls.PTSDFlashbackTest do
     end
 
     test "matches cues in scene context" do
-      f = PTSDFlashback.detect_flashback([traumatic_memory()], %{"narrative" => "the river rose and they drowned"}, "")
+      f =
+        PTSDFlashback.detect_flashback(
+          [traumatic_memory()],
+          %{"narrative" => "the river rose and they drowned"},
+          ""
+        )
 
       assert f.triggered?
     end

@@ -24,7 +24,9 @@ defmodule SovereignSoulEngine.Souls.NeurochemistryTest do
     end
 
     test "caps cortisol at 100 under extreme inputs" do
-      chem = Neurochemistry.compute(%{stress: 100, fear: 100, anger: 100}, %{pain: 100}, %{wound: 100})
+      chem =
+        Neurochemistry.compute(%{stress: 100, fear: 100, anger: 100}, %{pain: 100}, %{wound: 100})
+
       assert chem.cortisol == 100
     end
 
@@ -59,14 +61,16 @@ defmodule SovereignSoulEngine.Souls.NeurochemistryTest do
       calm = %Neurochemistry{oxytocin: 100, serotonin: 60}
       volatile = %Neurochemistry{oxytocin: 100, serotonin: 20}
 
-      assert Neurochemistry.modulate_delta(:anger, 10, volatile) > Neurochemistry.modulate_delta(:anger, 10, calm)
+      assert Neurochemistry.modulate_delta(:anger, 10, volatile) >
+               Neurochemistry.modulate_delta(:anger, 10, calm)
     end
 
     test "high cortisol sensitizes fear deltas" do
       stressed = %Neurochemistry{cortisol: 80}
       calm = %Neurochemistry{cortisol: 30}
 
-      assert Neurochemistry.modulate_delta(:fear, 10, stressed) > Neurochemistry.modulate_delta(:fear, 10, calm)
+      assert Neurochemistry.modulate_delta(:fear, 10, stressed) >
+               Neurochemistry.modulate_delta(:fear, 10, calm)
     end
 
     test "unknown dimensions pass through unchanged" do

@@ -32,7 +32,11 @@ defmodule SovereignSoulEngine.Souls.EmotionalContagionTest do
 
   describe "apply_contagion/4" do
     test "positive tone with sufficient susceptibility" do
-      assert EmotionalContagion.apply_contagion(nil, :positive, 60) == %{stress: -2, anger: -1, gratitude: 2}
+      assert EmotionalContagion.apply_contagion(nil, :positive, 60) == %{
+               stress: -2,
+               anger: -1,
+               gratitude: 2
+             }
     end
 
     test "negative tone" do
@@ -40,7 +44,11 @@ defmodule SovereignSoulEngine.Souls.EmotionalContagionTest do
     end
 
     test "distressed tone" do
-      assert EmotionalContagion.apply_contagion(nil, :distressed, 60) == %{fear: 3, stress: 4, sadness: 2}
+      assert EmotionalContagion.apply_contagion(nil, :distressed, 60) == %{
+               fear: 3,
+               stress: 4,
+               sadness: 2
+             }
     end
 
     test "low susceptibility produces no contagion" do
@@ -48,15 +56,24 @@ defmodule SovereignSoulEngine.Souls.EmotionalContagionTest do
     end
 
     test "avoidant attachment halves the deltas" do
-      assert EmotionalContagion.apply_contagion(nil, :negative, 60, "avoidant") == %{stress: 1, anger: 1}
+      assert EmotionalContagion.apply_contagion(nil, :negative, 60, "avoidant") == %{
+               stress: 1,
+               anger: 1
+             }
     end
 
     test "anxious attachment doubles the deltas" do
-      assert EmotionalContagion.apply_contagion(nil, :negative, 60, "anxious") == %{stress: 6, anger: 4}
+      assert EmotionalContagion.apply_contagion(nil, :negative, 60, "anxious") == %{
+               stress: 6,
+               anger: 4
+             }
     end
 
     test "secure attachment leaves deltas unchanged" do
-      assert EmotionalContagion.apply_contagion(nil, :negative, 60, "secure") == %{stress: 3, anger: 2}
+      assert EmotionalContagion.apply_contagion(nil, :negative, 60, "secure") == %{
+               stress: 3,
+               anger: 2
+             }
     end
   end
 

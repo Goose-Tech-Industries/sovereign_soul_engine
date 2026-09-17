@@ -11,6 +11,7 @@ defmodule SovereignSoulEngine.Souls.SchemaChangesetsTest do
     SoulShadow,
     SoulProfile
   }
+
   alias SovereignSoulEngine.Memories.Memory
 
   @char "11111111-1111-1111-1111-111111111111"
@@ -75,7 +76,13 @@ defmodule SovereignSoulEngine.Souls.SchemaChangesetsTest do
     end
 
     test "rejects an invalid loss type" do
-      attrs = %{character_id: @char, subject: "x", triggered_at: DateTime.utc_now(), loss_type: "galaxy"}
+      attrs = %{
+        character_id: @char,
+        subject: "x",
+        triggered_at: DateTime.utc_now(),
+        loss_type: "galaxy"
+      }
+
       refute GriefArc.changeset(%GriefArc{}, attrs).valid?
     end
   end
