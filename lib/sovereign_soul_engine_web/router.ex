@@ -16,6 +16,12 @@ defmodule SovereignSoulEngineWeb.Router do
     plug SovereignSoulEngineWeb.Plugs.RateLimit
   end
 
+  # Peer-to-peer relay traffic is authenticated per-message by Ed25519 envelope
+  # signature, not by tenant API key.
+  pipeline :relay do
+    plug :accepts, ["json"]
+  end
+
   # Scoped under /sse to match every other route in this app (see
   # endpoint.ex's `socket "/sse/live"` and `Plug.Static at: "/sse"`) —
   # nginx passes the full request URI through unchanged for this app,
@@ -154,6 +160,7 @@ defmodule SovereignSoulEngineWeb.Router do
   scope "/sse/api", SovereignSoulEngineWeb.Api do
     post "/webhooks/telegram", TelegramWebhookController, :webhook
     post "/alexa", AlexaController, :handle
+    post "/relay/inbound", RelayController, :inbound
   end
 
   scope "/", SovereignSoulEngineWeb do

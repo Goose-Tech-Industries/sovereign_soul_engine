@@ -1,8 +1,8 @@
 {
-  "capsule_id": "ff2fcb90-5ca5-4ce5-921f-cbda341270f9",
-  "checksum": "585394aaf9b1e107a0d1556b5239fea04cf4c3b7894c945f2e796ca06d0ecc28",
+  "capsule_id": "572588a5-c5a3-46e8-8295-b24ab717c09a",
+  "checksum": "8b9bc5d19bff1143b7da26051963334e563197c1881cbe7160d7f9f98c1f18a6",
   "engine": "SovereignSoulEngine/2.0",
-  "exported_at": "2026-09-17T12:47:44.327000Z",
+  "exported_at": "2026-09-17T13:33:17.717000Z",
   "format": "sovereign_soul_capsule/v1",
   "soul": {
     "beliefs": [],
@@ -30,6 +30,11 @@
     },
     "fears": [],
     "goals": [],
+    "identity": {
+      "did": "did:soul:zfMV8nWds115WtRqayWK6dJxsxePuocJCVPbYEB2u8xi",
+      "private_key_sealed": "WENQLnh5dm5ZenB1OFRfXzh0MzdmbE9iYlB6SHREd3ZlbU1Vc01MdVg1UkdRdzNtVHdoRTY4ZThqUUtxUmFCUXNwNVFBZGQ5WXF1RDNpUEYyUWw5eUFTQ3Jsd19VQ3Jac0Vuenc5M3Y0NjRfQ2RaODFWOFc4NHdGNnlobVdmdjFTUQ==",
+      "public_key": "CdM7uOv+Iizh2t2pgq3XFUICYE+9J+ufcH3nE91Xiss="
+    },
     "memories": [
       {
         "category": "episodic",
@@ -56,7 +61,7 @@
         "wound": 0
       },
       {
-        "affinity": 45,
+        "affinity": 35,
         "anger": 0,
         "debt": 0,
         "fear": 0,
@@ -65,7 +70,7 @@
         "relationship_type": "ally",
         "respect": 0,
         "target_slug": "ravina",
-        "trust": 60,
+        "trust": 50,
         "wound": 0
       }
     ],

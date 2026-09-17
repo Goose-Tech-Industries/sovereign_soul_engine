@@ -7,6 +7,7 @@ defmodule SovereignSoulEngine.Souls.SoulCapsuleTest do
   alias SovereignSoulEngine.Memories
   alias SovereignSoulEngine.Relationships
   alias SovereignSoulEngine.Scenes
+  alias SovereignSoulEngine.Identity
 
   setup do
     {:ok, character} =
@@ -121,6 +122,8 @@ defmodule SovereignSoulEngine.Souls.SoulCapsuleTest do
         fear: 10
       })
 
+    {:ok, _soul_did, _private_key} = Identity.generate_did(character.id)
+
     %{character: character, target: target}
   end
 
@@ -227,6 +230,40 @@ defmodule SovereignSoulEngine.Souls.SoulCapsuleTest do
 
       imported = Characters.get_character!(imported.id)
       assert [%{"target_slug" => "sarah"}] = imported.metadata["unresolved_relationships"]
+    end
+  end
+
+  describe "identity" do
+    test "carries the DID identity across import", %{character: character} do
+      {:ok, capsule} = SoulCapsule.export_capsule(character)
+
+      identity = capsule["soul"]["identity"]
+      assert is_binary(identity["did"])
+      assert String.starts_with?(identity["did"], "did:soul:z")
+      assert is_binary(identity["public_key"])
+      assert is_binary(identity["private_key_sealed"])
+
+      assert {:ok, imported} = SoulCapsule.import_capsule(capsule, overwrite: false)
+
+      soul_did = Identity.get_did_for_character(imported.id)
+      assert soul_did != nil
+      assert soul_did.did == identity["did"]
+    end
+
+    test "imports a capsule with no identity gracefully" do
+      {:ok, fresh} =
+        Characters.create_character(%{
+          name: "Fresh Soul",
+          slug: "fresh_soul",
+          kind: "npc",
+          status: "active",
+          description: "No DID yet"
+        })
+
+      {:ok, capsule} = SoulCapsule.export_capsule(fresh)
+
+      assert {:ok, imported} = SoulCapsule.import_capsule(capsule, overwrite: false)
+      assert Identity.get_did_for_character(imported.id) == nil
     end
   end
 

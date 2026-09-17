@@ -26,7 +26,7 @@ defmodule SovereignSoulEngine.Relay.EncounterBridgeTest do
     {:ok, did_a, _} = Identity.generate_did(a.id)
     {:ok, did_b, _} = Identity.generate_did(b.id)
 
-    %{did_a: did_a.did, did_b: did_b.did}
+    %{did_a: did_a.did, did_b: did_b.did, a: a, b: b}
   end
 
   test "encounter?/1 identifies encounter lifecycle envelopes" do
@@ -37,15 +37,19 @@ defmodule SovereignSoulEngine.Relay.EncounterBridgeTest do
     refute EncounterBridge.encounter?(%{})
   end
 
-  test "runs MeshProtocol.encounter for two local souls and records an event", %{
+  test "runs MeshProtocol.encounter for two local souls, records event and establishes relationship", %{
     did_a: did_a,
-    did_b: did_b
+    did_b: did_b,
+    a: a,
+    b: b
   } do
     envelope = %{"from" => did_a, "to" => did_b, "payload" => %{}, "sig" => "signed"}
 
     assert {:ok, _encounter} = EncounterBridge.process_envelope(envelope)
 
     assert [%{kind: "encounter", from_did: ^did_a, to_did: ^did_b}] = World.list_recent_events()
+    assert SovereignSoulEngine.Relationships.get_relationship(a.id, b.id) != nil
+    assert SovereignSoulEngine.Relationships.get_relationship(b.id, a.id) != nil
   end
 
   test "records a remote encounter without a local target", %{did_a: did_a} do

@@ -21,6 +21,8 @@ defmodule SovereignSoulEngine.Souls.SoulCapsule do
   alias SovereignSoulEngine.Characters
   alias SovereignSoulEngine.Characters.Character
   alias SovereignSoulEngine.Souls
+  alias SovereignSoulEngine.Identity
+  alias SovereignSoulEngine.Identity.SoulIdentity
   alias SovereignSoulEngine.Souls.{EmotionalState, SomaticState, SoulShadow, SoulFear}
   alias SovereignSoulEngine.Memories
   alias SovereignSoulEngine.Memories.Memory
@@ -212,7 +214,8 @@ defmodule SovereignSoulEngine.Souls.SoulCapsule do
         ),
       "fears" =>
         Enum.map(fears, &serialize_struct(&1, [:fear_type, :severity, :origin, :status])),
-      "relationships" => Enum.map(relationships, &serialize_relationship/1)
+      "relationships" => Enum.map(relationships, &serialize_relationship/1),
+      "identity" => serialize_identity(character.id)
     }
 
     checksum = compute_checksum(payload, opts)
@@ -250,6 +253,21 @@ defmodule SovereignSoulEngine.Souls.SoulCapsule do
       "last_interaction_at" =>
         rel.last_interaction_at && DateTime.to_iso8601(rel.last_interaction_at)
     }
+  end
+
+  defp serialize_identity(character_id) do
+    case Identity.get_did_for_character(character_id) do
+      nil ->
+        %{}
+
+      soul_did ->
+        %{
+          "did" => soul_did.did,
+          "public_key" => Base.encode64(soul_did.public_key),
+          "private_key_sealed" =>
+            soul_did.private_key_sealed && Base.encode64(soul_did.private_key_sealed)
+        }
+    end
   end
 
   # ── Internal Import ────────────────────────────────────────────────────────
@@ -391,6 +409,9 @@ defmodule SovereignSoulEngine.Souls.SoulCapsule do
       end)
       |> Ecto.Multi.run(:relationships, fn _repo, %{character: character} ->
         restore_relationships(soul["relationships"], character)
+      end)
+      |> Ecto.Multi.run(:identity, fn _repo, %{character: character} ->
+        restore_identity(soul["identity"], character.id)
       end)
 
     case Repo.transaction(multi) do
@@ -536,6 +557,79 @@ defmodule SovereignSoulEngine.Souls.SoulCapsule do
 
     {:ok, resolved}
   end
+
+  defp restore_identity(nil, _character_id), do: {:ok, nil}
+
+  defp restore_identity(identity, character_id) when is_map(identity) do
+    did = identity["did"]
+
+    if is_binary(did) and did != "" do
+      public_key =
+        decode_b64(identity["public_key"]) ||
+          case SoulIdentity.public_key_from_did(did) do
+            {:ok, pub} -> pub
+            _ -> nil
+          end
+
+      sealed = decode_b64(identity["private_key_sealed"])
+
+      case Identity.get_did(did) do
+        nil ->
+          if public_key do
+            case Identity.register_did(%{
+                   character_id: character_id,
+                   did: did,
+                   public_key: public_key,
+                   private_key_sealed: sealed,
+                   active: true
+                 }) do
+              {:ok, soul_did} ->
+                {:ok, soul_did.did}
+
+              {:error, changeset} ->
+                Logger.warning(
+                  "[SoulCapsule] Failed to register DID #{did}: #{inspect(changeset)}"
+                )
+
+                {:ok, nil}
+            end
+          else
+            {:ok, nil}
+          end
+
+        existing ->
+          if existing.character_id == character_id do
+            {:ok, existing.did}
+          else
+            existing
+            |> Identity.SoulDid.changeset(%{
+              character_id: character_id,
+              public_key: public_key || existing.public_key,
+              private_key_sealed: sealed || existing.private_key_sealed,
+              active: true
+            })
+            |> Repo.update()
+            |> case do
+              {:ok, updated} -> {:ok, updated.did}
+              {:error, _} -> {:ok, existing.did}
+            end
+          end
+      end
+    else
+      {:ok, nil}
+    end
+  end
+
+  defp restore_identity(_, _character_id), do: {:ok, nil}
+
+  defp decode_b64(str) when is_binary(str) do
+    case Base.decode64(str) do
+      {:ok, bin} -> bin
+      _ -> nil
+    end
+  end
+
+  defp decode_b64(_), do: nil
 
   defp ensure_import_scene(character) do
     case Scenes.create_scene(%{title: "Capsule Import — #{character.name}", status: "active"}) do

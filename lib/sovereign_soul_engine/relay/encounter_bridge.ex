@@ -11,6 +11,7 @@ defmodule SovereignSoulEngine.Relay.EncounterBridge do
 
   alias SovereignSoulEngine.Characters
   alias SovereignSoulEngine.Identity
+  alias SovereignSoulEngine.Relationships
   alias SovereignSoulEngine.Social.MeshProtocol
   alias SovereignSoulEngine.World
 
@@ -34,8 +35,18 @@ defmodule SovereignSoulEngine.Relay.EncounterBridge do
 
     result =
       case {a, b} do
-        {a, b} when not is_nil(a) and not is_nil(b) -> MeshProtocol.encounter(a, b)
-        _ -> {:ok, :recorded_remote}
+        {a, b} when not is_nil(a) and not is_nil(b) ->
+          case MeshProtocol.encounter(a, b) do
+            {:ok, encounter_data} = ok ->
+              record_relationship(a, b, encounter_data.resonance)
+              ok
+
+            other ->
+              other
+          end
+
+        _ ->
+          {:ok, :recorded_remote}
       end
 
     record_event(envelope)
@@ -61,4 +72,47 @@ defmodule SovereignSoulEngine.Relay.EncounterBridge do
       retained_until: DateTime.add(DateTime.utc_now(), 30 * 24 * 3600, :second)
     })
   end
+
+  defp record_relationship(a, b, resonance) do
+    delta = relationship_delta(resonance)
+    apply_relationship(a, b, delta)
+    apply_relationship(b, a, delta)
+  end
+
+  defp relationship_delta(resonance) do
+    cond do
+      resonance >= 80 -> %{affinity: 5, trust: 4, respect: 3}
+      resonance >= 55 -> %{affinity: 2, trust: 1, respect: 1}
+      resonance >= 30 -> %{affinity: 1}
+      true -> %{affinity: -2, fear: 2, anger: 1}
+    end
+  end
+
+  defp apply_relationship(a, b, delta) do
+    case Relationships.get_relationship(a.id, b.id) do
+      nil ->
+        base = %{
+          source_character_id: a.id,
+          target_character_id: b.id,
+          relationship_type: "acquaintance",
+          last_interaction_at: DateTime.utc_now()
+        }
+
+        attrs = Enum.reduce(delta, base, fn {k, v}, acc -> Map.put(acc, k, clamp_dim(k, v)) end)
+        Relationships.create_relationship(attrs)
+
+      rel ->
+        attrs =
+          Enum.reduce(delta, %{}, fn {k, v}, acc ->
+            Map.put(acc, k, clamp_dim(k, (Map.get(rel, k) || 0) + v))
+          end)
+          |> Map.put(:last_interaction_at, DateTime.utc_now())
+
+        Relationships.update_relationship(rel, attrs)
+    end
+  end
+
+  defp clamp_dim(:relationship_type, v), do: v
+  defp clamp_dim(_k, v) when is_integer(v), do: max(-100, min(100, v))
+  defp clamp_dim(_k, v), do: v
 end

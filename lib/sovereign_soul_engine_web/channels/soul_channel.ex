@@ -1,7 +1,7 @@
 defmodule SovereignSoulEngineWeb.SoulChannel do
   use Phoenix.Channel
 
-  alias SovereignSoulEngine.Relay.{Envelope, EncounterBridge, SeenSet}
+  alias SovereignSoulEngine.Relay.{Envelope, EncounterBridge, Forwarder, SeenSet}
   alias SovereignSoulEngineWeb.Presence
 
   @world_topic "world:sovereign-society"
@@ -23,6 +23,7 @@ defmodule SovereignSoulEngineWeb.SoulChannel do
       {:ok, topic} ->
         Phoenix.PubSub.broadcast(SovereignSoulEngine.PubSub, topic, {:envelope, envelope})
         maybe_dispatch_encounter(envelope)
+        Forwarder.forward(envelope, 1)
         {:reply, :ok, socket}
 
       {:error, reason} ->

@@ -55,6 +55,17 @@ defmodule SovereignSoulEngine.Identity do
     Repo.get_by(SoulDid, did: did_string)
   end
 
+  @doc """
+  Registers a pre-existing DID identity (e.g. one restored from a `.soul`
+  capsule) without generating a fresh keypair.
+  """
+  @spec register_did(map()) :: {:ok, SoulDid.t()} | {:error, Ecto.Changeset.t()}
+  def register_did(attrs) do
+    %SoulDid{}
+    |> SoulDid.changeset(attrs)
+    |> Repo.insert()
+  end
+
   @doc "Unseals a soul's private key. Returns `{:ok, private_key}` or `{:error, reason}`."
   @spec unseal_private_key(SoulDid.t() | nil) :: {:ok, binary()} | {:error, term()}
   def unseal_private_key(%SoulDid{private_key_sealed: sealed}),
