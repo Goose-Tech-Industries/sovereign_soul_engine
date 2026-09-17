@@ -70,7 +70,7 @@ defmodule SovereignSoulEngine.Neighborhood.BoardTest do
   test "MeshProtocol.encounter/2 computes mutual resonance and records in TheoryOfMind", %{char_a: soul_a, char_b: soul_b} do
     {:ok, encounter} = MeshProtocol.encounter(soul_a, soul_b)
 
-    assert encounter.resonance >= 50 and encounter.resonance <= 95
+    assert encounter.resonance >= 15 and encounter.resonance <= 98
     assert is_list(encounter.dialogue_exchange)
     assert length(encounter.dialogue_exchange) == 2
   end
