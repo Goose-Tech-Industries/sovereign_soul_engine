@@ -10,8 +10,9 @@ defmodule SovereignSoulEngine.Souls.SoulCapsule do
   - Complete neurochemistry and emotional baselines
   - Somatic and circadian states
   - Full memory graph (episodic, core, semantic)
-  - Subconscious shadow motives and active defense mechanisms
-  - Cryptographic SHA-256 integrity checksum
+  - Beliefs, desires, goals, subconscious shadows, and active fears
+  - The inter-soul relationship graph (resolved by target slug)
+  - Cryptographic HMAC-SHA256 integrity checksum (key-derivable)
   """
 
   require Logger
@@ -26,26 +27,35 @@ defmodule SovereignSoulEngine.Souls.SoulCapsule do
   alias SovereignSoulEngine.Beliefs.CharacterBelief
   alias SovereignSoulEngine.Desires.SoulDesire
   alias SovereignSoulEngine.Goals.CharacterGoal
+  alias SovereignSoulEngine.Relationships
+  alias SovereignSoulEngine.Relationships.Relationship
+  alias SovereignSoulEngine.Scenes
 
   import Ecto.Query
 
   @format_version "sovereign_soul_capsule/v1"
-  @secret_salt "sovereign_soul_provenance_2026"
 
   # ── Public API ─────────────────────────────────────────────────────────────
 
   @doc """
   Exports a complete soul into a portable capsule map.
+
+  Accepts a `Character` struct or a character id. Options:
+    - `:secret_key` — the HMAC signing key (falls back to the endpoint
+      `secret_key_base`). Supplying an explicit key makes a capsule portable
+      and verifiable across engines that share the key.
   """
-  @spec export_capsule(String.t() | %Character{}) :: {:ok, map()} | {:error, term()}
-  def export_capsule(%Character{} = character) do
-    do_export_capsule(character)
+  @spec export_capsule(String.t() | %Character{}, keyword()) :: {:ok, map()} | {:error, term()}
+  def export_capsule(character_or_id, opts \\ [])
+
+  def export_capsule(%Character{} = character, opts) do
+    do_export_capsule(character, opts)
   end
 
-  def export_capsule(character_id) when is_binary(character_id) do
+  def export_capsule(character_id, opts) when is_binary(character_id) do
     case Characters.get_character(character_id) do
       nil -> {:error, :character_not_found}
-      character -> do_export_capsule(character)
+      character -> do_export_capsule(character, opts)
     end
   end
 
@@ -59,7 +69,7 @@ defmodule SovereignSoulEngine.Souls.SoulCapsule do
 
   @doc """
   Imports a soul capsule from a JSON string or parsed map, reconstituting
-  all psychological layers and memories into the database.
+  all psychological layers, memories, and the relationship graph.
   """
   @spec import_capsule(String.t() | map(), keyword()) :: {:ok, %Character{}} | {:error, term()}
   def import_capsule(input, opts \\ [])
@@ -72,7 +82,7 @@ defmodule SovereignSoulEngine.Souls.SoulCapsule do
   end
 
   def import_capsule(%{} = capsule, opts) do
-    case validate_capsule(capsule) do
+    case validate_capsule(capsule, opts) do
       :ok -> reconstitute_soul(capsule, opts)
       {:error, reason} -> {:error, reason}
     end
@@ -80,7 +90,7 @@ defmodule SovereignSoulEngine.Souls.SoulCapsule do
 
   # ── Internal Export ────────────────────────────────────────────────────────
 
-  defp do_export_capsule(character) do
+  defp do_export_capsule(character, opts) do
     profile = Souls.get_soul_profile_by_character(character.id)
     emotional = Souls.get_emotional_state_by_character(character.id)
     somatic = Souls.get_somatic_state_by_character(character.id)
@@ -88,9 +98,26 @@ defmodule SovereignSoulEngine.Souls.SoulCapsule do
     beliefs = Repo.all(from b in CharacterBelief, where: b.character_id == ^character.id)
     desires = Repo.all(from d in SoulDesire, where: d.character_id == ^character.id)
     goals = Repo.all(from g in CharacterGoal, where: g.character_id == ^character.id)
-    memories = Repo.all(from m in Memory, where: m.owner_character_id == ^character.id, order_by: [desc: m.inserted_at])
-    shadows = Repo.all(from s in SoulShadow, where: s.character_id == ^character.id, order_by: [desc: s.inserted_at], limit: 20)
+
+    memories =
+      Repo.all(
+        from m in Memory,
+          where: m.owner_character_id == ^character.id,
+          order_by: [desc: m.inserted_at]
+      )
+
+    shadows =
+      Repo.all(
+        from s in SoulShadow,
+          where: s.character_id == ^character.id,
+          order_by: [desc: s.inserted_at],
+          limit: 20
+      )
+
     fears = Repo.all(from f in SoulFear, where: f.character_id == ^character.id)
+
+    relationships =
+      Repo.all(from r in Relationship, where: r.source_character_id == ^character.id)
 
     payload = %{
       "character" => %{
@@ -132,9 +159,34 @@ defmodule SovereignSoulEngine.Souls.SoulCapsule do
           :illness_severity,
           :circadian_chronotype
         ]),
-      "beliefs" => Enum.map(beliefs, &serialize_struct(&1, [:claim, :conviction, :emotional_charge])),
-      "desires" => Enum.map(desires, &serialize_struct(&1, [:description, :intensity, :category])),
-      "goals" => Enum.map(goals, &serialize_struct(&1, [:description, :priority, :status, :progress])),
+      "beliefs" =>
+        Enum.map(
+          beliefs,
+          &serialize_struct(&1, [
+            :belief,
+            :domain,
+            :conviction,
+            :is_challenged,
+            :challenged_evidence
+          ])
+        ),
+      "desires" =>
+        Enum.map(
+          desires,
+          &serialize_struct(&1, [:desire, :domain, :urgency, :status, :blocking_belief])
+        ),
+      "goals" =>
+        Enum.map(
+          goals,
+          &serialize_struct(&1, [
+            :goal,
+            :current_step,
+            :blocker,
+            :priority,
+            :status,
+            :progress_notes
+          ])
+        ),
       "memories" =>
         Enum.map(
           memories,
@@ -158,13 +210,16 @@ defmodule SovereignSoulEngine.Souls.SoulCapsule do
             :emotional_drift
           ])
         ),
-      "fears" => Enum.map(fears, &serialize_struct(&1, [:fear_type, :severity, :origin, :status]))
+      "fears" =>
+        Enum.map(fears, &serialize_struct(&1, [:fear_type, :severity, :origin, :status])),
+      "relationships" => Enum.map(relationships, &serialize_relationship/1)
     }
 
-    checksum = compute_checksum(payload)
+    checksum = compute_checksum(payload, opts)
 
     capsule = %{
       "format" => @format_version,
+      "capsule_id" => Ecto.UUID.generate(),
       "engine" => "SovereignSoulEngine/2.0",
       "exported_at" => DateTime.utc_now() |> DateTime.to_iso8601(),
       "checksum" => checksum,
@@ -174,14 +229,37 @@ defmodule SovereignSoulEngine.Souls.SoulCapsule do
     {:ok, capsule}
   end
 
+  defp serialize_relationship(rel) do
+    target_slug =
+      case Characters.get_character(rel.target_character_id) do
+        nil -> nil
+        target -> target.slug
+      end
+
+    %{
+      "target_slug" => target_slug,
+      "relationship_type" => rel.relationship_type,
+      "affinity" => rel.affinity,
+      "trust" => rel.trust,
+      "respect" => rel.respect,
+      "fear" => rel.fear,
+      "anger" => rel.anger,
+      "gratitude" => rel.gratitude,
+      "debt" => rel.debt,
+      "wound" => rel.wound,
+      "last_interaction_at" =>
+        rel.last_interaction_at && DateTime.to_iso8601(rel.last_interaction_at)
+    }
+  end
+
   # ── Internal Import ────────────────────────────────────────────────────────
 
-  defp validate_capsule(%{"format" => format, "soul" => soul, "checksum" => checksum}) do
+  defp validate_capsule(%{"format" => format, "soul" => soul, "checksum" => checksum}, opts) do
     cond do
       format != @format_version ->
         {:error, :unsupported_capsule_format}
 
-      compute_checksum(soul) != checksum ->
+      compute_checksum(soul, opts) != checksum ->
         {:error, :checksum_mismatch_corrupted_capsule}
 
       true ->
@@ -189,7 +267,7 @@ defmodule SovereignSoulEngine.Souls.SoulCapsule do
     end
   end
 
-  defp validate_capsule(_), do: {:error, :malformed_capsule_structure}
+  defp validate_capsule(_, _opts), do: {:error, :malformed_capsule_structure}
 
   defp reconstitute_soul(%{"soul" => soul}, opts) do
     char_data = soul["character"] || %{}
@@ -200,10 +278,7 @@ defmodule SovereignSoulEngine.Souls.SoulCapsule do
       if overwrite? do
         base_slug
       else
-        case Characters.get_character_by_slug(base_slug) do
-          nil -> base_slug
-          _ -> "#{base_slug}_#{:erlang.phash2(:erlang.monotonic_time(), 10_000)}"
-        end
+        resolve_slug(base_slug)
       end
 
     multi =
@@ -236,6 +311,7 @@ defmodule SovereignSoulEngine.Souls.SoulCapsule do
               attachment_style: profile_data["attachment_style"] || "secure",
               identity_summary: profile_data["identity_summary"],
               speech_style: profile_data["speech_style"],
+              humor_style: profile_data["humor_style"],
               personality_traits: profile_data["personality_traits"] || %{}
             })
 
@@ -243,7 +319,8 @@ defmodule SovereignSoulEngine.Souls.SoulCapsule do
             Souls.update_soul_profile(existing, %{
               attachment_style: profile_data["attachment_style"] || existing.attachment_style,
               identity_summary: profile_data["identity_summary"] || existing.identity_summary,
-              personality_traits: profile_data["personality_traits"] || existing.personality_traits
+              personality_traits:
+                profile_data["personality_traits"] || existing.personality_traits
             })
         end
       end)
@@ -297,24 +374,230 @@ defmodule SovereignSoulEngine.Souls.SoulCapsule do
 
         {:ok, length(memories)}
       end)
+      |> Ecto.Multi.run(:beliefs, fn _repo, %{character: character} ->
+        restore_beliefs(soul["beliefs"], character.id)
+      end)
+      |> Ecto.Multi.run(:desires, fn _repo, %{character: character} ->
+        restore_desires(soul["desires"], character.id)
+      end)
+      |> Ecto.Multi.run(:goals, fn _repo, %{character: character} ->
+        restore_goals(soul["goals"], character.id)
+      end)
+      |> Ecto.Multi.run(:shadows, fn _repo, %{character: character} ->
+        restore_shadows(soul["shadows"], character)
+      end)
+      |> Ecto.Multi.run(:fears, fn _repo, %{character: character} ->
+        restore_fears(soul["fears"], character.id)
+      end)
+      |> Ecto.Multi.run(:relationships, fn _repo, %{character: character} ->
+        restore_relationships(soul["relationships"], character)
+      end)
 
     case Repo.transaction(multi) do
       {:ok, %{character: character}} ->
-        Logger.info("[SoulCapsule] Successfully resurrected #{character.name} (#{character.slug})")
+        Logger.info(
+          "[SoulCapsule] Successfully resurrected #{character.name} (#{character.slug})"
+        )
+
         {:ok, character}
 
       {:error, step, failed_value, _changes} ->
-        Logger.error("[SoulCapsule] Failed importing step #{inspect(step)}: #{inspect(failed_value)}")
+        Logger.error(
+          "[SoulCapsule] Failed importing step #{inspect(step)}: #{inspect(failed_value)}"
+        )
+
         {:error, {step, failed_value}}
     end
   end
 
+  # ── Restoration helpers ────────────────────────────────────────────────────
+
+  defp restore_beliefs(beliefs, character_id) do
+    (beliefs || [])
+    |> Enum.each(fn b ->
+      Souls.create_belief(%{
+        character_id: character_id,
+        belief: b["belief"] || "Restored belief",
+        domain: b["domain"] || "world",
+        conviction: b["conviction"] || 50,
+        is_challenged: b["is_challenged"] || false,
+        challenged_evidence: b["challenged_evidence"]
+      })
+    end)
+
+    {:ok, length(beliefs || [])}
+  end
+
+  defp restore_desires(desires, character_id) do
+    (desires || [])
+    |> Enum.each(fn d ->
+      Souls.create_desire(%{
+        character_id: character_id,
+        desire: d["desire"] || "Restored desire",
+        domain: d["domain"] || "connection",
+        urgency: d["urgency"] || 50,
+        status: d["status"] || "active",
+        blocking_belief: d["blocking_belief"]
+      })
+    end)
+
+    {:ok, length(desires || [])}
+  end
+
+  defp restore_goals(goals, character_id) do
+    (goals || [])
+    |> Enum.each(fn g ->
+      Souls.create_goal(%{
+        character_id: character_id,
+        goal: g["goal"] || "Restored goal",
+        current_step: g["current_step"],
+        blocker: g["blocker"],
+        priority: g["priority"] || 50,
+        status: g["status"] || "active",
+        progress_notes: g["progress_notes"]
+      })
+    end)
+
+    {:ok, length(goals || [])}
+  end
+
+  defp restore_shadows(shadows, character) do
+    case shadows || [] do
+      [] ->
+        {:ok, 0}
+
+      list ->
+        scene_id = ensure_import_scene(character)
+
+        Enum.each(list, fn s ->
+          Souls.create_soul_shadow(%{
+            character_id: character.id,
+            scene_id: scene_id,
+            private_monologue: s["private_monologue"],
+            repressed_motive: s["repressed_motive"],
+            active_defense: s["active_defense"] || "none",
+            emotional_drift: s["emotional_drift"]
+          })
+        end)
+
+        {:ok, length(list)}
+    end
+  end
+
+  defp restore_fears(fears, character_id) do
+    (fears || [])
+    |> Enum.each(fn f ->
+      Souls.create_soul_fear(%{
+        character_id: character_id,
+        fear_type: f["fear_type"] || "unknown",
+        severity: f["severity"] || 50,
+        origin: f["origin"] || "baked_in",
+        status: f["status"] || "active"
+      })
+    end)
+
+    {:ok, length(fears || [])}
+  end
+
+  defp restore_relationships(relationships, character) do
+    {resolved, unresolved} =
+      (relationships || [])
+      |> Enum.reduce({0, []}, fn rel, {resolved, unresolved} ->
+        target = rel["target_slug"] && Characters.get_character_by_slug(rel["target_slug"])
+
+        if target do
+          Relationships.create_relationship(%{
+            source_character_id: character.id,
+            target_character_id: target.id,
+            relationship_type: rel["relationship_type"] || "acquaintance",
+            affinity: rel["affinity"] || 0,
+            trust: rel["trust"] || 0,
+            respect: rel["respect"] || 0,
+            fear: rel["fear"] || 0,
+            anger: rel["anger"] || 0,
+            gratitude: rel["gratitude"] || 0,
+            debt: rel["debt"] || 0,
+            wound: rel["wound"] || 0,
+            last_interaction_at: parse_datetime(rel["last_interaction_at"])
+          })
+
+          {resolved + 1, unresolved}
+        else
+          {resolved, [rel | unresolved]}
+        end
+      end)
+
+    if unresolved != [] do
+      current_meta = character.metadata || %{}
+      pending = current_meta["unresolved_relationships"] || []
+      new_meta = Map.put(current_meta, "unresolved_relationships", pending ++ unresolved)
+      Characters.update_character(character, %{metadata: new_meta})
+    end
+
+    {:ok, resolved}
+  end
+
+  defp ensure_import_scene(character) do
+    case Scenes.create_scene(%{title: "Capsule Import — #{character.name}", status: "active"}) do
+      {:ok, scene} -> scene.id
+      {:error, _} -> nil
+    end
+  end
+
+  defp resolve_slug(base_slug) do
+    case Characters.get_character_by_slug(base_slug) do
+      nil -> base_slug
+      _ -> "#{base_slug}_#{:erlang.phash2(:erlang.monotonic_time(), 10_000)}"
+    end
+  end
+
+  defp parse_datetime(nil), do: nil
+
+  defp parse_datetime(str) when is_binary(str) do
+    case DateTime.from_iso8601(str) do
+      {:ok, dt, _offset} -> dt
+      _ -> nil
+    end
+  end
+
+  defp parse_datetime(_), do: nil
+
   # ── Cryptographic Checksum & Serialization Helpers ─────────────────────────
 
-  defp compute_checksum(payload) do
-    serialized = Jason.encode!(payload)
-    :crypto.mac(:hmac, :sha256, @secret_salt, serialized) |> Base.encode16(case: :lower)
+  defp compute_checksum(payload, opts) do
+    serialized = payload |> canonicalize() |> Jason.encode!()
+    :crypto.mac(:hmac, :sha256, signing_key(opts), serialized) |> Base.encode16(case: :lower)
   end
+
+  # Derives the HMAC signing key. An explicit `opts[:secret_key]` wins; otherwise
+  # the endpoint `secret_key_base` (or `SECRET_KEY_BASE`) is used so the checksum
+  # is verifiable across nodes that share the same secret, instead of a shared
+  # compile-time salt.
+  defp signing_key(opts) do
+    cond do
+      is_binary(opts[:secret_key]) and byte_size(opts[:secret_key]) > 0 ->
+        opts[:secret_key]
+
+      true ->
+        endpoint = Application.get_env(:sovereign_soul_engine, SovereignSoulEngineWeb.Endpoint)
+
+        (endpoint && endpoint[:secret_key_base]) ||
+          System.get_env("SECRET_KEY_BASE") ||
+          "sovereign_soul_capsule_insecure_fallback_secret"
+    end
+  end
+
+  # Canonical JSON (key-sorted, recursively) so the checksum is byte-stable
+  # across engines regardless of map insertion order.
+  defp canonicalize(value) when is_map(value) do
+    value
+    |> Enum.sort_by(fn {k, _v} -> to_string(k) end)
+    |> Enum.map(fn {k, v} -> {to_string(k), canonicalize(v)} end)
+    |> Jason.OrderedObject.new()
+  end
+
+  defp canonicalize(value) when is_list(value), do: Enum.map(value, &canonicalize/1)
+  defp canonicalize(value), do: value
 
   defp serialize_struct(nil, _fields), do: %{}
 
