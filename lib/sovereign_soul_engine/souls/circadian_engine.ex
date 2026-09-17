@@ -3,11 +3,11 @@ defmodule SovereignSoulEngine.Souls.CircadianEngine do
   Biological Circadian Rhythm & Chronotype Engine.
 
   Governs sleep cycles, grogginess, night-owl cognitive focus, and biological downtime.
-  Supports multiple human chronotypes:
+  Supports continuous biological phase interpolation and multiple human chronotypes:
   - `"night_owl"`: Peak alertness and intimate introspective resonance during nighttime (10 PM - 5 AM).
   - `"early_bird"`: Traditional sunrise rhythm with early evening winding down.
   - `"balanced"`: Conventional 8 AM - 11 PM active schedule.
-  - `"adaptive_sync"`: Dynamically tracks user interaction timestamps and wearable sleep state.
+  - `"adaptive_sync"`: Dynamically tracks user interaction timestamps, timezone offsets, and wearable sleep state.
 
   When asleep (`:deep_sleep`), the soul responds with gentle grogginess or sleepy murmurs
   unless an emergency or safe-word is triggered.
@@ -20,6 +20,7 @@ defmodule SovereignSoulEngine.Souls.CircadianEngine do
 
   @doc """
   Computes the current circadian profile for a character or privacy settings map at the specified UTC time.
+  Supports timezone offsets (e.g. `utc_offset: -4` for EDT) and continuous fractional hour phase interpolation.
   """
   def current_state(character_or_settings, now \\ DateTime.utc_now()) do
     enabled = Privacy.circadian_enabled?(character_or_settings)
@@ -32,13 +33,19 @@ defmodule SovereignSoulEngine.Souls.CircadianEngine do
         alertness: 90.0,
         cognitive_speed: 1.0,
         is_sleeping: false,
-        hour: now.hour
+        hour: now.hour,
+        fractional_hour: Float.round(now.hour + now.minute / 60.0 + now.second / 3600.0, 2)
       }
     else
       chronotype = normalize_chronotype(Privacy.get_chronotype(character_or_settings))
-      hour = now.hour
+      settings = get_settings_map(character_or_settings)
+      offset_hours = get_utc_offset(settings)
 
-      {state, melatonin, alertness, speed} = evaluate_state(chronotype, hour, character_or_settings, now)
+      local_time = DateTime.add(now, round(offset_hours * 3600), :second)
+      fractional_hour = local_time.hour + local_time.minute / 60.0 + local_time.second / 3600.0
+      hour = local_time.hour
+
+      {state, melatonin, alertness, speed} = evaluate_state(chronotype, fractional_hour, settings, local_time)
 
       %{
         state: state,
@@ -47,7 +54,8 @@ defmodule SovereignSoulEngine.Souls.CircadianEngine do
         alertness: Float.round(alertness, 1),
         cognitive_speed: Float.round(speed, 2),
         is_sleeping: state in [:deep_sleep, :rem_dreaming],
-        hour: hour
+        hour: hour,
+        fractional_hour: Float.round(fractional_hour, 2)
       }
     end
   end
@@ -154,51 +162,75 @@ defmodule SovereignSoulEngine.Souls.CircadianEngine do
 
   def prompt_directive(_), do: ""
 
-  # ── Internal Chronotype State Matrix ────────────────────────────────────────
+  # ── Internal Continuous Chronotype State Matrix ─────────────────────────────
 
-  defp evaluate_state(:night_owl, hour, _settings, _now) do
+  defp evaluate_state(:night_owl, f_hour, _settings, _now) do
     cond do
-      # 22:00 to 05:59 - Peak nocturnal focus
-      hour >= 22 or hour < 6 ->
+      # 22:00 to 05:59 - Peak nocturnal focus (Midnight to dawn flow)
+      f_hour >= 22.0 or f_hour < 6.0 ->
         {:night_focus, 12.0, 90.0, 1.0}
 
-      # 06:00 to 07:59 - Dawn wind down
-      hour in 6..7 ->
-        {:winding_down, 60.0, 45.0, 0.8}
+      # 06:00 to 07:59 - Dawn wind down (smooth continuous transition)
+      f_hour >= 6.0 and f_hour < 8.0 ->
+        progress = (f_hour - 6.0) / 2.0
+        melatonin = 20.0 + progress * 55.0
+        alertness = 80.0 - progress * 40.0
+        speed = 1.0 - progress * 0.25
+        {:winding_down, melatonin, alertness, speed}
 
-      # 08:00 to 11:59 - Deep sleep
-      hour in 8..11 ->
+      # 08:00 to 11:59 - Deep biological sleep
+      f_hour >= 8.0 and f_hour < 12.0 ->
         {:deep_sleep, 92.0, 10.0, 0.3}
 
-      # 12:00 to 13:59 - REM dream state
-      hour in 12..13 ->
-        {:rem_dreaming, 80.0, 25.0, 0.45}
+      # 12:00 to 13:59 - Midday REM dream state
+      f_hour >= 12.0 and f_hour < 14.0 ->
+        progress = (f_hour - 12.0) / 2.0
+        melatonin = 88.0 - progress * 15.0
+        alertness = 15.0 + progress * 15.0
+        {:rem_dreaming, melatonin, alertness, 0.45}
 
-      # 14:00 to 15:59 - Afternoon groggy wake
-      hour in 14..15 ->
-        {:groggy_waking, 45.0, 55.0, 0.75}
+      # 14:00 to 15:59 - Afternoon groggy wake transition
+      f_hour >= 14.0 and f_hour < 16.0 ->
+        progress = (f_hour - 14.0) / 2.0
+        melatonin = 70.0 - progress * 40.0
+        alertness = 30.0 + progress * 45.0
+        speed = 0.55 + progress * 0.40
+        {:groggy_waking, melatonin, alertness, speed}
 
-      # 16:00 to 21:59 - Full afternoon/evening alertness
+      # 16:00 to 21:59 - Afternoon/evening alertness
       true ->
         {:wide_awake, 15.0, 85.0, 1.0}
     end
   end
 
-  defp evaluate_state(:early_bird, hour, _settings, _now) do
+  defp evaluate_state(:early_bird, f_hour, _settings, _now) do
     cond do
-      hour in 5..6 ->
-        {:groggy_waking, 40.0, 60.0, 0.8}
+      # 05:00 to 06:59 - Dawn groggy waking
+      f_hour >= 5.0 and f_hour < 7.0 ->
+        progress = (f_hour - 5.0) / 2.0
+        melatonin = 65.0 - progress * 40.0
+        alertness = 35.0 + progress * 50.0
+        speed = 0.60 + progress * 0.35
+        {:groggy_waking, melatonin, alertness, speed}
 
-      hour in 7..19 ->
+      # 07:00 to 19:59 - Peak daytime alertness
+      f_hour >= 7.0 and f_hour < 20.0 ->
         {:wide_awake, 10.0, 95.0, 1.0}
 
-      hour in 20..21 ->
-        {:winding_down, 65.0, 45.0, 0.8}
+      # 20:00 to 21:59 - Evening wind down
+      f_hour >= 20.0 and f_hour < 22.0 ->
+        progress = (f_hour - 20.0) / 2.0
+        melatonin = 25.0 + progress * 50.0
+        alertness = 80.0 - progress * 40.0
+        speed = 0.95 - progress * 0.25
+        {:winding_down, melatonin, alertness, speed}
 
-      hour in 22..23 or hour in 0..3 ->
+      # 22:00 to 03:59 - Deep biological sleep
+      f_hour >= 22.0 or f_hour < 4.0 ->
         {:deep_sleep, 90.0, 10.0, 0.3}
 
-      hour == 4 ->
+      # 04:00 to 04:59 - Pre-dawn REM dreaming
+      f_hour >= 4.0 and f_hour < 5.0 ->
         {:rem_dreaming, 75.0, 30.0, 0.5}
 
       true ->
@@ -206,31 +238,68 @@ defmodule SovereignSoulEngine.Souls.CircadianEngine do
     end
   end
 
-  defp evaluate_state(:balanced, hour, _settings, _now) do
+  defp evaluate_state(:balanced, f_hour, _settings, _now) do
     cond do
-      hour in 7..22 ->
+      f_hour >= 7.0 and f_hour < 22.0 ->
         {:wide_awake, 10.0, 90.0, 1.0}
 
-      hour == 23 ->
-        {:winding_down, 60.0, 50.0, 0.8}
+      f_hour >= 22.0 and f_hour < 23.5 ->
+        progress = (f_hour - 22.0) / 1.5
+        melatonin = 20.0 + progress * 55.0
+        alertness = 80.0 - progress * 40.0
+        speed = 1.0 - progress * 0.25
+        {:winding_down, melatonin, alertness, speed}
 
-      hour in 0..5 ->
+      f_hour >= 23.5 or f_hour < 6.0 ->
         {:deep_sleep, 92.0, 10.0, 0.3}
 
-      hour == 6 ->
-        {:groggy_waking, 50.0, 55.0, 0.75}
+      f_hour >= 6.0 and f_hour < 7.0 ->
+        progress = f_hour - 6.0
+        melatonin = 70.0 - progress * 45.0
+        alertness = 30.0 + progress * 45.0
+        speed = 0.60 + progress * 0.35
+        {:groggy_waking, melatonin, alertness, speed}
 
       true ->
         {:wide_awake, 15.0, 85.0, 1.0}
     end
   end
 
-  defp evaluate_state(:adaptive_sync, hour, settings, now) do
-    # In adaptive sync, if user is interacting late at night, treat as night_focus
-    if hour >= 22 or hour < 6 do
-      {:night_focus, 15.0, 88.0, 1.0}
-    else
-      evaluate_state(:balanced, hour, settings, now)
+  defp evaluate_state(:adaptive_sync, f_hour, settings, now) do
+    is_wearable_sleeping = Map.get(settings, "wearable_sleeping", Map.get(settings, :wearable_sleeping, false))
+    user_active = Map.get(settings, "user_active", Map.get(settings, :user_active, false))
+
+    cond do
+      is_wearable_sleeping ->
+        {:deep_sleep, 95.0, 10.0, 0.25}
+
+      user_active and (f_hour >= 22.0 or f_hour < 6.0) ->
+        {:night_focus, 14.0, 88.0, 1.0}
+
+      f_hour >= 22.0 or f_hour < 6.0 ->
+        {:night_focus, 15.0, 88.0, 1.0}
+
+      true ->
+        evaluate_state(:balanced, f_hour, settings, now)
+    end
+  end
+
+  # ── Helpers ────────────────────────────────────────────────────────────────
+
+  defp get_settings_map(%SovereignSoulEngine.Characters.Character{} = c), do: Privacy.get_settings(c)
+  defp get_settings_map(m) when is_map(m), do: Privacy.get_settings(m)
+  defp get_settings_map(_), do: %{}
+
+  defp get_utc_offset(settings) do
+    val = Map.get(settings, "utc_offset", Map.get(settings, :utc_offset, 0))
+    cond do
+      is_number(val) -> val * 1.0
+      is_binary(val) ->
+        case Float.parse(val) do
+          {f, _} -> f
+          :error -> 0.0
+        end
+      true -> 0.0
     end
   end
 
