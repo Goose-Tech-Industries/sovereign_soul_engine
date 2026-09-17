@@ -161,11 +161,11 @@ defmodule SovereignSoulEngine.Voice.ProsodyEngine do
     case Map.get(metadata, "neurochem") do
       nc when is_map(nc) ->
         %{
-          valence: Map.get(nc, "valence", 50.0),
-          arousal: Map.get(nc, "arousal", 50.0),
-          cortisol: Map.get(nc, "cortisol", 15.0),
-          dopamine: Map.get(nc, "dopamine", 50.0),
-          oxytocin: Map.get(nc, "oxytocin", 50.0)
+          valence: safe_float(Map.get(nc, "valence"), 50.0),
+          arousal: safe_float(Map.get(nc, "arousal"), 50.0),
+          cortisol: safe_float(Map.get(nc, "cortisol"), 15.0),
+          dopamine: safe_float(Map.get(nc, "dopamine"), 50.0),
+          oxytocin: safe_float(Map.get(nc, "oxytocin"), 50.0)
         }
       _ ->
         %{valence: 50.0, arousal: 50.0, cortisol: 15.0, dopamine: 50.0, oxytocin: 50.0}
@@ -174,15 +174,26 @@ defmodule SovereignSoulEngine.Voice.ProsodyEngine do
 
   defp extract_neurochem(map) when is_map(map) do
     %{
-      valence: Map.get(map, :valence, Map.get(map, "valence", 50.0)),
-      arousal: Map.get(map, :arousal, Map.get(map, "arousal", 50.0)),
-      cortisol: Map.get(map, :cortisol, Map.get(map, "cortisol", 15.0)),
-      dopamine: Map.get(map, :dopamine, Map.get(map, "dopamine", 50.0)),
-      oxytocin: Map.get(map, :oxytocin, Map.get(map, "oxytocin", 50.0))
+      valence: safe_float(Map.get(map, :valence, Map.get(map, "valence")), 50.0),
+      arousal: safe_float(Map.get(map, :arousal, Map.get(map, "arousal")), 50.0),
+      cortisol: safe_float(Map.get(map, :cortisol, Map.get(map, "cortisol")), 15.0),
+      dopamine: safe_float(Map.get(map, :dopamine, Map.get(map, "dopamine")), 50.0),
+      oxytocin: safe_float(Map.get(map, :oxytocin, Map.get(map, "oxytocin")), 50.0)
     }
   end
 
   defp extract_neurochem(_), do: %{valence: 50.0, arousal: 50.0, cortisol: 15.0, dopamine: 50.0, oxytocin: 50.0}
+
+  defp safe_float(nil, default), do: default * 1.0
+  defp safe_float(v, _default) when is_float(v), do: v
+  defp safe_float(v, _default) when is_integer(v), do: v * 1.0
+  defp safe_float(v, default) when is_binary(v) do
+    case Float.parse(v) do
+      {f, _} -> f
+      :error -> default * 1.0
+    end
+  end
+  defp safe_float(_, default), do: default * 1.0
 
   defp resolve_character(%Character{} = c), do: c
   defp resolve_character(id_or_slug) when is_binary(id_or_slug) do
