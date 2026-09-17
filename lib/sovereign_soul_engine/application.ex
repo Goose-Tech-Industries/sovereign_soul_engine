@@ -22,6 +22,7 @@ defmodule SovereignSoulEngine.Application do
       SovereignSoulEngine.TheoryOfMind.ProactiveDispatcher,
       SovereignSoulEngine.Wearables.SmartHomeBridge,
       SovereignSoulEngine.Neighborhood.Board,
+      SovereignSoulEngine.Relay.SeenSet,
       # Start to serve requests, typically the last entry
       SovereignSoulEngineWeb.Endpoint
     ]
