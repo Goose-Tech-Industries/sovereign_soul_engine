@@ -37,12 +37,13 @@ defmodule SovereignSoulEngine.Relay.EncounterBridgeTest do
     refute EncounterBridge.encounter?(%{})
   end
 
-  test "runs MeshProtocol.encounter for two local souls, records event and establishes relationship", %{
-    did_a: did_a,
-    did_b: did_b,
-    a: a,
-    b: b
-  } do
+  test "runs MeshProtocol.encounter for two local souls, records event and establishes relationship",
+       %{
+         did_a: did_a,
+         did_b: did_b,
+         a: a,
+         b: b
+       } do
     envelope = %{"from" => did_a, "to" => did_b, "payload" => %{}, "sig" => "signed"}
 
     assert {:ok, _encounter} = EncounterBridge.process_envelope(envelope)
@@ -58,5 +59,22 @@ defmodule SovereignSoulEngine.Relay.EncounterBridgeTest do
     assert {:ok, :recorded_remote} = EncounterBridge.process_envelope(envelope)
 
     assert [%{kind: "encounter", to_did: "did:soul:zremote"}] = World.list_recent_events()
+  end
+
+  test "forms a relationship with a remote soul via a stub character", %{did_a: did_a, a: a} do
+    {remote_pub, _} = SovereignSoulEngine.Identity.SoulIdentity.generate_keypair()
+    remote_did = SovereignSoulEngine.Identity.SoulIdentity.did(remote_pub)
+
+    envelope = %{"from" => remote_did, "to" => did_a, "payload" => %{}, "sig" => "signed"}
+
+    assert {:ok, _encounter} = EncounterBridge.process_envelope(envelope)
+
+    # the remote DID materialized a stub character, and a real relationship formed
+    stub = Identity.ensure_local_character(remote_did)
+    assert stub != nil
+    assert String.starts_with?(stub.slug, "remote_")
+
+    assert SovereignSoulEngine.Relationships.get_relationship(stub.id, a.id) != nil
+    assert SovereignSoulEngine.Relationships.get_relationship(a.id, stub.id) != nil
   end
 end

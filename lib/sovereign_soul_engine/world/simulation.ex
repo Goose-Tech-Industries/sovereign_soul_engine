@@ -16,6 +16,7 @@ defmodule SovereignSoulEngine.World.Simulation do
 
   alias SovereignSoulEngine.{Characters, Identity, Memories, Relationships, Repo, Souls, World}
   alias SovereignSoulEngine.Relationships.Relationship
+  alias SovereignSoulEngine.Scenes.SceneParticipant
   alias SovereignSoulEngine.Souls.IntentEngine
 
   alias SovereignSoulEngine.Social.{
@@ -80,7 +81,7 @@ defmodule SovereignSoulEngine.World.Simulation do
   # --- Step logic -------------------------------------------------------------
 
   defp do_step(opts) do
-    souls = load_pilot()
+    souls = load_world_souls()
     cohort_ids = Enum.map(souls, & &1.id)
     regenerate_stamina(souls)
 
@@ -114,13 +115,22 @@ defmodule SovereignSoulEngine.World.Simulation do
     end
   end
 
-  defp load_pilot do
-    Enum.flat_map(@pilot_slugs, fn slug ->
-      case Characters.get_character_by_slug(slug) do
-        nil -> []
-        char -> [char]
-      end
-    end)
+  # Every active NPC participating in the world scene lives here — not just the
+  # pilot cohort — so the whole town breathes.
+  defp load_world_souls do
+    case World.world_scene() do
+      nil ->
+        []
+
+      scene ->
+        from(sp in SceneParticipant,
+          join: c in assoc(sp, :character),
+          where: sp.scene_id == ^scene.id and c.kind == "npc" and c.status == "active",
+          select: c,
+          distinct: true
+        )
+        |> Repo.all()
+    end
   end
 
   defp pair_up(souls) when length(souls) < 2, do: []

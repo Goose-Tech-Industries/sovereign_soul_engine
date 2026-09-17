@@ -31,9 +31,23 @@ defmodule SovereignSoulEngine.Relay.Forwarder do
   defp post(peer, envelope, hops) do
     url = String.trim_trailing(peer, "/") <> "/sse/api/relay/inbound"
 
-    case Req.post(url, json: %{"envelope" => envelope, "hops" => hops}, retry: false) do
+    headers =
+      case relay_secret() do
+        nil -> []
+        secret -> [{"x-relay-secret", secret}]
+      end
+
+    case Req.post(url,
+           json: %{"envelope" => envelope, "hops" => hops},
+           headers: headers,
+           retry: false
+         ) do
       {:ok, %{status: status}} when status in 200..299 -> :ok
       other -> {:error, other}
     end
+  end
+
+  defp relay_secret do
+    Application.get_env(:sovereign_soul_engine, :relay_secret)
   end
 end

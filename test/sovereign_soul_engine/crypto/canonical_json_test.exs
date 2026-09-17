@@ -29,4 +29,17 @@ defmodule SovereignSoulEngine.Crypto.CanonicalJSONTest do
     assert CanonicalJSON.encode(42) == "42"
     assert CanonicalJSON.encode("hi") == ~s("hi")
   end
+
+  test "normalizes floats per RFC 8785" do
+    # integer-valued floats serialize as plain integers
+    assert CanonicalJSON.encode(1.0) == "1"
+    assert CanonicalJSON.encode(-2.0) == "-2"
+
+    # non-integer floats use the shortest round-trip form
+    assert CanonicalJSON.encode(0.5) == "0.5"
+    assert CanonicalJSON.encode(-0.667) == "-0.667"
+
+    # and inside objects
+    assert CanonicalJSON.encode(%{"valence" => 0.8}) == ~s({"valence":0.8})
+  end
 end

@@ -45,4 +45,43 @@ defmodule SovereignSoulEngine.IdentityTest do
 
     assert {:ok, ^private_key} = Identity.unseal_private_key(soul_did)
   end
+
+  test "ensure_local_character/1 stubs an unknown remote DID" do
+    {public_key, _private_key} = SovereignSoulEngine.Identity.SoulIdentity.generate_keypair()
+    did = SovereignSoulEngine.Identity.SoulIdentity.did(public_key)
+
+    char = Identity.ensure_local_character(did)
+    assert char != nil
+    assert String.starts_with?(char.slug, "remote_")
+
+    soul_did = Identity.get_did_for_character(char.id)
+    assert soul_did.did == did
+    assert soul_did.public_key == public_key
+    assert soul_did.private_key_sealed == nil
+
+    # idempotent: a second call returns the same stub
+    assert Identity.ensure_local_character(did).id == char.id
+  end
+
+  test "ensure_local_character/1 returns nil for an invalid DID" do
+    assert Identity.ensure_local_character("not-a-did") == nil
+  end
+
+  test "rotate_key/1 deactivates the old DID and issues a new one", %{character: character} do
+    {:ok, old_did, _} = Identity.generate_did(character.id)
+
+    assert {:ok, new_did, new_private_key} = Identity.rotate_key(character.id)
+
+    assert new_did.did != old_did.did
+    assert new_did.active == true
+    assert byte_size(new_private_key) == 32
+
+    # the active DID is now the new one; the old one is historical
+    assert Identity.get_did_for_character(character.id).did == new_did.did
+    assert Identity.get_did(old_did.did).active == false
+  end
+
+  test "rotate_key/1 returns :no_did when the character has no DID", %{character: character} do
+    assert {:error, :no_did} = Identity.rotate_key(character.id)
+  end
 end

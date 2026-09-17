@@ -9,7 +9,6 @@ defmodule SovereignSoulEngine.Relay.EncounterBridge do
   event ledger for audit, whether or not the encounter ran locally.
   """
 
-  alias SovereignSoulEngine.Characters
   alias SovereignSoulEngine.Identity
   alias SovereignSoulEngine.Relationships
   alias SovereignSoulEngine.Social.MeshProtocol
@@ -25,13 +24,15 @@ defmodule SovereignSoulEngine.Relay.EncounterBridge do
   @doc """
   Processes a verified encounter envelope.
 
-  Returns the `MeshProtocol.encounter/3` result when both souls are local, or
-  `{:ok, :recorded_remote}` when at least one soul has no local character.
+  Resolves each DID to a local character (stubbing unknown remote DIDs), so a
+  cross-node encounter forms a real, persistent relationship toward the remote
+  soul. Returns the `MeshProtocol.encounter/3` result, or `{:ok, :recorded_remote}`
+  if either DID is invalid.
   """
   @spec process_envelope(map()) :: {:ok, term()} | {:error, term()}
   def process_envelope(envelope) do
-    a = resolve_local(envelope["from"])
-    b = resolve_local(envelope["to"])
+    a = Identity.ensure_local_character(envelope["from"])
+    b = Identity.ensure_local_character(envelope["to"])
 
     result =
       case {a, b} do
@@ -51,15 +52,6 @@ defmodule SovereignSoulEngine.Relay.EncounterBridge do
 
     record_event(envelope)
     result
-  end
-
-  defp resolve_local(nil), do: nil
-
-  defp resolve_local(did) do
-    case Identity.get_did(did) do
-      nil -> nil
-      soul_did -> Characters.get_character(soul_did.character_id)
-    end
   end
 
   defp record_event(envelope) do

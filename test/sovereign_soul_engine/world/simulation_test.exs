@@ -13,11 +13,11 @@ defmodule SovereignSoulEngine.World.SimulationTest do
     assert length(Simulation.pilot_slugs()) == 6
   end
 
-  test "step/1 runs hermetic encounters across the pilot cohort" do
+  test "step/1 runs hermetic encounters across the full world population" do
     assert {:ok, summary} = Simulation.step()
 
-    assert summary.souls == 6
-    assert length(summary.encounters) == 3
+    assert summary.souls == 50
+    assert length(summary.encounters) == 25
 
     for encounter <- summary.encounters do
       assert encounter.outcome == :encountered
@@ -26,11 +26,11 @@ defmodule SovereignSoulEngine.World.SimulationTest do
     end
 
     # relationships were formed for each pair
-    assert length(Relationships.list_relationships()) == 3
+    assert length(Relationships.list_relationships()) == 25
 
     # a signed world event was recorded for each encounter
-    events = World.list_recent_events(limit: 10) |> Enum.filter(&(&1.kind == "encounter"))
-    assert length(events) == 3
+    events = World.list_recent_events(limit: 100) |> Enum.filter(&(&1.kind == "encounter"))
+    assert length(events) == 25
   end
 
   test "step/1 throttles low-stamina souls out of the square" do
@@ -41,8 +41,8 @@ defmodule SovereignSoulEngine.World.SimulationTest do
 
     assert {:ok, summary} = Simulation.step()
 
-    # maya is excluded, leaving 5 eligible souls -> 2 pairs
-    assert length(summary.encounters) == 2
+    # maya is excluded, leaving 49 eligible souls -> 24 pairs
+    assert length(summary.encounters) == 24
     assert Enum.all?(summary.encounters, fn e -> e.a != "maya" and e.b != "maya" end)
   end
 
@@ -52,7 +52,6 @@ defmodule SovereignSoulEngine.World.SimulationTest do
 
   test "three-party gossip ripples a grudge to a soul who has never met the subject" do
     maya = Characters.get_character_by_slug!("maya")
-    corvus = Characters.get_character_by_slug!("corvus")
     soren = Characters.get_character_by_slug!("soren")
 
     # Maya nurses a grudge against Soren.
@@ -63,10 +62,22 @@ defmodule SovereignSoulEngine.World.SimulationTest do
       affinity: -50
     })
 
-    assert {:ok, _summary} = Simulation.step()
+    {:ok, summary} = Simulation.step()
 
-    # Maya meets Corvus this tick and gossips about Soren; Corvus now distrusts Soren.
-    rel = Relationships.get_relationship(corvus.id, soren.id)
+    # Maya gossips about Soren to whoever she meets this tick.
+    partner_slug =
+      Enum.find_value(summary.encounters, fn e ->
+        cond do
+          e.a == "maya" -> e.b
+          e.b == "maya" -> e.a
+          true -> nil
+        end
+      end)
+
+    assert partner_slug != nil
+    partner = Characters.get_character_by_slug(partner_slug)
+
+    rel = Relationships.get_relationship(partner.id, soren.id)
     assert rel != nil
     assert rel.affinity < 0
   end

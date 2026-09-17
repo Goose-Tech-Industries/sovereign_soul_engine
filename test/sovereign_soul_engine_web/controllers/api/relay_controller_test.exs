@@ -62,4 +62,26 @@ defmodule SovereignSoulEngineWeb.Api.RelayControllerTest do
 
     assert conn.status == 400
   end
+
+  test "enforces the relay secret when one is configured", %{
+    from_did: from_did,
+    private_key: private_key
+  } do
+    Application.put_env(:sovereign_soul_engine, :relay_secret, "s3cret")
+    on_exit(fn -> Application.delete_env(:sovereign_soul_engine, :relay_secret) end)
+
+    envelope = from_did |> Envelope.build("gossip") |> Envelope.sign(private_key)
+
+    # without the secret header -> 401
+    assert relay_post(build_conn(), envelope, 1).status == 401
+
+    # with the correct secret header -> 200
+    conn =
+      build_conn()
+      |> Plug.Conn.put_req_header("content-type", "application/json")
+      |> Plug.Conn.put_req_header("x-relay-secret", "s3cret")
+      |> post("/sse/api/relay/inbound", Jason.encode!(%{"envelope" => envelope, "hops" => 1}))
+
+    assert json_response(conn, 200)["status"] == "ok"
+  end
 end

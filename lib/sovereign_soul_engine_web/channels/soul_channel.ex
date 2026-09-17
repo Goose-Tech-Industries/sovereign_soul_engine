@@ -23,7 +23,7 @@ defmodule SovereignSoulEngineWeb.SoulChannel do
       {:ok, topic} ->
         Phoenix.PubSub.broadcast(SovereignSoulEngine.PubSub, topic, {:envelope, envelope})
         maybe_dispatch_encounter(envelope)
-        Forwarder.forward(envelope, 1)
+        forward_async(envelope)
         {:reply, :ok, socket}
 
       {:error, reason} ->
@@ -89,6 +89,16 @@ defmodule SovereignSoulEngineWeb.SoulChannel do
     if EncounterBridge.encounter?(envelope) do
       EncounterBridge.process_envelope(envelope)
     end
+
+    :ok
+  end
+
+  # Forwarding is fire-and-forget so a slow/unreachable peer never blocks the
+  # channel's reply to the sending soul.
+  defp forward_async(envelope) do
+    Task.Supervisor.start_child(SovereignSoulEngine.TaskSupervisor, fn ->
+      Forwarder.forward(envelope, 1)
+    end)
 
     :ok
   end

@@ -11,6 +11,8 @@ defmodule SovereignSoulEngine.World do
 
   alias SovereignSoulEngine.Repo
   alias SovereignSoulEngine.Scenes.Scene
+  alias SovereignSoulEngine.Scenes.SceneParticipant
+  alias SovereignSoulEngine.Relationships.Relationship
   alias SovereignSoulEngine.World.WorldEvent
   alias SovereignSoulEngine.World.SeedSouls
 
@@ -67,4 +69,58 @@ defmodule SovereignSoulEngine.World do
   @doc "Seeds the 50 founding souls into the Soul Society, idempotently."
   @spec seed_souls() :: {:ok, non_neg_integer()}
   def seed_souls, do: SeedSouls.seed_all()
+
+  @doc """
+  A live summary of the world: soul count, relationship count, and recent events.
+  The observability surface the world feed (and any dashboard) reads.
+  """
+  @spec feed(keyword()) :: map()
+  def feed(opts \\ []) do
+    %{
+      scene_id: world_scene() && world_scene().id,
+      souls: soul_count(),
+      relationships: relationship_count(),
+      recent_events: recent_events(Keyword.get(opts, :limit, 20))
+    }
+  end
+
+  defp soul_count do
+    case world_scene() do
+      nil ->
+        0
+
+      scene ->
+        from(sp in SceneParticipant, where: sp.scene_id == ^scene.id)
+        |> Repo.aggregate(:count)
+    end
+  end
+
+  defp relationship_count do
+    Repo.aggregate(Relationship, :count)
+  end
+
+  defp recent_events(limit) do
+    list_recent_events(limit: limit)
+    |> Enum.map(fn e ->
+      %{
+        kind: e.kind,
+        from: e.from_did,
+        to: e.to_did,
+        payload: e.payload,
+        at: e.inserted_at
+      }
+    end)
+  end
+
+  @doc """
+  Physically removes compacted world events older than `before` (default 30 days).
+  This is the anti-bloat deletion step — `WorldCompactor` summarizes, this purges.
+  Returns the number of rows deleted.
+  """
+  @spec purge_events(DateTime.t()) :: non_neg_integer()
+  def purge_events(before \\ DateTime.add(DateTime.utc_now(), -30 * 24 * 3600, :second)) do
+    from(e in WorldEvent, where: e.compacted == true and e.inserted_at < ^before)
+    |> Repo.delete_all()
+    |> then(fn {count, _} -> count end)
+  end
 end

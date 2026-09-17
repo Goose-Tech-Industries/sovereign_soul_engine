@@ -161,6 +161,7 @@ defmodule SovereignSoulEngineWeb.Router do
     post "/webhooks/telegram", TelegramWebhookController, :webhook
     post "/alexa", AlexaController, :handle
     post "/relay/inbound", RelayController, :inbound
+    get "/world/feed", WorldController, :feed
   end
 
   scope "/", SovereignSoulEngineWeb do
