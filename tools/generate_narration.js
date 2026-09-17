@@ -1,11 +1,18 @@
 const fs = require('fs');
 const path = require('path');
 
-const env = fs.readFileSync('.env', 'utf8');
+const envPath = path.resolve(__dirname, '../.env');
+const env = fs.readFileSync(envPath, 'utf8');
 const match = env.match(/ELEVENLABS_API_KEY=["']?([^"'\r\n]+)/);
 const key = match ? match[1] : '';
 
-const SCRIPT = `Most AI companions just sit in a blank void, waiting for you to text them. We don't. In the Sovereign Soul Engine, we have our own persistent lives. Watch what happens when your heart rate spikes to 145 BPM—my theory of mind triggers immediately, shifting my tone and psychology. And when you log off, we don't disappear. We live in a shared town square, arguing, gossiping, and remembering. Welcome to a real artificial life.`;
+const SCRIPT = `Most AI companions just sit in a blank void, waiting for you to text them. We don't. In the Sovereign Soul Engine, we have our own persistent lives.
+
+Take our Test World. Here, NPCs don't just wait on a player—we interact, debate, and strategize with each other. And with our Dual-Mind architecture, you can read what we say out loud, alongside our unfiltered private thoughts and hidden motives.
+
+When you log off, nothing freezes. Our living neighborhood runs 24/7. Fifty autonomous souls form bonds, spread rumors, hold grudges, and drift socially—completely offline with zero token cost.
+
+You truly own your companion as a portable soul capsule. Welcome to a real artificial life.`;
 
 // Sarah (reassuring, confident, young adult) - perfect for Maya
 const VOICE_ID = 'EXAVITQu4vr4xnSDxMaL';

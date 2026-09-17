@@ -41,7 +41,7 @@ defmodule SovereignSoulEngineWeb.ChatLive do
       |> assign(:npcs, npcs)
       |> assign(:creating_group?, false)
       |> assign(:group_name, "")
-      |> assign(:group_location, "The Hollow Bastion")
+      |> assign(:group_location, "Town Commons")
       |> assign(:group_mood, "tense")
       |> assign(:group_weather, "overcast")
       |> assign(:selected_npc_ids, %{})
@@ -80,6 +80,22 @@ defmodule SovereignSoulEngineWeb.ChatLive do
   end
 
   @impl true
+  def handle_params(%{"scene_id" => id}, _uri, socket) do
+    case Scenes.get_scene(id) do
+      nil ->
+        {:noreply, socket}
+
+      scene ->
+        socket =
+          socket
+          |> assign(:creating_group?, false)
+          |> load_scenes()
+          |> select_scene(scene)
+
+        {:noreply, socket}
+    end
+  end
+
   def handle_params(%{"character_id" => id}, _uri, socket) do
     case Enum.find(socket.assigns.npcs, &(&1.id == id)) do
       nil ->
@@ -1396,7 +1412,7 @@ defmodule SovereignSoulEngineWeb.ChatLive do
                 type="text"
                 name="group_name"
                 value={@group_name}
-                placeholder="e.g. Bastion Council"
+                placeholder="e.g. Town Council"
                 required
                 class="w-full input input-bordered text-sm"
               />
@@ -1510,7 +1526,7 @@ defmodule SovereignSoulEngineWeb.ChatLive do
                 </span>
               </h1>
                <%!-- Scenario Context --%>
-              <div class="hidden md:flex items-center gap-2 text-[11px] bg-base-300/40 px-2 py-1 rounded-lg border border-base-300">
+              <div class="hidden 2xl:flex items-center gap-2 text-[11px] bg-slate-900/80 px-2.5 py-1 rounded-lg border border-slate-800 shrink-0">
                 <span class="font-mono text-base-content/40 uppercase text-[9px] tracking-wider">
                   Scenario:
                 </span>
@@ -1594,7 +1610,7 @@ defmodule SovereignSoulEngineWeb.ChatLive do
             </div>
 
             <%!-- Galaxy Watch Biometric HUD --%>
-            <div class="hidden xl:flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-base-300/40 border border-base-300 text-xs">
+            <div class="hidden 2xl:flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-slate-900/80 border border-slate-800 text-xs">
               <span class="flex items-center gap-1 font-mono font-bold text-rose-400">
                 <span class="animate-pulse">❤️</span> {@player_biometrics.heart_rate} BPM
               </span>
@@ -1652,7 +1668,7 @@ defmodule SovereignSoulEngineWeb.ChatLive do
               phx-click="toggle_voice_call"
               id="voice-call-toggle-btn"
               class={[
-                "btn btn-xs flex items-center gap-1.5 border transition-all shadow-sm font-semibold",
+                "hidden 2xl:flex btn btn-xs items-center gap-1.5 border transition-all shadow-sm font-semibold",
                 @voice_call_active? && "btn-error text-error-content animate-pulse border-error",
                 !@voice_call_active? && "btn-outline border-base-300 text-base-content/70 hover:bg-base-300"
               ]}
@@ -1666,7 +1682,7 @@ defmodule SovereignSoulEngineWeb.ChatLive do
             <button
               phx-click="toggle_social_drawer"
               class={[
-                "btn btn-xs flex items-center gap-1.5 border transition-all",
+                "hidden 2xl:flex btn btn-xs items-center gap-1.5 border transition-all",
                 @showing_social_drawer? && "btn-info text-info-content border-info shadow-sm",
                 !@showing_social_drawer? && "btn-outline border-base-300 text-base-content/60 hover:bg-base-300"
               ]}
@@ -1696,7 +1712,7 @@ defmodule SovereignSoulEngineWeb.ChatLive do
               <div
                 id="circadian-status-badge"
                 class={[
-                  "flex items-center gap-1.5 px-2 py-0.5 rounded-lg border text-xs font-semibold shadow-xs",
+                  "hidden 2xl:flex items-center gap-1.5 px-2 py-0.5 rounded-lg border text-xs font-semibold shadow-xs",
                   @circadian_state.state == :night_focus && "bg-indigo-950/80 border-indigo-500/60 text-indigo-300",
                   @circadian_state.state in [:deep_sleep, :rem_dreaming] && "bg-purple-950/80 border-purple-500/60 text-purple-300",
                   @circadian_state.state == :groggy_waking && "bg-amber-950/80 border-amber-500/60 text-amber-300",
@@ -1740,7 +1756,7 @@ defmodule SovereignSoulEngineWeb.ChatLive do
               phx-click="toggle_privacy_modal"
               id="privacy-shield-btn"
               class={[
-                "btn btn-xs flex items-center gap-1.5 border transition-all shadow-sm font-semibold",
+                "hidden 2xl:flex btn btn-xs items-center gap-1.5 border transition-all shadow-sm font-semibold",
                 @showing_privacy_modal? && "btn-info text-info-content border-info",
                 !@showing_privacy_modal? && "btn-outline border-base-300 text-sky-400 hover:bg-sky-500/15"
               ]}
