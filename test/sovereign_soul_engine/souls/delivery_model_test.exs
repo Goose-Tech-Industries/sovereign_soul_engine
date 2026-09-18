@@ -72,8 +72,8 @@ defmodule SovereignSoulEngine.Souls.DeliveryModelTest do
       assert Enum.any?(tiers, &(&1.tier == "Enterprise / AAA"))
 
       creators = matrix.companion_creators
-      assert creators.revenue_split == "80% Creator / 20% Platform"
-      assert creators.one_time_forge_fee == "$29.00 USD (covers automated cloud LoRA training and GGUF compilation)"
+      assert creators.revenue_split == "50% Platform / 50% Creator"
+      assert creators.one_time_forge_fee == "$49.00 USD (covers automated cloud LoRA fine-tuning and GGUF compilation)"
     end
   end
 end

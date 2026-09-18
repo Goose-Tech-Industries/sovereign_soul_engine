@@ -117,18 +117,26 @@ We monetize studios using the **Annual Title License + Revenue Share Cap** (The 
 
 For independent creators (writers, VTubers, roleplayers, dungeon masters) who build companions for your consumer app:
 
-1. **80 / 20 Subscription Revenue Split:**
+1. **50 / 50 True Partnership Split (or 60 / 40 Platform First):**
    - Creator designs a character and publishes it on your Companion App feed (`/sse/feed`).
    - Fans subscribe at **$14.99 / month** or **$19.99 / month** (Archon 18+ Uncensored).
-   - **Creator receives 80%** ($11.99 or $15.99 / mo).
-   - **Platform keeps 20%** ($3.00 or $4.00 / mo).
-   - *Platform cost per user is only ~$0.30 in GPU compute, netting you ~$2.50 to $3.50 pure margin per subscriber.*
+   - **Platform keeps 50%** ($7.50 or $10.00 / mo).
+   - **Creator receives 50%** ($7.49 or $9.99 / mo).
+   - **Why 50/50 instead of an app-store 80/20:**
+     In static software (App Store / Steam / Patreon), distribution costs $0.0001. In an **AI Companion App**, our servers shoulder:
+     - 24/7 dedicated GPU compute running LLM inference for every single message.
+     - ElevenLabs / Edge-TTS audio voice synthesis streaming to the client.
+     - Continuous Ecto vector database updates, relationship metrics, and circadian state.
+     - Live Phoenix WebSocket channels, TownMap rendering, and Push notifications.
+     - Content moderation pipelines, age verification compliance, and Stripe chargeback liability.
+     A 50/50 split (or 60/40) protects your operating margins, fully covers heavy users chatting hundreds of times a day, and still pays creators massive passive income ($7.50 to $10.00 net per subscriber).
 
-2. **The Character Forge Fee ($29 – $49 one-time):**
+2. **The Character Forge Fee ($49.00 USD one-time):**
    - When a creator wants a bespoke fine-tuned LoRA adapter made from their character sheet or `.soul` file:
-   - They pay **$29.00 USD**.
+   - They pay **$49.00 USD**.
    - Your automated pipeline (`character_lora_forge.py` + `train_modal_lora.py`) trains the adapter on a cloud A100 in 15 minutes for **$1.20**.
-   - **Instant profit: $27.80 per character forged.**
+   - **Instant profit: $47.80 per character forged.**
+
 
 ---
 

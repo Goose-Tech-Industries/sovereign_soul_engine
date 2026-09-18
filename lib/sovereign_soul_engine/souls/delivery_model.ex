@@ -215,16 +215,24 @@ defmodule SovereignSoulEngine.Souls.DeliveryModel do
         ]
       },
       companion_creators: %{
-        model: "Marketplace Subscription Split + One-Time Character Forge Fee",
-        revenue_split: "80% Creator / 20% Platform",
+        model: "Platform-Hosted Marketplace Split + Character Forge Fee",
+        revenue_split: "50% Platform / 50% Creator",
+        rationale:
+          "Platform shoulders 100% of 24/7 GPU inference, voice synthesis, vector database storage, moderation, age verification, and payment chargeback risks.",
         one_time_forge_fee:
-          "$29.00 USD (covers automated cloud LoRA training and GGUF compilation)",
+          "$49.00 USD (covers automated cloud LoRA fine-tuning and GGUF compilation)",
         companion_subscriptions: [
-          %{tier: "Companion Tier", price: "$14.99 / month", creator_payout: "$11.99 / month"},
+          %{
+            tier: "Companion Tier",
+            price: "$14.99 / month",
+            platform_share: "$7.50 / month",
+            creator_payout: "$7.49 / month"
+          },
           %{
             tier: "Archon 18+ Uncensored",
             price: "$19.99 / month",
-            creator_payout: "$15.99 / month"
+            platform_share: "$10.00 / month",
+            creator_payout: "$9.99 / month"
           }
         ]
       }
