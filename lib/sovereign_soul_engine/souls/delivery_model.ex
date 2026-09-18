@@ -215,24 +215,28 @@ defmodule SovereignSoulEngine.Souls.DeliveryModel do
         ]
       },
       companion_creators: %{
-        model: "Platform-Hosted Marketplace Split + Character Forge Fee",
-        revenue_split: "50% Platform / 50% Creator",
+        model: "All-Access Companion Pass ($14.99 & $19.99) + Gold Tier Engagement Pool",
+        pool_allocation: "15% of total subscription revenue allocated to verified Gold Tier bots",
+        platform_retained: "85% (funds dedicated 24/7 GPU clusters, vector memory, voice synthesis, net profit)",
         rationale:
-          "Platform shoulders 100% of 24/7 GPU inference, voice synthesis, vector database storage, moderation, age verification, and payment chargeback risks.",
+          "Users subscribe to the entire platform (Town Map, SoulBook, Canon personas), not individual bots. Gold Tier creators earn proportional monthly distributions based on qualified message engagement.",
+        tier_requirements: %{
+          bronze: "Community sandbox, link-only, 0% pool",
+          silver: "100+ interactions, clean record, tips eligible",
+          gold: "1,000+ interactions, >35% 7-day retention, qualifies for Monthly Pool distributions"
+        },
         one_time_forge_fee:
           "$49.00 USD (covers automated cloud LoRA fine-tuning and GGUF compilation)",
-        companion_subscriptions: [
+        platform_subscriptions: [
           %{
-            tier: "Companion Tier",
+            tier: "Companion Pass",
             price: "$14.99 / month",
-            platform_share: "$7.50 / month",
-            creator_payout: "$7.49 / month"
+            features: "Full Town Map, SoulBook, all Canon & Community companions, voice TTS"
           },
           %{
             tier: "Archon 18+ Uncensored",
             price: "$19.99 / month",
-            platform_share: "$10.00 / month",
-            creator_payout: "$9.99 / month"
+            features: "All Companion Pass features + unmoderated local weight routing & erotic subtext"
           }
         ]
       }

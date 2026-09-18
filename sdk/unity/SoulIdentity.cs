@@ -144,9 +144,11 @@ namespace SovereignSoul
             return Mod(FromLittleEndian(digest), L);
         }
 
-        static byte[] ClampScalar(byte[] seed)
+        static byte[] ClampScalar(byte[] hash)
         {
-            byte[] a = (byte[])seed.Clone();
+            // RFC 8032: the scalar is the first 32 bytes of SHA-512(seed), clamped.
+            byte[] a = new byte[32];
+            Array.Copy(hash, 0, a, 0, 32);
             a[0] &= 248;
             a[31] &= 127;
             a[31] |= 64;
