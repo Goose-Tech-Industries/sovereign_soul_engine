@@ -43,6 +43,81 @@ defmodule SovereignSoulEngine.Souls do
     SoulProfile.changeset(profile, attrs)
   end
 
+  @doc """
+  Ensures that a character is fully alive with a complete Soul Profile,
+  baseline Emotional State, Somatic State, and cryptographic DID.
+  Idempotent: will never overwrite an existing profile.
+  """
+  def ensure_soul_vitality(character, attrs \\ %{})
+
+  def ensure_soul_vitality(%SovereignSoulEngine.Characters.Character{} = character, attrs) do
+    # 1. Soul Profile
+    profile =
+      get_soul_profile_by_character(character.id) ||
+        case create_soul_profile(
+               Map.merge(
+                 %{
+                   character_id: character.id,
+                   identity_summary: character.description || "A living sovereign soul of Feannag's Rest.",
+                   speech_style: "Direct, expressive",
+                   personality_traits: %{
+                     "openness" => 0.75,
+                     "conscientiousness" => 0.65,
+                     "extraversion" => 0.55,
+                     "agreeableness" => 0.60,
+                     "neuroticism" => 0.30
+                   },
+                   core_values: ["Autonomy", "Honor the craft", "Sovereign presence"],
+                   fears: ["Loss of autonomy", "Being forgotten"],
+                   desires: ["Forge lasting bonds in Feannag's Rest", "Fulfill personal purpose"],
+                   social_stamina: 100,
+                   stamina_max: 100,
+                   stamina_regen_rate: 10
+                 },
+                 attrs
+               )
+             ) do
+          {:ok, p} -> p
+          _ -> nil
+        end
+
+    # 2. Emotional State
+    _emotion =
+      get_emotional_state_by_character(character.id) ||
+        case create_emotional_state(%{
+               character_id: character.id,
+               anger: 0,
+               fear: 0,
+               stress: 15,
+               gratitude: 40,
+               confidence: 60,
+               sadness: 0,
+               joy: 50,
+               trust: 60,
+               attachment: 50,
+               curiosity: 70
+             }) do
+          {:ok, e} -> e
+          _ -> nil
+        end
+
+    # 3. Somatic State
+    _somatic = get_or_create_somatic_state(character.id)
+
+    # 4. Cryptographic DID
+    case SovereignSoulEngine.Identity.get_did_for_character(character.id) do
+      nil -> SovereignSoulEngine.Identity.generate_did(character.id)
+      did -> {:ok, did}
+    end
+
+    profile
+  end
+
+  def ensure_soul_vitality(character_id, attrs) when is_binary(character_id) do
+    character = SovereignSoulEngine.Characters.get_character(character_id)
+    if character, do: ensure_soul_vitality(character, attrs), else: nil
+  end
+
   # Emotional States
 
   def get_emotional_state!(id), do: Repo.get!(EmotionalState, id)

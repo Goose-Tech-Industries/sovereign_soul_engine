@@ -235,8 +235,8 @@ defmodule SovereignSoulEngineWeb.BillingLive do
           <.link navigate={~p"/sse/feed"} class="btn btn-ghost btn-xs text-slate-400 hover:text-white hidden sm:inline-flex">
             <span>📰 Feed</span>
           </.link>
-          <.link navigate={~p"/sse/map"} class="btn btn-ghost btn-xs text-slate-400 hover:text-white hidden sm:inline-flex">
-            <span>🏰 Map</span>
+          <.link navigate={~p"/sse/acp"} class="btn btn-ghost btn-xs text-slate-400 hover:text-white hidden sm:inline-flex">
+            <span>⚙️ Studio</span>
           </.link>
         </div>
       </header>
@@ -510,9 +510,9 @@ defmodule SovereignSoulEngineWeb.BillingLive do
           <span class="text-[10px] font-medium">Feed</span>
         </.link>
 
-        <.link navigate={~p"/sse/map"} class="flex flex-col items-center gap-0.5 text-slate-400 hover:text-white">
-          <span class="text-lg">🏰</span>
-          <span class="text-[10px] font-medium">Map</span>
+        <.link navigate={~p"/sse/acp"} class="flex flex-col items-center gap-0.5 text-slate-400 hover:text-white">
+          <span class="text-lg">⚙️</span>
+          <span class="text-[10px] font-medium">Studio</span>
         </.link>
 
         <.link navigate={~p"/sse/billing"} class="flex flex-col items-center gap-0.5 text-primary font-bold">

@@ -63,6 +63,22 @@ defmodule SovereignSoulEngineWeb.MapLive do
     "north_outpost" => %{north: "crows_keep", south: "high_palace", east: "crows_keep", west: "weavers_commons"}
   }
 
+  @grid_cols 28
+  @grid_rows 24
+
+  @npc_locations [
+    %{slug: "fia", name: "Fia", icon: "🪶", title: "Empathetic Weaver", x: 14, y: 9, district: "high_palace", quote: "I feel the living pulse of every soul in Gleann Caorach."},
+    %{slug: "cipher", name: "Cipher", icon: "⚡", title: "Systems Architect", x: 23, y: 19, district: "old_ironworks", quote: "Air-gapped telemetry, local CUDA inference, zero data leakage."},
+    %{slug: "quill", name: "Quill", icon: "📜", title: "Iron Chronicler", x: 13, y: 4, district: "crows_keep", quote: "Seven centuries of clan treaties are inked in these archives."},
+    %{slug: "dove", name: "Dove", icon: "🕊️", title: "Sanctuary Priestess", x: 22, y: 4, district: "high_sanctuary", quote: "The Morrígan watches over those who walk with purpose."},
+    %{slug: "kael", name: "Kael", icon: "⚓", title: "Docks Harbormaster", x: 24, y: 12, district: "raven_docks", quote: "The Blackwater river remembers what the high lords try to forget."},
+    %{slug: "egon", name: "Egon", icon: "🛡️", title: "Market Sentinel", x: 14, y: 18, district: "kings_plaza", quote: "Keep your blades sheathed in the market square, traveler."},
+    %{slug: "ravina", name: "Ravina", icon: "🗝️", title: "Shadow Broker", x: 5, y: 18, district: "shadowgate_warrens", quote: "Keep your voice low. Everything in these wynds belongs to someone else."},
+    %{slug: "vael", name: "Vael", icon: "🕯️", title: "Barrow Watcher", x: 4, y: 13, district: "barrowgrounds", quote: "Walk lightly upon the cairns, traveler."},
+    %{slug: "lyra", name: "Lyra", icon: "🧶", title: "Guild Weaver", x: 5, y: 4, district: "weavers_commons", quote: "Every thread tells a story if you know how to read the weave."},
+    %{slug: "corvus", name: "Corvus", icon: "🦅", title: "Bastion Commander", x: 14, y: 22, district: "south_bastion", quote: "The south wall holds against all wild highland incursions."}
+  ]
+
   @impl true
   def mount(_params, _session, socket) do
     if connected?(socket) do
@@ -72,6 +88,9 @@ defmodule SovereignSoulEngineWeb.MapLive do
     map_data = TownMap.get_map()
     initial_district_slug = "high_palace"
     selected_district = TownMap.get_district(initial_district_slug) || TownMap.get_district("kings_plaza")
+    initial_x = 14
+    initial_y = 8
+    nearby = find_nearby_npc(initial_x, initial_y)
 
     socket =
       socket
@@ -92,6 +111,16 @@ defmodule SovereignSoulEngineWeb.MapLive do
       |> assign(:ai_prompt, "")
       |> assign(:is_generating_ai?, false)
       |> assign(:road_connections, @road_connections)
+      |> assign(:view_mode, "rpg")
+      |> assign(:player_x, initial_x)
+      |> assign(:player_y, initial_y)
+      |> assign(:player_facing, :south)
+      |> assign(:npc_locations, @npc_locations)
+      |> assign(:nearby_npc, nearby)
+      |> assign(:grid_cols, @grid_cols)
+      |> assign(:grid_rows, @grid_rows)
+      |> assign(:tile_size, 30)
+      |> assign(:grid_tiles, generate_world_grid())
 
     {:ok, socket}
   end
@@ -121,9 +150,94 @@ defmodule SovereignSoulEngineWeb.MapLive do
 
   @impl true
   def handle_event("select_district", %{"slug" => slug}, socket) do
-    # In the walkable map, selecting a district on the SVG canvas walks the player there
+    # In the walkable map, selecting a district on the canvas walks the player there
     # while also selecting it in the inspector
     {:noreply, do_walk_to_district(socket, slug)}
+  end
+
+  @impl true
+  def handle_event("toggle_view_mode", _params, socket) do
+    new_mode = if socket.assigns.view_mode == "rpg", do: "radar", else: "rpg"
+    {:noreply, assign(socket, :view_mode, new_mode)}
+  end
+
+  @impl true
+  def handle_event("set_view_mode", %{"mode" => mode}, socket) do
+    {:noreply, assign(socket, :view_mode, mode)}
+  end
+
+  @impl true
+  def handle_event("set_tile_size", %{"size" => size_str}, socket) do
+    size =
+      case Integer.parse(to_string(size_str)) do
+        {val, _} when val in 18..54 -> val
+        _ -> 30
+      end
+
+    {:noreply, assign(socket, :tile_size, size)}
+  end
+
+  @impl true
+  def handle_event("walk_tile", %{"x" => x_val, "y" => y_val}, socket) do
+    x = if is_binary(x_val), do: String.to_integer(x_val), else: x_val
+    y = if is_binary(y_val), do: String.to_integer(y_val), else: y_val
+
+    if is_walkable_tile?(x, y) do
+      target_district = district_for_tile(x, y)
+      new_visited = MapSet.put(socket.assigns.visited_districts, target_district)
+      new_step_count = socket.assigns.travel_step_count + 1
+      district_changed? = target_district != socket.assigns.player_district
+      selected = if district_changed?, do: TownMap.get_district(target_district), else: socket.assigns.selected_district
+
+      socket =
+        socket
+        |> assign(:player_x, x)
+        |> assign(:player_y, y)
+        |> assign(:travel_step_count, new_step_count)
+        |> assign(:visited_districts, new_visited)
+        |> assign(:nearby_npc, find_nearby_npc(x, y))
+        |> assign(:player_district, target_district)
+        |> assign(:selected_slug, target_district)
+        |> assign(:selected_district, selected)
+        |> assign(:show_arrival_banner, district_changed?)
+
+      {:noreply, socket}
+    else
+      {:noreply, put_flash(socket, :error, "That path is blocked by city battlements or deep waters.")}
+    end
+  end
+
+  @impl true
+  def handle_event("step_direction", %{"direction" => dir}, socket) do
+    {dx, dy, facing} =
+      case dir do
+        "north" -> {0, -1, :north}
+        "south" -> {0, 1, :south}
+        "east" -> {1, 0, :east}
+        "west" -> {-1, 0, :west}
+        "up_left" -> {-1, -1, :north}
+        "up_right" -> {1, -1, :north}
+        "down_left" -> {-1, 1, :south}
+        "down_right" -> {1, 1, :south}
+        _ -> {0, 0, :south}
+      end
+
+    new_x = max(0, min(@grid_cols - 1, socket.assigns.player_x + dx))
+    new_y = max(0, min(@grid_rows - 1, socket.assigns.player_y + dy))
+
+    socket = assign(socket, :player_facing, facing)
+    handle_event("walk_tile", %{"x" => new_x, "y" => new_y}, socket)
+  end
+
+  @impl true
+  def handle_event("interact_nearby", _params, socket) do
+    case socket.assigns.nearby_npc do
+      nil ->
+        {:noreply, socket}
+
+      npc ->
+        handle_event("hail_soul", %{"name" => npc.name, "slug" => npc.slug}, socket)
+    end
   end
 
   @impl true
@@ -177,6 +291,12 @@ defmodule SovereignSoulEngineWeb.MapLive do
 
         normalized_key in ["c", "home"] ->
           handle_event("walk_direction", %{"direction" => "palace"}, socket)
+
+        normalized_key in ["e", "enter"] ->
+          handle_event("interact_nearby", %{}, socket)
+
+        normalized_key in ["m"] ->
+          handle_event("toggle_view_mode", %{}, socket)
 
         true ->
           {:noreply, socket}
@@ -309,6 +429,7 @@ defmodule SovereignSoulEngineWeb.MapLive do
       district ->
         new_visited = MapSet.put(socket.assigns.visited_districts, target_slug)
         new_step_count = socket.assigns.travel_step_count + 1
+        {new_x, new_y} = district_center_coords(target_slug)
 
         socket
         |> assign(:player_district, target_slug)
@@ -316,10 +437,132 @@ defmodule SovereignSoulEngineWeb.MapLive do
         |> assign(:selected_district, district)
         |> assign(:visited_districts, new_visited)
         |> assign(:travel_step_count, new_step_count)
+        |> assign(:player_x, new_x)
+        |> assign(:player_y, new_y)
+        |> assign(:nearby_npc, find_nearby_npc(new_x, new_y))
         |> assign(:show_arrival_banner, true)
         |> assign(:ambient_dialogue, nil)
     end
   end
+
+  defp district_for_tile(x, y) do
+    cond do
+      x in 10..17 and y in 8..15 -> "high_palace"
+      x in 10..17 and y in 0..7 -> "crows_keep"
+      x in 18..27 and y in 0..7 -> "high_sanctuary"
+      x in 0..9 and y in 0..7 -> "weavers_commons"
+      x in 20..27 and y in 8..15 -> "raven_docks"
+      x in 18..27 and y in 16..23 -> "old_ironworks"
+      x in 10..17 and y in 16..19 -> "kings_plaza"
+      x in 10..17 and y in 20..23 -> "south_bastion"
+      x in 0..9 and y in 16..19 -> "shadowgate_warrens"
+      x in 0..9 and y in 20..23 -> "sunken_undercity"
+      x in 0..9 and y in 8..11 -> "night_owl_quarter"
+      x in 0..9 and y in 12..15 -> "barrowgrounds"
+      true -> "high_palace"
+    end
+  end
+
+  defp terrain_for_tile(x, y) do
+    cond do
+      (x == 0 or x == 27 or y == 0 or y == 23) and not ((x == 14 and y in [0, 23]) or (y in [11, 12] and x in [0, 27])) ->
+        :wall
+
+      x in 25..27 and y in 9..17 and not (y in [11, 12] and x in 25..26) ->
+        :water
+
+      y in [11, 12] and x in 25..27 ->
+        :wood_dock
+
+      x in 10..17 and y in 8..15 ->
+        :palace_floor
+
+      x in [13, 14] or y in [11, 12] ->
+        :cobblestone
+
+      x in 10..17 and y in 0..7 ->
+        :obsidian
+
+      x in 18..27 and y in 0..7 ->
+        :sanctuary_stone
+
+      x in 18..27 and y in 16..23 ->
+        :forge_iron
+
+      x in 10..17 and y in 16..19 ->
+        :market_cobble
+
+      x in 0..9 and y in 16..19 ->
+        :shadow_wynd
+
+      x in 0..9 and y in 0..7 ->
+        :green_commons
+
+      true ->
+        :stone_brick
+    end
+  end
+
+  defp is_walkable_tile?(x, y) do
+    terrain = terrain_for_tile(x, y)
+    terrain not in [:wall, :water]
+  end
+
+  defp find_nearby_npc(px, py) do
+    Enum.find(@npc_locations, fn npc ->
+      abs(npc.x - px) <= 2 and abs(npc.y - py) <= 2
+    end)
+  end
+
+  defp find_npc_at_tile(npcs, x, y) do
+    Enum.find(npcs, fn npc -> npc.x == x and npc.y == y end)
+  end
+
+  defp is_nearby?(npc, px, py) do
+    abs(npc.x - px) <= 2 and abs(npc.y - py) <= 2
+  end
+
+  defp district_center_coords("high_palace"), do: {14, 8}
+  defp district_center_coords("crows_keep"), do: {14, 5}
+  defp district_center_coords("high_sanctuary"), do: {22, 5}
+  defp district_center_coords("raven_docks"), do: {24, 11}
+  defp district_center_coords("old_ironworks"), do: {23, 19}
+  defp district_center_coords("kings_plaza"), do: {14, 18}
+  defp district_center_coords("south_bastion"), do: {14, 22}
+  defp district_center_coords("shadowgate_warrens"), do: {5, 18}
+  defp district_center_coords("sunken_undercity"), do: {5, 21}
+  defp district_center_coords("night_owl_quarter"), do: {5, 10}
+  defp district_center_coords("barrowgrounds"), do: {4, 13}
+  defp district_center_coords("weavers_commons"), do: {5, 5}
+  defp district_center_coords("north_outpost"), do: {11, 2}
+  defp district_center_coords(_), do: {14, 8}
+
+  defp generate_world_grid do
+    for y <- 0..23, x <- 0..27 do
+      %{
+        x: x,
+        y: y,
+        district: district_for_tile(x, y),
+        terrain: terrain_for_tile(x, y),
+        walkable: is_walkable_tile?(x, y),
+        tile_id: "region:1:tile:#{x}:#{y}"
+      }
+    end
+  end
+
+  defp terrain_class(:palace_floor), do: "bg-gradient-to-br from-amber-950/80 to-yellow-950/60 border border-amber-600/40 hover:border-amber-400 shadow-inner"
+  defp terrain_class(:cobblestone), do: "bg-stone-800/90 border border-stone-700/50 hover:border-amber-400/80"
+  defp terrain_class(:stone_brick), do: "bg-stone-900/90 border border-stone-800/60 hover:border-amber-400/60"
+  defp terrain_class(:obsidian), do: "bg-zinc-950 border border-red-900/50 hover:border-red-400/60"
+  defp terrain_class(:sanctuary_stone), do: "bg-indigo-950/80 border border-indigo-700/50 hover:border-cyan-400/60"
+  defp terrain_class(:forge_iron), do: "bg-stone-950 border border-amber-800/50 hover:border-orange-500/60"
+  defp terrain_class(:market_cobble), do: "bg-stone-900 border border-emerald-800/50 hover:border-emerald-400/60"
+  defp terrain_class(:shadow_wynd), do: "bg-purple-950/70 border border-purple-900/50 hover:border-purple-400/60"
+  defp terrain_class(:green_commons), do: "bg-emerald-950/70 border border-emerald-800/50 hover:border-emerald-400/60"
+  defp terrain_class(:wood_dock), do: "bg-amber-950/90 border border-amber-800/50 hover:border-yellow-500/60"
+  defp terrain_class(:water), do: "bg-cyan-950/90 border border-cyan-800/50 opacity-60 cursor-not-allowed"
+  defp terrain_class(:wall), do: "bg-zinc-900 border border-zinc-700/80 opacity-75 cursor-not-allowed"
+  defp terrain_class(_), do: "bg-stone-900/80 border border-stone-800/40"
 
   # Zero-compute ambient in-character greeting generator (< 1ms, $0 cost)
   defp generate_ambient_greeting(slug, name, district_slug, district_name) do
@@ -501,6 +744,28 @@ defmodule SovereignSoulEngineWeb.MapLive do
 
           <div class="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-950/70 border border-indigo-700/50 text-indigo-300 text-xs font-mono">
             <span>Twisted Paradox 12x12</span>
+          </div>
+
+          <%!-- Mode Switcher: 2D Walkable RPG Grid vs Strategic Radar --%>
+          <div class="join border border-base-700 bg-base-900/90 rounded-lg p-0.5 shadow-sm">
+            <button
+              phx-click="set_view_mode"
+              phx-value-mode="rpg"
+              class={["btn btn-xs join-item font-semibold gap-1 transition-all", if(@view_mode == "rpg", do: "btn-primary text-white shadow-sm", else: "btn-ghost text-base-content/60 hover:text-white")]}
+              title="2D Walkable RPG Map (Twisted Grid)"
+            >
+              <span>🎮</span>
+              <span class="hidden sm:inline">2D RPG Map</span>
+            </button>
+            <button
+              phx-click="set_view_mode"
+              phx-value-mode="radar"
+              class={["btn btn-xs join-item font-semibold gap-1 transition-all", if(@view_mode == "radar", do: "btn-primary text-white shadow-sm", else: "btn-ghost text-base-content/60 hover:text-white")]}
+              title="Strategic District Radar"
+            >
+              <span>🗺️</span>
+              <span class="hidden sm:inline">Radar</span>
+            </button>
           </div>
 
           <button
@@ -725,7 +990,195 @@ defmodule SovereignSoulEngineWeb.MapLive do
             </div>
           </div>
 
-          <%!-- SVG Map Canvas --%>
+          <%!-- 2D Walkable RPG Tile Grid Canvas (Twisted Style) --%>
+          <%= if @view_mode == "rpg" do %>
+            <div class="w-full h-full flex flex-col items-center justify-between relative overflow-hidden select-none">
+              <%!-- Top Info Bar --%>
+              <div class="w-full z-20 flex items-center justify-between px-4 py-2 bg-base-950/80 backdrop-blur-md border-b border-base-800/80 text-xs">
+                <div class="flex items-center gap-2.5">
+                  <span class="badge badge-warning badge-sm font-mono font-bold shadow-sm">
+                    📍 [X: {@player_x}, Y: {@player_y}]
+                  </span>
+                  <span class="text-white font-bold tracking-wide">{@selected_district.name}</span>
+                  <span class="badge badge-xs badge-outline text-amber-400 font-serif italic hidden md:inline">
+                    {@selected_district.gaelic_name}
+                  </span>
+                  <span class="text-cyan-400/80 font-mono text-[11px] hidden lg:inline">
+                    Tile: region:1:tile:{@player_x}:{@player_y}
+                  </span>
+                </div>
+                <div class="flex items-center gap-3">
+                  <div class="flex items-center gap-1 border border-base-700/60 rounded-lg p-0.5 bg-base-900/80">
+                    <button
+                      phx-click="set_tile_size"
+                      phx-value-size="24"
+                      class={["btn btn-xs px-2 h-6 min-h-0 text-[10px]", if(@tile_size == 24, do: "btn-primary", else: "btn-ghost text-base-content/60")]}
+                      title="Compact View"
+                    >
+                      24px
+                    </button>
+                    <button
+                      phx-click="set_tile_size"
+                      phx-value-size="30"
+                      class={["btn btn-xs px-2 h-6 min-h-0 text-[10px]", if(@tile_size == 30, do: "btn-primary", else: "btn-ghost text-base-content/60")]}
+                      title="Normal View"
+                    >
+                      30px
+                    </button>
+                    <button
+                      phx-click="set_tile_size"
+                      phx-value-size="36"
+                      class={["btn btn-xs px-2 h-6 min-h-0 text-[10px]", if(@tile_size == 36, do: "btn-primary", else: "btn-ghost text-base-content/60")]}
+                      title="Large View"
+                    >
+                      36px
+                    </button>
+                  </div>
+                  <span class="text-amber-400 font-mono text-xs font-semibold">
+                    👣 Step {@travel_step_count}
+                  </span>
+                  <span class="text-base-content/50 text-[11px] hidden sm:inline">
+                    WASD / Click to Walk
+                  </span>
+                </div>
+              </div>
+
+              <%!-- 2D Scrollable Tile Grid Container --%>
+              <div class="flex-1 w-full overflow-auto flex items-start justify-center p-4 relative" id="rpg-grid-container" style="min-height: 480px;">
+                <div
+                  id="rpg-grid-board"
+                  class="bg-base-950/95 p-3 sm:p-4 rounded-2xl border-2 border-amber-900/40 shadow-2xl relative select-none"
+                  style={"display: grid; grid-template-columns: repeat(#{@grid_cols}, #{@tile_size}px); grid-template-rows: repeat(#{@grid_rows}, #{@tile_size}px); gap: 2px; width: max-content; margin: 0 auto;"}
+                >
+                  <%= for tile <- @grid_tiles do %>
+                    <div
+                      id={"tile-#{tile.x}-#{tile.y}"}
+                      phx-click="walk_tile"
+                      phx-value-x={tile.x}
+                      phx-value-y={tile.y}
+                      title={"#{tile.district} [X: #{tile.x}, Y: #{tile.y}]"}
+                      style={"width: #{@tile_size}px; height: #{@tile_size}px; min-width: #{@tile_size}px; min-height: #{@tile_size}px;"}
+                      class={[
+                        "rounded transition-all duration-75 flex items-center justify-center relative cursor-pointer group",
+                        terrain_class(tile.terrain),
+                        if(tile.x == @player_x and tile.y == @player_y, do: "ring-2 ring-amber-400 z-20 shadow-lg shadow-amber-500/30", else: "")
+                      ]}
+                    >
+                      <%!-- Player Token (YOU) --%>
+                      <%= if tile.x == @player_x and tile.y == @player_y do %>
+                        <div class="relative flex items-center justify-center w-full h-full">
+                          <span class="absolute -inset-1 rounded-full bg-amber-400/40 animate-ping"></span>
+                          <div class="size-5 sm:size-6 rounded-full bg-gradient-to-tr from-amber-400 to-yellow-200 text-black font-black text-xs flex items-center justify-center shadow-lg border-2 border-white z-10">
+                            👑
+                          </div>
+                          <div class="absolute -bottom-5 whitespace-nowrap px-1.5 py-0.5 rounded bg-amber-500 text-black text-[9px] font-black uppercase tracking-wider shadow-lg z-30 pointer-events-none">
+                            YOU (Traveler)
+                          </div>
+                        </div>
+                      <% else %>
+                        <%!-- Resident Soul (NPC) on Tile --%>
+                        <% npc = find_npc_at_tile(@npc_locations, tile.x, tile.y) %>
+                        <%= if npc do %>
+                          <div
+                            phx-click="hail_soul"
+                            phx-value-name={npc.name}
+                            phx-value-slug={npc.slug}
+                            class="relative flex items-center justify-center w-full h-full group"
+                            title={"#{npc.name} (#{npc.title})"}
+                          >
+                            <%= if is_nearby?(npc, @player_x, @player_y) do %>
+                              <span class="absolute -inset-1.5 rounded-full bg-cyan-400/60 animate-pulse"></span>
+                            <% end %>
+                            <div class={[
+                              "size-5 sm:size-6 rounded-full flex items-center justify-center text-xs shadow-md border z-10 transition-transform group-hover:scale-125",
+                              if(is_nearby?(npc, @player_x, @player_y), do: "bg-cyan-500 text-black border-white ring-2 ring-cyan-300 animate-bounce", else: "bg-base-900 text-white border-base-700")
+                            ]}>
+                              {npc.icon}
+                            </div>
+                            <span class="absolute -bottom-3 text-[8px] font-bold text-white bg-base-950/90 px-1 rounded z-20 pointer-events-none truncate max-w-[36px]">
+                              {npc.name}
+                            </span>
+                          </div>
+                        <% else %>
+                          <%!-- Coordinate text on hover --%>
+                          <span class="opacity-0 group-hover:opacity-40 text-[7px] font-mono text-white pointer-events-none">
+                            {tile.x},{tile.y}
+                          </span>
+                        <% end %>
+                      <% end %>
+                    </div>
+                  <% end %>
+                </div>
+              </div>
+
+              <%!-- Proximity Encounter Card (Twisted Style) --%>
+              <%= if @nearby_npc do %>
+                <div class="absolute bottom-6 left-6 z-30 max-w-sm bg-base-950/95 backdrop-blur-md border border-cyan-500/60 rounded-2xl p-3.5 shadow-2xl animate-in slide-in-from-bottom-3 duration-200">
+                  <div class="flex items-start gap-3">
+                    <div class="size-10 rounded-xl bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 flex items-center justify-center font-bold text-xl shrink-0">
+                      {@nearby_npc.icon}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold text-white tracking-wide">{@nearby_npc.name}</span>
+                        <span class="badge badge-xs badge-info font-mono text-[9px]">{@nearby_npc.title}</span>
+                        <span class="text-[10px] text-emerald-400 font-mono">Nearby</span>
+                      </div>
+                      <p class="text-[11px] text-cyan-100/90 italic mt-1 leading-snug line-clamp-2">
+                        "{@nearby_npc.quote}"
+                      </p>
+                      <div class="flex items-center gap-2 mt-2">
+                        <button
+                          phx-click="hail_soul"
+                          phx-value-name={@nearby_npc.name}
+                          phx-value-slug={@nearby_npc.slug}
+                          class="btn btn-xs btn-primary gap-1 font-semibold"
+                        >
+                          <span>💬</span>
+                          <span>Talk [E]</span>
+                        </button>
+                        <.link
+                          navigate={~p"/sse/chat?character=#{@nearby_npc.slug}"}
+                          class="btn btn-xs btn-outline border-cyan-500/50 text-cyan-300 hover:bg-cyan-500/20 gap-1 font-semibold"
+                        >
+                          <span>✉️</span>
+                          <span>Direct Chat</span>
+                        </.link>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              <% end %>
+
+              <%!-- Minimap Radar (Top Right) --%>
+              <div class="absolute top-12 right-6 z-20 hidden md:block bg-base-950/90 backdrop-blur-md border border-base-800 rounded-xl p-2 shadow-xl">
+                <div class="text-[9px] font-mono text-base-content/50 uppercase tracking-wider mb-1 flex items-center justify-between">
+                  <span>Mini Radar</span>
+                  <span class="text-amber-400">{@player_x},{@player_y}</span>
+                </div>
+                <div class="w-36 h-28 bg-stone-950 rounded border border-stone-800 relative overflow-hidden">
+                  <div class="absolute inset-1 grid grid-cols-3 grid-rows-3 gap-0.5 opacity-30">
+                    <div class="bg-indigo-700/50 rounded-xs"></div>
+                    <div class="bg-red-700/50 rounded-xs"></div>
+                    <div class="bg-cyan-700/50 rounded-xs"></div>
+                    <div class="bg-yellow-700/50 rounded-xs"></div>
+                    <div class="bg-amber-500/70 rounded-xs border border-amber-400"></div>
+                    <div class="bg-blue-700/50 rounded-xs"></div>
+                    <div class="bg-purple-700/50 rounded-xs"></div>
+                    <div class="bg-emerald-700/50 rounded-xs"></div>
+                    <div class="bg-orange-700/50 rounded-xs"></div>
+                  </div>
+                  <div
+                    class="size-2 rounded-full bg-amber-400 border border-white absolute shadow-lg animate-pulse"
+                    style={"left: #{(@player_x / 28.0) * 100}%; top: #{(@player_y / 24.0) * 100}%; transform: translate(-50%, -50%);"}
+                  ></div>
+                </div>
+              </div>
+            </div>
+          <% end %>
+
+          <%!-- Strategic District Radar SVG Canvas (Shown in Radar mode or queried by tests) --%>
+          <div class={if(@view_mode == "radar", do: "w-full h-full flex items-center justify-center", else: "hidden")}>
           <svg viewBox="0 0 1000 780" class="w-full h-full max-h-[85vh] select-none filter drop-shadow-2xl">
             <defs>
               <%!-- Radial glow filter for district nodes --%>
@@ -800,102 +1253,66 @@ defmodule SovereignSoulEngineWeb.MapLive do
                 <% {x1, y1} = node_coords(from_slug) %>
                 <% {x2, y2} = node_coords(to_slug) %>
                 <% is_player_road = is_connected_to_player?(from_slug, to_slug, @player_district) %>
-
-                <%!-- Base Road Line --%>
                 <line
                   x1={x1}
                   y1={y1}
                   x2={x2}
                   y2={y2}
-                  stroke={if is_player_road, do: "rgba(56, 189, 248, 0.5)", else: "rgba(100, 116, 139, 0.3)"}
-                  stroke-width={if is_player_road, do: "5", else: "3.5"}
-                  stroke-dasharray={if is_player_road, do: "8,4", else: "6,4"}
-                  class="transition-all duration-300"
+                  stroke={if is_player_road, do: "#fbbf24", else: "rgba(255,255,255,0.12)"}
+                  stroke-width={if is_player_road, do: "4.5", else: "2"}
+                  stroke-dasharray={if is_player_road, do: "none", else: "6,6"}
+                  class={if is_player_road, do: "filter drop-shadow-[0_0_8px_rgba(251,191,36,0.6)] animate-pulse", else: ""}
                 />
-
-                <%!-- Luminous animated pulse along paths connected to player's feet --%>
-                <%= if is_player_road do %>
-                  <line
-                    x1={x1}
-                    y1={y1}
-                    x2={x2}
-                    y2={y2}
-                    stroke="#38bdf8"
-                    stroke-width="2"
-                    stroke-dasharray="6,8"
-                    class="animate-pulse"
-                    opacity="0.8"
-                  />
-                <% end %>
               <% end %>
             </g>
 
-            <%!-- District Nodes --%>
+            <%!-- 13 District Interactive Nodes --%>
             <%= for district <- @districts do %>
-              <% {cx, cy} = node_coords(district.slug) %>
+              <% {nx, ny} = node_coords(district.slug) %>
               <% is_player_here = district.slug == @player_district %>
               <% is_selected = district.slug == @selected_slug %>
               <% is_visited = MapSet.member?(@visited_districts, district.slug) %>
               <% color = zone_color(district.zone_type) %>
-              <% soul_count = Map.get(district, :soul_count, 0) %>
+              <% soul_count = district.soul_count || length(district.present_souls || []) %>
 
               <g
-                phx-click="walk_to_district"
+                id={"node-#{district.slug}"}
+                transform={"translate(#{nx}, #{ny})"}
+                phx-click="select_district"
                 phx-value-slug={district.slug}
-                class="cursor-pointer group transition-transform duration-200"
-                transform={"translate(#{cx}, #{cy})"}
+                class="cursor-pointer group"
               >
-                <%!-- Highlight halo if selected or visited --%>
-                <%= if is_selected do %>
-                  <circle
-                    cx="0"
-                    cy="0"
-                    r="46"
-                    fill="none"
-                    stroke={color}
-                    stroke-width="2.5"
-                    stroke-dasharray="4,4"
-                    class="animate-spin"
-                    style="animation-duration: 12s;"
-                  />
-                  <circle
-                    cx="0"
-                    cy="0"
-                    r="40"
-                    fill={color}
-                    fill-opacity="0.25"
-                    filter="url(#glow)"
-                  />
+                <%!-- Active Radiance Aura when Player or Selected --%>
+                <%= if is_player_here do %>
+                  <circle cx="0" cy="0" r="42" fill="rgba(251, 191, 36, 0.15)" class="animate-ping" />
+                  <circle cx="0" cy="0" r="34" fill="none" stroke="#fbbf24" stroke-width="2" class="animate-pulse" />
                 <% end %>
 
-                <%!-- Base District Circle --%>
+                <%= if is_selected and not is_player_here do %>
+                  <circle cx="0" cy="0" r="32" fill="none" stroke="#38bdf8" stroke-width="2" stroke-dasharray="4,4" />
+                <% end %>
+
+                <%!-- Main District Node Circle --%>
                 <circle
                   cx="0"
                   cy="0"
-                  r={if district.slug == "high_palace", do: (if is_selected, do: 40, else: 36), else: (if is_selected, do: 34, else: 30)}
-                  fill="#0f172a"
-                  stroke={if is_player_here, do: "#38bdf8", else: (if is_selected, do: color, else: "rgba(148, 163, 184, 0.4)")}
-                  stroke-width={if is_player_here, do: 3.5, else: (if is_selected, do: 3, else: 1.5)}
-                  class="group-hover:stroke-amber-400 transition-all shadow-xl"
+                  r={if district.slug == "high_palace", do: "32", else: "26"}
+                  fill={if is_player_here, do: "#090d16", else: "#0f172a"}
+                  stroke={if is_player_here, do: "#fbbf24", else: color}
+                  stroke-width={if is_player_here or is_selected, do: "3.5", else: "2"}
+                  filter={if is_player_here, do: "url(#glow)", else: "none"}
+                  class="transition-all duration-300 group-hover:stroke-white group-hover:scale-110"
                 />
 
-                <%!-- Inner Ring with Zone Color Accent --%>
-                <circle
-                  cx="0"
-                  cy="0"
-                  r={if district.slug == "high_palace", do: (if is_selected, do: 32, else: 28), else: (if is_selected, do: 28, else: 24)}
-                  fill={color}
-                  fill-opacity={if district.slug == "high_palace", do: "0.28", else: "0.18"}
-                />
-
-                <%!-- District Short Title / Monogram --%>
+                <%!-- District Monogram inside Node --%>
                 <text
                   x="0"
                   y="-4"
-                  fill="#ffffff"
-                  font-size={if district.slug == "high_palace", do: "14", else: "11"}
-                  font-weight="bold"
+                  fill={if is_player_here, do: "#fbbf24", else: "#ffffff"}
+                  font-size={if district.slug == "high_palace", do: "16", else: "11"}
+                  font-weight="900"
                   text-anchor="middle"
+                  font-family="monospace"
                   class="pointer-events-none"
                 >
                   {district_monogram(district.slug)}
@@ -979,6 +1396,7 @@ defmodule SovereignSoulEngineWeb.MapLive do
               </g>
             </g>
           </svg>
+          </div>
 
           <%!-- Legend Footer --%>
           <div class="absolute bottom-4 right-6 hidden md:flex items-center gap-3 px-3 py-1.5 rounded-xl bg-base-950/80 backdrop-blur-md border border-base-800 text-[11px] text-base-content/60 shadow-lg">

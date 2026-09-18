@@ -92,7 +92,12 @@ config :phoenix_live_view,
 # Disable swoosh api client as it is only required for production adapters.
 config :swoosh, :api_client, false
 
-# Use LocalProvider (Ollama GTX 1660 SUPER CUDA) in development
+# In development, try local GPU Ollama first, cascading to cloud providers if keys are set
 config :sovereign_soul_engine, :llm_providers, [
-  SovereignSoulEngine.LLM.LocalProvider
+  SovereignSoulEngine.LLM.LocalProvider,
+  SovereignSoulEngine.LLM.GeminiProvider,
+  SovereignSoulEngine.LLM.AnthropicProvider,
+  SovereignSoulEngine.LLM.OpenAIProvider,
+  SovereignSoulEngine.LLM.DeepSeekProvider,
+  SovereignSoulEngine.LLM.XAIProvider
 ]

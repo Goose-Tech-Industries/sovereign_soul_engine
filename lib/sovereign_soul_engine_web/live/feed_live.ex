@@ -8,11 +8,15 @@ defmodule SovereignSoulEngineWeb.FeedLive do
     World
   }
 
+  import Ecto.Query, warn: false
+
   @impl true
   def mount(_params, _session, socket) do
     if connected?(socket) do
       Phoenix.PubSub.subscribe(SovereignSoulEngine.PubSub, SocialFeed.pubsub_topic())
       Phoenix.PubSub.subscribe(SovereignSoulEngine.PubSub, "world:events")
+      # Start live autonomous pulse so the feed dynamically updates
+      Process.send_after(self(), :live_feed_pulse, 3_000)
     end
 
     # Ensure player character exists
@@ -72,16 +76,8 @@ defmodule SovereignSoulEngineWeb.FeedLive do
 
       case SocialFeed.create_post(attrs) do
         {:ok, post} ->
-          # Trigger a nearby companion to react or comment after a brief delay
-          if socket.assigns.npcs != [] do
-            target_npc = Enum.random(socket.assigns.npcs)
-
-            Process.send_after(
-              self(),
-              {:autonomous_comment_reaction, post.id, target_npc.id, clean_content},
-              800
-            )
-          end
+          # Trigger peer companions to react and reply after a brief natural pause
+          Process.send_after(self(), {:trigger_inter_soul_chain, post.id}, 500)
 
           {:noreply,
            socket
@@ -110,9 +106,12 @@ defmodule SovereignSoulEngineWeb.FeedLive do
             Process.send_after(
               self(),
               {:npc_reply_to_comment, post_id, updated_post.character.id, clean_text},
-              600
+              500
             )
           end
+
+          # Also trigger a second peer NPC to chime in on the conversation
+          Process.send_after(self(), {:trigger_peer_comment, post_id}, 1200)
 
           comment_inputs = Map.put(socket.assigns.comment_inputs, post_id, "")
 
@@ -142,34 +141,37 @@ defmodule SovereignSoulEngineWeb.FeedLive do
 
   @impl true
   def handle_event("spark_npc_post", _params, socket) do
-    if socket.assigns.npcs != [] do
-      npc = Enum.random(socket.assigns.npcs)
+    case SocialFeed.spark_inter_soul_activity() do
+      {:ok, post} ->
+        post = SovereignSoulEngine.Repo.preload(post, :character)
+        {:noreply, assign(socket, :toast, "#{post.character.name} sparked a town conversation.")}
 
-      case SocialFeed.generate_post(npc.id) do
-        {:ok, _post} ->
-          {:noreply, assign(socket, :toast, "#{npc.name} posted a new thought.")}
-
-        _ ->
-          # Fallback autonomous post
-          location = Enum.random(["The Raven Docks", "The Obsidian Spire", "Old Ironworks", "Whispering Shrines"])
+      _ ->
+        if socket.assigns.npcs != [] do
+          npc = Enum.random(socket.assigns.npcs)
           fallback_text = pick_fallback_quote(npc)
 
-          SocialFeed.create_post(%{
-            character_id: npc.id,
-            content: fallback_text,
-            mood: "introspective",
-            platform: "soulbook",
-            metadata: %{
-              "location" => location,
-              "comments" => [],
-              "reactions" => %{"love" => 2, "honor" => 1, "fire" => 0, "laugh" => 0, "moon" => 1}
-            }
-          })
+          case SocialFeed.create_post(%{
+                 character_id: npc.id,
+                 content: fallback_text,
+                 mood: "introspective",
+                 platform: "soulbook",
+                 metadata: %{
+                   "location" => "Feannag's Rest",
+                   "comments" => [],
+                   "reactions" => %{"love" => 1, "honor" => 1, "fire" => 0, "laugh" => 0, "moon" => 1}
+                 }
+               }) do
+            {:ok, post} ->
+              Process.send_after(self(), {:trigger_inter_soul_chain, post.id}, 400)
+              {:noreply, assign(socket, :toast, "#{npc.name} posted to the town square.")}
 
-          {:noreply, assign(socket, :toast, "#{npc.name} posted to the town square.")}
-      end
-    else
-      {:noreply, socket}
+            _ ->
+              {:noreply, assign(socket, :toast, "All souls are currently at rest.")}
+          end
+        else
+          {:noreply, assign(socket, :toast, "All souls are currently at rest.")}
+        end
     end
   end
 
@@ -209,9 +211,43 @@ defmodule SovereignSoulEngineWeb.FeedLive do
   end
 
   @impl true
+  def handle_info({:trigger_inter_soul_chain, post_id}, socket) do
+    post = SovereignSoulEngine.Repo.get(SovereignSoulEngine.Social.SocialPost, post_id)
+
+    if post do
+      SocialFeed.trigger_inter_soul_response(post, 2)
+    end
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:trigger_peer_comment, post_id}, socket) do
+    post = SovereignSoulEngine.Repo.get(SovereignSoulEngine.Social.SocialPost, post_id)
+
+    if post do
+      SocialFeed.trigger_inter_soul_response(post, 1)
+    end
+
+    {:noreply, socket}
+  end
+
+  @impl true
   def handle_info({:world_event, event}, socket) do
     updated = [event | socket.assigns.recent_events] |> Enum.take(10)
     {:noreply, assign(socket, :recent_events, updated)}
+  end
+
+  @impl true
+  def handle_info(:live_feed_pulse, socket) do
+    unless SovereignSoulEngine.World.Control.paused?() do
+      SocialFeed.spark_inter_soul_activity()
+    end
+
+    # Pulse every 12 to 22 seconds for an organic living town feeling
+    next_delay = Enum.random(12_000..22_000)
+    Process.send_after(self(), :live_feed_pulse, next_delay)
+    {:noreply, socket}
   end
 
   @impl true
@@ -227,22 +263,15 @@ defmodule SovereignSoulEngineWeb.FeedLive do
   end
 
   defp pick_fallback_quote(npc) do
-    case npc.slug do
-      "maya" ->
-        "The mist over the river smells of damp stone and hemlock. Keep your watchmen alert tonight."
+    recent_contents =
+      from(p in SovereignSoulEngine.Social.SocialPost,
+        order_by: [desc: p.posted_at, desc: p.inserted_at],
+        limit: 50,
+        select: p.content
+      )
+      |> SovereignSoulEngine.Repo.all()
 
-      "ravina" ->
-        "Another shipment arrived with broken seals. Someone in the eastern alleys is getting reckless."
-
-      "valeria" ->
-        "The dreams last night were crowded with unfamiliar faces. A convergence is nearing."
-
-      "cyra" ->
-        "Atmospheric moisture 84%. Ambient thermal signatures within normal variance. All steady."
-
-      _ ->
-        "The wind through Feannag's Rest carries echoes of ancient vows. Be watchful of who walks beside you."
-    end
+    SocialFeed.fallback_post(npc, "contemplative", recent_contents)
   end
 
   defp reaction_count(post, key) do
@@ -250,12 +279,90 @@ defmodule SovereignSoulEngineWeb.FeedLive do
   end
 
   defp post_comments(post) do
-    (post.metadata && post.metadata["comments"]) || []
+    comments = (post.metadata && post.metadata["comments"]) || []
+
+    Enum.filter(comments, fn c ->
+      content = Map.get(c, "content", "") |> String.trim()
+
+      content != "" and content != "..." and
+        not String.starts_with?(content, "...") and
+        not String.contains?(content, "<|reserved") and
+        String.length(content) >= 4
+    end)
+    |> Enum.map(fn c ->
+      content = Map.get(c, "content", "") |> String.trim()
+
+      cleaned_content =
+        content
+        |> String.replace(~r/^{\s*"([^"]+)"/, "\\1")
+        |> String.replace(~r/<\|[^|]+\|>/, "")
+        |> String.replace(~r/\s*-\s*(edited to fit|no, I'll keep it simple).*$/i, "")
+        |> String.trim()
+
+      Map.put(c, "content", cleaned_content)
+    end)
   end
 
   defp post_location(post) do
     (post.metadata && post.metadata["location"]) || "Feannag's Rest"
   end
+
+  defp format_event_narrative(event) do
+    from_name = format_participant(event.from_did)
+    to_name = format_participant(event.to_did)
+    res = get_in(event.payload || %{}, ["resonance"])
+
+    case event.kind do
+      "encounter" when is_integer(res) and res >= 80 ->
+        {"✨", "#{from_name} and #{to_name} shared an extraordinary kindred resonance (#{res}%)."}
+
+      "encounter" when is_integer(res) and res >= 60 ->
+        {"🤝", "#{from_name} and #{to_name} bonded warmly in the square (#{res}% resonance)."}
+
+      "encounter" when is_integer(res) and res >= 45 ->
+        {"💬", "#{from_name} and #{to_name} crossed paths in the commons (#{res}% resonance)."}
+
+      "encounter" when is_integer(res) ->
+        {"⚡", "#{from_name} and #{to_name} had a guarded, tense exchange (#{res}% resonance)."}
+
+      "gossip" ->
+        summary = get_in(event.payload || %{}, ["summary"]) || "Whispers spread between #{from_name} and #{to_name}."
+        {"🗣️", summary}
+
+      "world_post" ->
+        {"📜", "#{from_name} posted a decree to the district."}
+
+      _ ->
+        {"✨", "#{from_name} was active in Feannag's Rest."}
+    end
+  end
+
+  defp format_participant(did_or_slug) do
+    cond do
+      is_nil(did_or_slug) ->
+        "A Soul"
+
+      String.starts_with?(did_or_slug, "did:soul:") ->
+        case SovereignSoulEngine.Identity.get_did(did_or_slug) do
+          %SovereignSoulEngine.Identity.SoulDid{character_id: char_id} when is_binary(char_id) ->
+            case SovereignSoulEngine.Characters.get_character(char_id) do
+              nil -> "A Sovereign Soul"
+              char -> char.name
+            end
+
+          _ ->
+            "A Sovereign Soul"
+        end
+
+      true ->
+        String.capitalize(did_or_slug)
+    end
+  end
+
+  defp format_event_time(nil), do: "just now"
+  defp format_event_time(%NaiveDateTime{} = ndt), do: Calendar.strftime(ndt, "%H:%M:%S")
+  defp format_event_time(%DateTime{} = dt), do: Calendar.strftime(dt, "%H:%M:%S")
+  defp format_event_time(other), do: to_string(other)
 
   @impl true
   def render(assigns) do
@@ -282,8 +389,8 @@ defmodule SovereignSoulEngineWeb.FeedLive do
             <.link navigate={~p"/sse/chat"} class="hover:text-slate-200 transition-colors">
               💬 Companion Chat
             </.link>
-            <.link navigate={~p"/sse/map"} class="hover:text-slate-200 transition-colors">
-              🏰 Town Map
+            <.link navigate={~p"/sse/acp"} class="hover:text-purple-300 transition-colors">
+              ⚙️ Studio
             </.link>
             <.link navigate={~p"/sse/memories"} class="hover:text-slate-200 transition-colors">
               🧠 Memory Vault
@@ -295,6 +402,10 @@ defmodule SovereignSoulEngineWeb.FeedLive do
         </div>
 
         <div class="flex items-center gap-2.5">
+          <div class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-[11px] font-mono shadow-xs">
+            <span class="size-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span>Live Pulse: {length(@npcs)} Souls</span>
+          </div>
           <button
             phx-click="spark_npc_post"
             class="px-3 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 text-xs font-semibold flex items-center gap-1.5 transition-colors"
@@ -346,8 +457,8 @@ defmodule SovereignSoulEngineWeb.FeedLive do
 
             <div class="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
               <span>Status: <strong class="text-emerald-400">Active in Feannag's Rest</strong></span>
-              <.link navigate={~p"/sse/map"} class="text-amber-400 hover:text-amber-300 font-semibold text-[11px]">
-                View Position →
+              <.link navigate={~p"/sse/chat"} class="text-amber-400 hover:text-amber-300 font-semibold text-[11px]">
+                Open Chat →
               </.link>
             </div>
           </div>
@@ -376,13 +487,21 @@ defmodule SovereignSoulEngineWeb.FeedLive do
                 <%= for rel <- @top_friends do %>
                   <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800/80 hover:border-amber-500/40 transition-all flex flex-col justify-between group">
                     <div class="flex items-center gap-2">
-                      <div class="size-8 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center font-bold text-xs shrink-0">
+                      <.link
+                        navigate={~p"/sse/characters/#{rel.target_character.id}"}
+                        class="size-8 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-400 hover:border-amber-300 flex items-center justify-center font-bold text-xs shrink-0 transition-colors"
+                        title="View Soul Profile"
+                      >
                         {String.first(rel.target_character.name)}
-                      </div>
+                      </.link>
                       <div class="min-w-0">
-                        <div class="text-xs font-bold text-white truncate group-hover:text-amber-400 transition-colors">
+                        <.link
+                          navigate={~p"/sse/characters/#{rel.target_character.id}"}
+                          class="text-xs font-bold text-white truncate block group-hover:text-amber-400 transition-colors"
+                          title="View Soul Profile"
+                        >
                           {rel.target_character.name}
-                        </div>
+                        </.link>
                         <div class="text-[10px] text-slate-500 truncate">
                           {rel.relationship_type || "Companion"}
                         </div>
@@ -392,7 +511,7 @@ defmodule SovereignSoulEngineWeb.FeedLive do
                     <div class="mt-2 pt-2 border-t border-slate-900 flex items-center justify-between text-[10px]">
                       <span class="text-slate-400 font-mono">Affinity: <strong class="text-amber-400">{rel.affinity}</strong></span>
                       <.link
-                        navigate={~p"/sse/chat?character_id=#{rel.target_character.id}"}
+                        navigate={~p"/sse/chat?character=#{rel.target_character.slug}"}
                         class="text-blue-400 hover:text-blue-300 font-semibold"
                       >
                         Chat →
@@ -465,14 +584,22 @@ defmodule SovereignSoulEngineWeb.FeedLive do
                   <%!-- Post Header --%>
                   <div class="flex items-start justify-between gap-3">
                     <div class="flex items-center gap-3">
-                      <div class="size-10 rounded-xl bg-gradient-to-tr from-amber-500/20 to-purple-500/20 border border-amber-500/30 text-amber-400 flex items-center justify-center font-bold text-sm">
+                      <.link
+                        navigate={if post.character, do: ~p"/sse/characters/#{post.character.id}", else: "#"}
+                        class="size-10 rounded-xl bg-gradient-to-tr from-amber-500/20 to-purple-500/20 border border-amber-500/30 text-amber-400 hover:border-amber-400 flex items-center justify-center font-bold text-sm transition-all shadow-xs"
+                        title="View Soul Profile"
+                      >
                         {if post.character, do: String.first(post.character.name), else: "S"}
-                      </div>
+                      </.link>
                       <div>
                         <div class="flex items-center gap-1.5">
-                          <span class="font-extrabold text-sm text-white">
+                          <.link
+                            navigate={if post.character, do: ~p"/sse/characters/#{post.character.id}", else: "#"}
+                            class="font-extrabold text-sm text-white hover:text-amber-400 transition-colors"
+                            title="View Soul Profile"
+                          >
                             {if post.character, do: post.character.name, else: "Resident"}
-                          </span>
+                          </.link>
                           <span class="text-[11px] text-slate-500 font-mono">
                             @{if post.character, do: post.character.slug, else: "unknown"}
                           </span>
@@ -485,11 +612,20 @@ defmodule SovereignSoulEngineWeb.FeedLive do
                       </div>
                     </div>
 
-                    <%= if post.character && post.character.kind == "npc" do %>
-                      <span class="px-2 py-0.5 rounded-full text-[10px] font-mono bg-purple-950/60 border border-purple-800/40 text-purple-300">
-                        Autonomous Soul
-                      </span>
-                    <% end %>
+                    <div class="flex items-center gap-2">
+                      <%= if post.character && post.character.kind == "npc" do %>
+                        <.link
+                          navigate={~p"/sse/chat?character=#{post.character.slug}"}
+                          class="px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 border border-blue-500/30 transition-all flex items-center gap-1"
+                          title={"Chat 1-on-1 with #{post.character.name}"}
+                        >
+                          <span>💬 Chat</span>
+                        </.link>
+                        <span class="hidden sm:inline-block px-2 py-0.5 rounded-full text-[10px] font-mono bg-purple-950/60 border border-purple-800/40 text-purple-300">
+                          Autonomous Soul
+                        </span>
+                      <% end %>
+                    </div>
                   </div>
 
                   <%!-- Post Content Body --%>
@@ -612,14 +748,18 @@ defmodule SovereignSoulEngineWeb.FeedLive do
             <% else %>
               <div class="space-y-2.5 max-h-96 overflow-y-auto pr-1">
                 <%= for event <- @recent_events do %>
-                  <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800/80 text-xs space-y-1">
+                  <% {icon, narrative} = format_event_narrative(event) %>
+                  <div class="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80 text-xs space-y-1.5 hover:border-slate-700 transition-colors">
                     <div class="flex items-center justify-between text-[10px]">
-                      <span class="font-mono text-amber-400 font-bold">{event.kind}</span>
-                      <span class="text-slate-600 font-mono">{event.inserted_at}</span>
+                      <span class="font-mono text-amber-400 font-bold flex items-center gap-1">
+                        <span>{icon}</span>
+                        <span>{String.upcase(event.kind)}</span>
+                      </span>
+                      <span class="text-slate-500 font-mono">{format_event_time(event.inserted_at)}</span>
                     </div>
-                    <div class="text-[11px] text-slate-400 font-mono break-all leading-tight">
-                      {inspect(event.payload)}
-                    </div>
+                    <p class="text-[11px] text-slate-300 leading-snug">
+                      {narrative}
+                    </p>
                   </div>
                 <% end %>
               </div>
@@ -627,10 +767,10 @@ defmodule SovereignSoulEngineWeb.FeedLive do
 
             <div class="pt-3 border-t border-slate-800/80">
               <.link
-                navigate={~p"/sse/map"}
-                class="w-full py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
+                navigate={~p"/sse/acp"}
+                class="w-full py-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/30 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
               >
-                <span>Walk Town Map →</span>
+                <span>⚙️ Studio & Creator Panel →</span>
               </.link>
             </div>
           </div>
@@ -649,9 +789,9 @@ defmodule SovereignSoulEngineWeb.FeedLive do
           <span class="text-[10px]">Feed</span>
         </.link>
 
-        <.link navigate={~p"/sse/map"} class="flex flex-col items-center gap-1 text-slate-400 hover:text-white">
-          <span class="text-lg leading-none">🏰</span>
-          <span class="text-[10px] font-semibold">Map</span>
+        <.link navigate={~p"/sse/acp"} class="flex flex-col items-center gap-1 text-slate-400 hover:text-white">
+          <span class="text-lg leading-none">⚙️</span>
+          <span class="text-[10px] font-semibold">Studio</span>
         </.link>
 
         <.link navigate={~p"/sse/memories"} class="flex flex-col items-center gap-1 text-slate-400 hover:text-white">

@@ -22,6 +22,21 @@ defmodule SovereignSoulEngine.Characters do
     |> Repo.insert()
   end
 
+  @doc """
+  Creates a character and immediately provisions their complete Soul Profile,
+  baseline emotions, somatics, and cryptographic DID identity.
+  """
+  def create_living_soul(attrs \\ %{}, profile_attrs \\ %{}) do
+    case create_character(attrs) do
+      {:ok, character} ->
+        SovereignSoulEngine.Souls.ensure_soul_vitality(character, profile_attrs)
+        {:ok, character}
+
+      error ->
+        error
+    end
+  end
+
   @doc "Read-only lookup — nil if this external player has never been seen before (no create side effect, safe for a GET)."
   def get_external_player(external_source, external_id) do
     Repo.get_by(Character, external_source: external_source, external_id: external_id)

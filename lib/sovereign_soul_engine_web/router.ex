@@ -192,6 +192,7 @@ defmodule SovereignSoulEngineWeb.Router do
       live "/map", MapLive, :index
       live "/chat/sauce", ChatSauceLive, :index
       live "/characters/:id", CharacterLive, :show
+      live "/souls/:id", CharacterLive, :show
       live "/scenes/:id", SceneLive, :show
       live "/ledger", SoulLedgerLive, :index
       live "/memories", MemoryVaultLive, :index

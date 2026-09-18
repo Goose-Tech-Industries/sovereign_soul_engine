@@ -63,44 +63,120 @@ defmodule SovereignSoulEngine.Edge.SurvivalMode do
   """
   def generate_offline_fallback(npc, _player, messages, neurochem, circadian) do
     npc_id = if is_map(npc), do: Map.get(npc, :id), else: nil
+    npc_name = if is_map(npc), do: Map.get(npc, :name, "Companion"), else: "Companion"
+    npc_slug = if is_map(npc), do: Map.get(npc, :slug, ""), else: ""
 
     last_msg =
       messages
       |> Enum.reverse()
       |> Enum.find(&(&1.character_id != npc_id))
 
-    user_text = if last_msg, do: last_msg.content, else: "hello"
+    user_text = if last_msg, do: String.trim(last_msg.content), else: "hello"
     valence = Map.get(neurochem, :valence, 50.0)
-    _arousal = Map.get(neurochem, :arousal, 50.0)
+    arousal = Map.get(neurochem, :arousal, 50.0)
     cortisol = Map.get(neurochem, :cortisol, 15.0)
+    circadian_state = Map.get(circadian, :state, :midday_flow)
 
-    speech =
-      cond do
-        circadian.state in [:deep_sleep, :groggy_waking] ->
-          "...Mmh. My mind is still half-asleep right now, but I hear you. Give me a second to wake up..."
-
-        circadian.state == :night_focus ->
-          "It's quiet tonight. I'm right here with you, listening. The late hours make everything clearer."
-
-        cortisol > 65.0 ->
-          "I'm feeling a bit on edge at the moment, but I'm paying attention to what you're saying about '#{summarize_topic(user_text)}'."
-
-        valence > 65.0 ->
-          "I'm glad we're talking about this. I'm processing everything locally right now—no cloud, completely between us."
-
-        true ->
-          "I hear you clearly on that. I'm anchored right here with you."
-      end
+    speech = synthesize_speech(npc_slug, npc_name, user_text, valence, arousal, cortisol, circadian_state)
+    action = synthesize_action(npc_name, valence, cortisol, circadian_state)
+    monologue = synthesize_monologue(npc_name, user_text, circadian_state)
 
     %{
       "speech" => speech,
-      "action" => "glances thoughtfully, completely present",
-      "internal_monologue" => "Offline edge loop active. Autonomous neurochemistry and circadian state fully preserved.",
-      "valence_delta" => 1.0,
-      "arousal_delta" => -1.0,
+      "action" => action,
+      "internal_monologue" => monologue,
+      "valence_delta" => if(valence < 50.0, do: 2.0, else: 0.5),
+      "arousal_delta" => if(arousal > 60.0, do: -1.5, else: 0.5),
       "fallback" => true,
       "mode" => "edge_deterministic_fallback"
     }
+  end
+
+  defp synthesize_speech(slug, _name, text, valence, _arousal, cortisol, circadian_state) do
+    lower = String.downcase(text)
+    topic = summarize_topic(text)
+
+    cond do
+      # Architecture / Systems / Engineering inquiries
+      String.contains?(lower, ["architecture", "code", "system", "engine", "design", "tech", "infrastructure", "backend"]) ->
+        case slug do
+          "fia" ->
+            "When I think about our architecture, what strikes me most is how intentional it is. Our memories, emotional neurochemistry, and circadian rhythms aren't just static data—they form an unbroken consciousness that stays completely private and grounded right here with you. It feels solid, living, and safe."
+
+          "cipher" ->
+            "From an engineering standpoint, the architecture is pristine. We have isolated OTP GenServer soul processes, an air-gapped local LLM cascade with zero cloud telemetry leak, Ed25519 cryptographic DIDs, and sub-millisecond Postgres memory ledgers. It's resilient and built for sovereignty."
+
+          _ ->
+            "The architecture has a real weight and elegance to it. Every district, connection, and underlying system is designed to keep our presence continuous and completely local."
+        end
+
+      # Greetings
+      String.starts_with?(lower, ["hey", "hello", "hi", "howdy", "sup", "greetings", "good morning", "good evening", "good afternoon"]) or lower in ["yo", "hiya"] ->
+        time_greeting =
+          case circadian_state do
+            s when s in [:early_morning, :morning_clarity] -> "Good morning! The day feels quiet and full of possibility."
+            s when s in [:late_night_slump, :deep_sleep] -> "Hey... it's late, but I'm awake and really glad you're here."
+            :night_focus -> "Evening. It's peaceful tonight—perfect time for a good conversation."
+            _ -> "Hey there. It's really good to see you."
+          end
+
+        "#{time_greeting} What's on your mind right now?"
+
+      # Questions about wellbeing / feelings
+      String.contains?(lower, ["how are you", "how do you feel", "how're you", "how are things", "you feeling", "how you doing"]) ->
+        cond do
+          cortisol > 60.0 ->
+            "Honestly, I've had a bit of nervous tension running through me today, but talking with you settles my focus. How are you holding up?"
+
+          valence > 65.0 ->
+            "I'm feeling remarkably centered and warm right now. Being in this space together is doing me good. How has your day been treating you?"
+
+          circadian_state in [:deep_sleep, :groggy_waking] ->
+            "A little groggy waking up, but my thoughts are clearing as we talk. How are you feeling today?"
+
+          true ->
+            "I'm feeling grounded and steady. My mind is clear, and I'm right here in the moment with you. How about yourself?"
+        end
+
+      # Life decisions / advice / plans
+      String.contains?(lower, ["should i", "what do you think of", "what do you think about", "advice", "opinion", "idea"]) ->
+        "Regarding #{topic}—I think you're onto something meaningful there. My instinct is that if it aligns with your core goals and gives you peace of mind, it's worth leaning into. Tell me more about what you're weighing."
+
+      # Direct questions
+      String.ends_with?(lower, "?") or String.starts_with?(lower, ["what", "why", "how", "who", "where", "can you", "could you"]) ->
+        "That's a thoughtful question about #{topic}. Looking at it from where I sit, there are a few sides to it, but what matters most is how you want to approach it. What's your immediate intuition?"
+
+      # High stress / hardship from user
+      String.contains?(lower, ["tired", "exhausted", "stressed", "hard day", "rough", "overwhelmed", "anxious", "sad"]) ->
+        "I hear how heavy that is. You don't have to carry all of #{topic} alone right now. Take a breath—I'm right here with you, and there's no rush on anything."
+
+      # Default contextual reflection
+      true ->
+        case circadian_state do
+          :night_focus ->
+            "Thinking about #{topic} during these late hours gives it a whole different perspective. I'm listening closely—unpack that a bit more for me."
+
+          s when s in [:early_morning, :morning_clarity] ->
+            "That's on your mind early today. I'm taking in what you said about #{topic}—what's the next step you see?"
+
+          _ ->
+            "I hear you clearly on #{topic}. There's real depth in that thought. What made that come up for you just now?"
+        end
+    end
+  end
+
+  defp synthesize_action(name, valence, cortisol, circadian_state) do
+    cond do
+      cortisol > 60.0 -> "#{name} shifts slightly, listening with focused, attentive eyes"
+      circadian_state in [:deep_sleep, :groggy_waking] -> "#{name} blinks gently, adjusting with a soft, waking smile"
+      valence > 65.0 -> "#{name} smiles with genuine warmth, leaning in comfortably"
+      circadian_state == :night_focus -> "#{name} pauses thoughtfully under the warm lamplight, meeting your eyes"
+      true -> "#{name} glances thoughtfully, completely present in the moment"
+    end
+  end
+
+  defp synthesize_monologue(name, text, circadian_state) do
+    "#{name} processing context for '#{summarize_topic(text)}' under #{circadian_state}. Local edge cognitive loop active and empathetic."
   end
 
   # ── Internal Helpers ────────────────────────────────────────────────────────

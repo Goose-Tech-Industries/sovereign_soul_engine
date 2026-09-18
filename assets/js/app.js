@@ -151,6 +151,12 @@ const customHooks = {
         } else if (key === 'c' || key === 'home') {
           e.preventDefault();
           this.pushEvent("walk_direction", { direction: "palace" });
+        } else if (key === 'e' || key === 'enter') {
+          e.preventDefault();
+          this.pushEvent("interact_nearby", {});
+        } else if (key === 'm') {
+          e.preventDefault();
+          this.pushEvent("toggle_view_mode", {});
         }
       };
       window.addEventListener("keydown", this.handleKeyDown);

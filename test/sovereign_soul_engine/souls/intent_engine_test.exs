@@ -74,7 +74,7 @@ defmodule SovereignSoulEngine.Souls.IntentEngineTest do
           {%{@calm_emotional | curiosity: 90, stress: 10}, @calm_somatic}
         ] do
       result = IntentEngine.decide(emotional, somatic)
-      assert is_binary(result.reason) and result.reason != ""
+      assert byte_size(result.reason) > 0
     end
   end
 end

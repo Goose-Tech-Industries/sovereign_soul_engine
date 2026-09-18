@@ -189,8 +189,8 @@ defmodule SovereignSoulEngineWeb.AcpModerationLive do
         </div>
 
         <div class="flex items-center gap-3">
-          <.link navigate={~p"/sse/map"} class="text-xs text-amber-400/80 hover:text-amber-300 font-mono flex items-center gap-1">
-            🏰 Feannag's Rest Map →
+          <.link navigate={~p"/sse/feed"} class="text-xs text-amber-400/80 hover:text-amber-300 font-mono flex items-center gap-1">
+            📰 Living Feed →
           </.link>
           <.link navigate={~p"/sse/chat"} class="text-xs text-blue-400/80 hover:text-blue-300 font-mono flex items-center gap-1">
             💬 Live Chat →

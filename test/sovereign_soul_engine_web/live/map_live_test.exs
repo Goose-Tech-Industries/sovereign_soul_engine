@@ -105,4 +105,37 @@ defmodule SovereignSoulEngineWeb.MapLiveTest do
     assert html =~ "Ramparts are secure" or html =~ "Keep your"
     assert html =~ "Ambient Local Voice"
   end
+
+  test "renders 28x24 2D RPG matrix with inline grid columns preventing 1-column collapse", %{conn: conn} do
+    {:ok, view, html} = live(conn, "/sse/map")
+
+    # Verify grid board has inline style repeat(28, ...)
+    assert html =~ "grid-template-columns: repeat(28,"
+    assert html =~ "grid-template-rows: repeat(24,"
+    assert html =~ "rpg-grid-board"
+
+    # Verify initial tile coordinates and player start
+    assert html =~ "tile-14-8"
+    assert html =~ "tile-14-9"
+    assert html =~ "YOU (Traveler)"
+
+    # Click a walkable tile
+    html =
+      view
+      |> element("#tile-14-9")
+      |> render_click()
+
+    # Player stepped onto tile (14, 9) right next to Fia
+    assert html =~ "Tile: region:1:tile:14:9"
+    assert html =~ "Fia"
+    assert html =~ "Empathetic Weaver"
+
+    # Toggle zoom level / tile size
+    html =
+      view
+      |> element("button[phx-value-size='36']", "36px")
+      |> render_click()
+
+    assert html =~ "grid-template-columns: repeat(28, 36px)"
+  end
 end

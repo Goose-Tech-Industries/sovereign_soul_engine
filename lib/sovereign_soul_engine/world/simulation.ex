@@ -101,7 +101,7 @@ defmodule SovereignSoulEngine.World.Simulation do
       encounters =
         souls
         |> Enum.filter(&eligible?/1)
-        |> pair_up()
+        |> pair_up(opts)
         |> Enum.map(fn {a, b} -> encounter(a, b, cohort_ids, opts) end)
 
       run_drift(souls)
@@ -152,11 +152,25 @@ defmodule SovereignSoulEngine.World.Simulation do
     end
   end
 
-  defp pair_up(souls) when length(souls) < 2, do: []
+  defp pair_up(souls, _opts) when length(souls) < 2, do: []
 
-  defp pair_up(souls) do
-    souls
-    |> Enum.sort_by(& &1.slug)
+  defp pair_up(souls, opts) do
+    offset =
+      cond do
+        Keyword.has_key?(opts, :offset) ->
+          Keyword.get(opts, :offset)
+
+        Mix.env() == :test and not Keyword.get(opts, :rotate, false) ->
+          0
+
+        true ->
+          rem(System.unique_integer([:positive]), max(1, length(souls)))
+      end
+
+    sorted = Enum.sort_by(souls, & &1.slug)
+    {front, back} = Enum.split(sorted, rem(offset, max(1, length(souls))))
+
+    (back ++ front)
     |> Enum.chunk_every(2, 2, :discard)
     |> Enum.map(fn [a, b] -> {a, b} end)
   end
@@ -201,10 +215,11 @@ defmodule SovereignSoulEngine.World.Simulation do
 
   defp relationship_delta(resonance) do
     cond do
-      resonance >= 80 -> %{affinity: 5, trust: 4, respect: 3}
-      resonance >= 55 -> %{affinity: 2, trust: 1, respect: 1}
-      resonance >= 30 -> %{affinity: 1}
-      true -> %{affinity: -2, fear: 2, anger: 1}
+      resonance >= 80 -> %{affinity: 6, trust: 5, respect: 4}
+      resonance >= 65 -> %{affinity: 4, trust: 3, respect: 2}
+      resonance >= 50 -> %{affinity: 2, trust: 1, respect: 1}
+      resonance >= 35 -> %{affinity: 0}
+      true -> %{affinity: -3, fear: 2, anger: 2}
     end
   end
 

@@ -23,7 +23,7 @@ defmodule SovereignSoulEngine.Social.NPCScheduler do
   require Logger
 
   alias SovereignSoulEngine.{Relationships, Souls, Repo}
-  alias SovereignSoulEngine.Social.{SocialDriftEngine, NPCConversation}
+  alias SovereignSoulEngine.Social.{SocialDriftEngine, NPCConversation, SocialFeed}
   alias SovereignSoulEngine.Relationships.Relationship
 
   import Ecto.Query
@@ -117,6 +117,11 @@ defmodule SovereignSoulEngine.Social.NPCScheduler do
       else
         state.conversations_run
       end
+
+    # Also spark an autonomous social post so the town accumulates history
+    Task.start(fn ->
+      SocialFeed.spark_inter_soul_activity()
+    end)
 
     %{
       state

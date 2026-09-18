@@ -124,6 +124,11 @@ defmodule SovereignSoulEngine.Billing do
     end
   end
 
+  @doc "Cancels a character's subscription and downgrades to the free tier."
+  def cancel_subscription(character_or_id) do
+    set_subscription(character_or_id, "free", status: "canceled")
+  end
+
   @doc "Creates a Stripe checkout session for the given tier."
   def create_checkout_session(tier_id, character_or_id, opts \\ []) do
     character = resolve_character(character_or_id)

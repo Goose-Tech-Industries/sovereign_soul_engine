@@ -1325,13 +1325,6 @@ defmodule SovereignSoulEngineWeb.ChatLive do
                 <.icon name="hero-newspaper" class="size-4" />
               </.link>
               <.link
-                navigate={~p"/sse/map"}
-                class="btn btn-ghost btn-xs text-teal-400 font-semibold p-1.5"
-                title="Feannag's Rest Town Map"
-              >
-                <.icon name="hero-map" class="size-4" />
-              </.link>
-              <.link
                 navigate={~p"/sse/billing"}
                 class="btn btn-ghost btn-xs text-emerald-400 font-semibold p-1.5"
                 title="Stripe Pass & Tier Billing"
@@ -1341,7 +1334,7 @@ defmodule SovereignSoulEngineWeb.ChatLive do
               <.link
                 navigate={~p"/sse/acp"}
                 class="btn btn-ghost btn-xs text-purple-400 font-semibold p-1.5"
-                title="Admin Control Panel"
+                title="Studio & Creator Control Panel"
               >
                 <.icon name="hero-cpu-chip" class="size-4" />
               </.link>
@@ -1748,15 +1741,15 @@ defmodule SovereignSoulEngineWeb.ChatLive do
               <span>Neighborhood ({length(@neighborhood_posts)})</span>
             </button>
 
-            <%!-- Feannag's Rest Town Map Link --%>
+            <%!-- Studio & Creator Panel Link --%>
             <.link
-              navigate={~p"/sse/map"}
-              id="town-map-nav-btn"
-              class="btn btn-xs flex items-center gap-1.5 border border-amber-500/40 text-amber-400 hover:bg-amber-500/15 transition-all shadow-sm font-semibold"
-              title="Explore the 13 regions of Feannag's Rest interactive map"
+              navigate={~p"/sse/acp"}
+              id="studio-nav-btn"
+              class="btn btn-xs flex items-center gap-1.5 border border-purple-500/40 text-purple-400 hover:bg-purple-500/15 transition-all shadow-sm font-semibold"
+              title="Open Creator Studio & Character Architect"
             >
-              <.icon name="hero-map" class="size-3.5 text-amber-400" />
-              <span>Map (13)</span>
+              <.icon name="hero-cpu-chip" class="size-3.5 text-purple-400" />
+              <span>Studio</span>
             </.link>
 
             <%!-- Circadian Rhythm & Night-Owl Badge --%>
