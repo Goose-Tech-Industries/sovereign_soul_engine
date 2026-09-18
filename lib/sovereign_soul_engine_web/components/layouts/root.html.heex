@@ -8,7 +8,22 @@
       {assigns[:page_title]}
     </.live_title>
     <link phx-track-static rel="stylesheet" href="/sse/assets/css/app.css" />
+    <link rel="manifest" href="/sse/manifest.json" />
+    <link rel="apple-touch-icon" href="/sse/images/app-icon.svg" />
+    <meta name="theme-color" content="#090d16" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Feannag's Rest" />
     <script defer phx-track-static type="text/javascript" src="/sse/assets/js/app.js">
+    </script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sse/sw.js').catch(err => {
+            console.log('[PWA] ServiceWorker registration failed: ', err);
+          });
+        });
+      }
     </script>
     <script>
       (() => {

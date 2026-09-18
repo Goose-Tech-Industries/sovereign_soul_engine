@@ -1,0 +1,25 @@
+{
+  "name": "Sovereign Soul Engine — Feannag's Rest",
+  "short_name": "Feannag's Rest",
+  "description": "Living AI Society, Companion Chat & Walkable Fantasy World",
+  "start_url": "/sse/chat",
+  "scope": "/sse/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#020617",
+  "theme_color": "#090d16",
+  "categories": ["entertainment", "social", "games"],
+  "icons": [
+    {
+      "src": "/sse/images/app-icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/sse/favicon.ico",
+      "sizes": "64x64 32x32 16x16",
+      "type": "image/x-icon"
+    }
+  ]
+}

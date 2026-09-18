@@ -186,6 +186,7 @@ defmodule SovereignSoulEngineWeb.Router do
       live "/", DashboardLive, :index
       live "/world", WorldLive, :index
       live "/chat", ChatLive, :index
+      live "/feed", FeedLive, :index
       live "/map", MapLive, :index
       live "/chat/sauce", ChatSauceLive, :index
       live "/characters/:id", CharacterLive, :show

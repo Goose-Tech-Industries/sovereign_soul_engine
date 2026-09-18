@@ -63,6 +63,19 @@ defmodule SovereignSoulEngine.Relationships do
   defp sort_key(%{last_interaction_at: %DateTime{} = dt}), do: DateTime.to_unix(dt)
   defp sort_key(_), do: 0
 
+  @doc """
+  Returns a character's top friends (highest affinity + trust) for social widgets.
+  """
+  def get_top_friends(character_id, limit \\ 8) do
+    from(r in Relationship,
+      where: r.source_character_id == ^character_id,
+      order_by: [desc: fragment("? + ?", r.affinity, r.trust)],
+      limit: ^limit,
+      preload: [:target_character]
+    )
+    |> Repo.all()
+  end
+
   def change_relationship(%Relationship{} = relationship, attrs \\ %{}) do
     Relationship.changeset(relationship, attrs)
   end

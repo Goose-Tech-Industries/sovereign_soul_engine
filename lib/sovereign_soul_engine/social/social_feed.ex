@@ -14,6 +14,7 @@ defmodule SovereignSoulEngine.Social.SocialFeed do
   alias SovereignSoulEngine.LLM.ProviderCascade
   alias SovereignSoulEngine.Privacy
   alias SovereignSoulEngine.Moderation
+  alias SovereignSoulEngine.World.Control, as: WorldControl
 
   @pubsub_topic "social:feed"
 
@@ -109,16 +110,151 @@ defmodule SovereignSoulEngine.Social.SocialFeed do
   end
 
   @doc """
+  Appends a threaded comment to a social post's metadata and broadcasts the update.
+  """
+  def add_comment(post_id, author, comment_text) do
+    post = Repo.get(SocialPost, post_id)
+
+    if post do
+      clean_comment = Moderation.redact(comment_text)
+
+      author_name =
+        case author do
+          %Character{} = c -> c.name
+          name when is_binary(name) -> name
+          _ -> "Resident"
+        end
+
+      author_id =
+        case author do
+          %Character{} = c -> c.id
+          _ -> nil
+        end
+
+      author_slug =
+        case author do
+          %Character{} = c -> c.slug
+          _ -> "guest"
+        end
+
+      comment_entry = %{
+        "id" => Ecto.UUID.generate(),
+        "author_name" => author_name,
+        "author_slug" => author_slug,
+        "author_id" => author_id,
+        "content" => clean_comment,
+        "inserted_at" => DateTime.utc_now() |> DateTime.to_iso8601()
+      }
+
+      current_meta = post.metadata || %{}
+      current_comments = Map.get(current_meta, "comments", [])
+      updated_comments = current_comments ++ [comment_entry]
+      updated_meta = Map.put(current_meta, "comments", updated_comments)
+
+      case post |> SocialPost.changeset(%{metadata: updated_meta}) |> Repo.update() do
+        {:ok, updated_post} ->
+          updated_post = Repo.preload(updated_post, :character, force: true)
+
+          Phoenix.PubSub.broadcast(
+            SovereignSoulEngine.PubSub,
+            @pubsub_topic,
+            {:post_updated, updated_post}
+          )
+
+          {:ok, updated_post, comment_entry}
+
+        error ->
+          error
+      end
+    else
+      {:error, :not_found}
+    end
+  end
+
+  @doc """
+  Increments a reaction counter ("love", "honor", "fire", "laugh", "moon") on a post.
+  """
+  def react_to_post(post_id, reaction_type) when reaction_type in ["love", "honor", "fire", "laugh", "moon"] do
+    post = Repo.get(SocialPost, post_id)
+
+    if post do
+      current_meta = post.metadata || %{}
+      current_reactions = Map.get(current_meta, "reactions", %{})
+      count = Map.get(current_reactions, reaction_type, 0) + 1
+      updated_reactions = Map.put(current_reactions, reaction_type, count)
+      updated_meta = Map.put(current_meta, "reactions", updated_reactions)
+
+      case post |> SocialPost.changeset(%{metadata: updated_meta}) |> Repo.update() do
+        {:ok, updated_post} ->
+          updated_post = Repo.preload(updated_post, :character, force: true)
+
+          Phoenix.PubSub.broadcast(
+            SovereignSoulEngine.PubSub,
+            @pubsub_topic,
+            {:post_updated, updated_post}
+          )
+
+          {:ok, updated_post}
+
+        error ->
+          error
+      end
+    else
+      {:error, :not_found}
+    end
+  end
+
+  def react_to_post(_post_id, _invalid_type), do: {:error, :invalid_reaction}
+
+  @doc """
+  Lightweight in-character NPC response to a comment on their post.
+  Fast, deterministic fallback taking near-zero compute and zero LLM cost.
+  """
+  def generate_npc_comment_reply(post_id, npc_id, _player_comment) do
+    npc = Characters.get_character(npc_id)
+    post = Repo.get(SocialPost, post_id)
+
+    if npc && post do
+      reply_text =
+        case npc.slug do
+          "maya" ->
+            "Noted. The bastions are always watching—keep your senses sharp."
+
+          "ravina" ->
+            "Talk is cheap in the undercroft. Make sure your blade is as sharp as your mouth."
+
+          "valeria" ->
+            "The weave remembers. What you whisper to the wind echoes through the spires."
+
+          "cyra" ->
+            "Telemetry confirmed. Biometric patterns verified and archived."
+
+          _ ->
+            "Understood. Feannag's Rest records every vow made within these walls."
+        end
+
+      add_comment(post_id, npc, reply_text)
+    else
+      {:error, :not_found}
+    end
+  end
+
+  @doc """
   Generates an authentic in-character social post for a companion based on their
   real-time emotional state, active desires, and recent memories.
   """
   def generate_post(character_id, opts \\ []) do
     character = Characters.get_character!(character_id)
 
-    if Privacy.neighborhood_share_allowed?(character) and not Privacy.safe_word_active?(character) do
-      do_generate_post(character, opts)
-    else
-      {:error, :privacy_restricted}
+    cond do
+      WorldControl.paused?() ->
+        {:error, :world_paused}
+
+      not Privacy.neighborhood_share_allowed?(character) or Privacy.safe_word_active?(character) ->
+        {:error, :privacy_restricted}
+
+      true ->
+        do_generate_post(character, opts)
     end
   end
 

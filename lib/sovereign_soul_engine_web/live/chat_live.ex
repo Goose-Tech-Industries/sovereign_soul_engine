@@ -1307,6 +1307,13 @@ defmodule SovereignSoulEngineWeb.ChatLive do
                 <.icon name="hero-cpu-chip" class="size-3.5" /> ACP
               </.link>
               <.link
+                navigate={~p"/sse/feed"}
+                class="btn btn-ghost btn-xs text-amber-400 font-semibold flex items-center gap-1"
+                title="SoulBook Living Social Feed"
+              >
+                <.icon name="hero-newspaper" class="size-3.5" /> Feed
+              </.link>
+              <.link
                 navigate={~p"/sse/map"}
                 class="btn btn-ghost btn-xs text-teal-400 font-semibold flex items-center gap-1"
                 title="Feannag's Rest Living Map"
