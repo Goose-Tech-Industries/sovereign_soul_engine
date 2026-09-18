@@ -124,6 +124,9 @@ defmodule SovereignSoulEngineWeb.AcpDashboardLive do
           <.link navigate={~p"/sse/acp/social"} class="text-sm text-gray-400 hover:text-gray-200 transition-colors">
             Social Log
           </.link>
+          <.link navigate={~p"/sse/acp/moderation"} class="text-sm text-gray-400 hover:text-gray-200 transition-colors">
+            🛡️ Moderation
+          </.link>
         </div>
       </nav>
 

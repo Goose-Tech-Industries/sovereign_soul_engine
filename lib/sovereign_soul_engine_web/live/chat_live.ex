@@ -62,6 +62,7 @@ defmodule SovereignSoulEngineWeb.ChatLive do
       |> assign(:last_vision, nil)
       |> assign(:privacy_settings, SovereignSoulEngine.Privacy.get_settings(player.id))
       |> assign(:showing_privacy_modal?, false)
+      |> assign(:showing_age_gate?, false)
       |> assign(:showing_neighborhood_drawer?, false)
       |> assign(:neighborhood_posts, SovereignSoulEngine.Neighborhood.Board.list_posts(limit: 25))
       |> assign(:neighborhood_zone_filter, "all")
@@ -830,6 +831,19 @@ defmodule SovereignSoulEngineWeb.ChatLive do
   end
 
   @impl true
+  def handle_event("show_age_gate", _params, socket) do
+    {:noreply, assign(socket, :showing_age_gate?, true)}
+  end
+
+  @impl true
+  def handle_event("confirm_age_gate", _params, socket) do
+    {:noreply,
+     socket
+     |> push_event("save_age_gate_confirmation", %{})
+     |> assign(:showing_age_gate?, false)}
+  end
+
+  @impl true
   def handle_event("toggle_privacy_modal", _params, socket) do
     {:noreply, assign(socket, :showing_privacy_modal?, !socket.assigns.showing_privacy_modal?)}
   end
@@ -1268,7 +1282,7 @@ defmodule SovereignSoulEngineWeb.ChatLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div data-theme="dark" class="flex h-screen bg-base-100 text-base-content" id="chat-app">
+    <div data-theme="dark" class="flex h-screen bg-base-100 text-base-content" id="chat-app" phx-hook="AgeGate">
       <%!-- Sidebar --%>
       <aside class="w-80 shrink-0 border-r border-base-300 bg-base-200/50 flex flex-col">
         <div class="p-4 border-b border-base-300 flex flex-col gap-2.5">
@@ -2634,6 +2648,72 @@ defmodule SovereignSoulEngineWeb.ChatLive do
             <div class="font-mono text-[10px] text-teal-300/90 select-all break-all">
               GET /api/neighborhood/posts • POST /api/neighborhood/encounter
             </div>
+          </div>
+        </div>
+      </div>
+
+      <%!-- 18+ Age Gate & Informed Consent Modal --%>
+      <div
+        :if={@showing_age_gate?}
+        id="age-gate-modal-overlay"
+        class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4"
+      >
+        <div class="w-full max-w-lg p-6 bg-base-200 rounded-2xl border border-rose-900/60 shadow-2xl flex flex-col space-y-5 animate-in fade-in zoom-in-95 duration-200">
+          <div class="flex items-center gap-3 pb-3 border-b border-base-300">
+            <div class="w-10 h-10 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center border border-rose-500/30 text-xl font-bold shrink-0">
+              🛡️
+            </div>
+            <div>
+              <h2 class="text-base font-bold text-base-content flex items-center gap-2">
+                18+ Verification & Informed Consent
+                <span class="badge badge-xs badge-error font-mono font-bold">REQUIRED</span>
+              </h2>
+              <p class="text-[11px] text-base-content/60">
+                Please acknowledge these safety, legal, and reality boundaries to enter
+              </p>
+            </div>
+          </div>
+
+          <div class="space-y-3 text-xs text-base-content/80">
+            <div class="p-3 rounded-xl bg-base-300/40 border border-base-300 space-y-1">
+              <div class="font-bold text-base-content flex items-center gap-1.5">
+                <span>🔞 Age Requirement (18+)</span>
+              </div>
+              <p class="text-[11px] text-base-content/70 leading-relaxed">
+                You must be at least 18 years old (or the legal age of majority in your jurisdiction). Feannag's Rest contains mature dramatic themes, psychological conflict, and dark fantasy narratives.
+              </p>
+            </div>
+
+            <div class="p-3 rounded-xl bg-base-300/40 border border-base-300 space-y-1">
+              <div class="font-bold text-base-content flex items-center gap-1.5">
+                <span>🧠 AI Reality & Non-Therapy Disclaimer</span>
+              </div>
+              <p class="text-[11px] text-base-content/70 leading-relaxed">
+                Sovereign Souls are autonomous, generative artificial intelligence entities. They are <strong>NOT real human beings, licensed medical doctors, psychologists, or mental health therapists</strong>. They cannot provide medical advice, therapy, or crisis intervention.
+              </p>
+            </div>
+
+            <div class="p-3 rounded-xl bg-base-300/40 border border-base-300 space-y-1">
+              <div class="font-bold text-base-content flex items-center gap-1.5">
+                <span>🛑 Dramatic Safe Word</span>
+              </div>
+              <p class="text-[11px] text-base-content/70 leading-relaxed">
+                If dialogue becomes uncomfortable or too intense, typing <code class="text-rose-400 font-mono font-bold">code red</code> or <code class="text-rose-400 font-mono font-bold">pause persona</code> immediately freezes dramatic conflict and calms persona intensity.
+              </p>
+            </div>
+          </div>
+
+          <div class="pt-2 flex items-center justify-between gap-3 border-t border-base-300">
+            <.link navigate={~p"/"} class="btn btn-ghost btn-sm text-xs text-base-content/50 hover:text-base-content">
+              Decline & Leave
+            </.link>
+            <button
+              id="confirm-age-gate-btn"
+              phx-click="confirm_age_gate"
+              class="btn btn-primary btn-sm text-xs font-bold gap-2 shadow-lg shadow-primary/20"
+            >
+              <span>I Am 18+ & Accept Notice</span> →
+            </button>
           </div>
         </div>
       </div>

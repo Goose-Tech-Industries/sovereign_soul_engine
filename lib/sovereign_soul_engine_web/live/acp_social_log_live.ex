@@ -127,6 +127,9 @@ defmodule SovereignSoulEngineWeb.AcpSocialLogLive do
             <.link navigate={~p"/sse/acp/social"} class="text-sm text-amber-400 font-semibold border-b border-amber-400 pb-0.5">
               Social Log
             </.link>
+            <.link navigate={~p"/sse/acp/moderation"} class="text-sm text-gray-400 hover:text-gray-200 transition-colors">
+              🛡️ Moderation
+            </.link>
           </div>
         </div>
         <button

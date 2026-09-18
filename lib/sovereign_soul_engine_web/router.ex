@@ -204,6 +204,7 @@ defmodule SovereignSoulEngineWeb.Router do
       live "/npcs/:id", AcpCharacterLive, :show
       live "/npcs/:id/:tab", AcpCharacterLive, :show
       live "/social", AcpSocialLogLive, :index
+      live "/moderation", AcpModerationLive, :index
     end
   end
 

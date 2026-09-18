@@ -83,6 +83,34 @@ defmodule SovereignSoulEngine.World do
     |> Repo.all()
   end
 
+  @doc "Deletes a world event by struct or ID."
+  def delete_event(event_or_id) do
+    event =
+      case event_or_id do
+        %WorldEvent{} = e -> e
+        id when is_binary(id) -> Repo.get(WorldEvent, id)
+        _ -> nil
+      end
+
+    if event do
+      case Repo.delete(event) do
+        {:ok, deleted} ->
+          Phoenix.PubSub.broadcast(
+            SovereignSoulEngine.PubSub,
+            "world:events",
+            {:world_event_deleted, deleted.id}
+          )
+
+          {:ok, deleted}
+
+        error ->
+          error
+      end
+    else
+      {:error, :not_found}
+    end
+  end
+
   @doc "Seeds the 50 founding souls into the Soul Society, idempotently."
   @spec seed_souls() :: {:ok, non_neg_integer()}
   def seed_souls, do: SeedSouls.seed_all()

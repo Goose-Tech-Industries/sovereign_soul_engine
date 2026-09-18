@@ -251,4 +251,22 @@ defmodule SovereignSoulEngineWeb.ChatLiveTest do
     |> element("button[phx-click='toggle_social_drawer']")
     |> render_click()
   end
+
+  test "displays and confirms 18+ age gate and consent notice", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/sse/chat")
+
+    refute has_element?(view, "#age-gate-modal-overlay")
+
+    # Trigger age gate (when client has not yet confirmed)
+    render_hook(view, "show_age_gate", %{})
+    assert has_element?(view, "#age-gate-modal-overlay")
+    assert has_element?(view, "#confirm-age-gate-btn")
+
+    # Confirm age gate
+    view
+    |> element("#confirm-age-gate-btn")
+    |> render_click()
+
+    refute has_element?(view, "#age-gate-modal-overlay")
+  end
 end

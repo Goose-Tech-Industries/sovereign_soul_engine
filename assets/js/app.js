@@ -116,6 +116,17 @@ const customHooks = {
         try { this.recognition.abort(); } catch(e) {}
       }
     }
+  },
+  AgeGate: {
+    mounted() {
+      const confirmed = localStorage.getItem("sse_age_gate_confirmed");
+      if (!confirmed) {
+        this.pushEvent("show_age_gate", {});
+      }
+      this.handleEvent("save_age_gate_confirmation", () => {
+        localStorage.setItem("sse_age_gate_confirmed", new Date().toISOString());
+      });
+    }
   }
 };
 

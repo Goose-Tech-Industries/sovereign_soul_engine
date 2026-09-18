@@ -79,6 +79,36 @@ defmodule SovereignSoulEngine.Social.SocialFeed do
   end
 
   @doc """
+  Deletes a social post by struct or ID and broadcasts the deletion.
+  """
+  def delete_post(post_or_id) do
+    post =
+      case post_or_id do
+        %SocialPost{} = p -> p
+        id when is_binary(id) -> Repo.get(SocialPost, id)
+        _ -> nil
+      end
+
+    if post do
+      case Repo.delete(post) do
+        {:ok, deleted} ->
+          Phoenix.PubSub.broadcast(
+            SovereignSoulEngine.PubSub,
+            @pubsub_topic,
+            {:social_post_deleted, deleted.id}
+          )
+
+          {:ok, deleted}
+
+        error ->
+          error
+      end
+    else
+      {:error, :not_found}
+    end
+  end
+
+  @doc """
   Generates an authentic in-character social post for a companion based on their
   real-time emotional state, active desires, and recent memories.
   """

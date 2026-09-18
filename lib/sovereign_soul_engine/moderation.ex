@@ -17,9 +17,71 @@ defmodule SovereignSoulEngine.Moderation do
     GenServer.start_link(__MODULE__, :ok, Keyword.put_new(opts, :name, __MODULE__))
   end
 
-  @doc "The configured blocked terms (comma-separated `MODERATION_BLOCKED_TERMS`)."
+  @doc "The configured blocked terms (static config plus runtime additions)."
   def blocked_terms do
-    Application.get_env(:sovereign_soul_engine, :moderation_blocked_terms, [])
+    static = Application.get_env(:sovereign_soul_engine, :moderation_blocked_terms, [])
+    dynamic = list_dynamic_blocked_terms()
+    Enum.uniq(static ++ dynamic)
+  end
+
+  @doc "Adds a dynamic blocked term at runtime."
+  def add_blocked_term(term) when is_binary(term) do
+    term = String.trim(term)
+    if term != "" do
+      GenServer.call(__MODULE__, {:add_blocked_term, term})
+    else
+      :ok
+    end
+  end
+
+  @doc "Removes a dynamic blocked term at runtime."
+  def remove_blocked_term(term) when is_binary(term) do
+    GenServer.call(__MODULE__, {:remove_blocked_term, String.trim(term)})
+  end
+
+  @doc "Lists all dynamically registered blocked terms."
+  def list_dynamic_blocked_terms do
+    if :ets.info(@table) != :undefined do
+      :ets.tab2list(@table)
+      |> Enum.filter(fn
+        {{:blocked_term, _}, true} -> true
+        _ -> false
+      end)
+      |> Enum.map(fn {{:blocked_term, term}, true} -> term end)
+    else
+      []
+    end
+  end
+
+  @doc "Lists all currently muted DIDs."
+  def list_muted_dids do
+    if :ets.info(@table) != :undefined do
+      :ets.tab2list(@table)
+      |> Enum.filter(fn
+        {did, true} when is_binary(did) -> true
+        _ -> false
+      end)
+      |> Enum.map(fn {did, true} -> did end)
+    else
+      []
+    end
+  end
+
+  @doc "Returns the active maturity rating preset: 'teen' | 'mature' | 'adult'."
+  def get_maturity_rating do
+    if :ets.info(@table) != :undefined do
+      case :ets.lookup(@table, :maturity_rating) do
+        [{:maturity_rating, rating}] -> rating
+        _ -> "mature"
+      end
+    else
+      "mature"
+    end
+  end
+
+  @doc "Sets the active maturity rating preset: 'teen' | 'mature' | 'adult'."
+  def set_maturity_rating(rating) when rating in ["teen", "mature", "adult"] do
+    GenServer.call(__MODULE__, {:set_maturity_rating, rating})
   end
 
   @doc "Replaces blocked terms in text with `[redacted]`."
@@ -33,8 +95,8 @@ defmodule SovereignSoulEngine.Moderation do
 
   def redact(other), do: other
 
-  def mute_did(did), do: GenServer.cast(__MODULE__, {:mute, did})
-  def unmute_did(did), do: GenServer.cast(__MODULE__, {:unmute, did})
+  def mute_did(did), do: GenServer.call(__MODULE__, {:mute, did})
+  def unmute_did(did), do: GenServer.call(__MODULE__, {:unmute, did})
   def muted?(did), do: GenServer.call(__MODULE__, {:muted?, did})
 
   @doc """
@@ -74,18 +136,32 @@ defmodule SovereignSoulEngine.Moderation do
   end
 
   @impl true
-  def handle_cast({:mute, did}, state) do
+  def handle_call({:mute, did}, _from, state) do
     :ets.insert(@table, {did, true})
-    {:noreply, state}
+    {:reply, :ok, state}
   end
 
-  def handle_cast({:unmute, did}, state) do
+  def handle_call({:unmute, did}, _from, state) do
     :ets.delete(@table, did)
-    {:noreply, state}
+    {:reply, :ok, state}
   end
 
-  @impl true
   def handle_call({:muted?, did}, _from, state) do
     {:reply, :ets.member(@table, did), state}
+  end
+
+  def handle_call({:add_blocked_term, term}, _from, state) do
+    :ets.insert(@table, {{:blocked_term, term}, true})
+    {:reply, :ok, state}
+  end
+
+  def handle_call({:remove_blocked_term, term}, _from, state) do
+    :ets.delete(@table, {:blocked_term, term})
+    {:reply, :ok, state}
+  end
+
+  def handle_call({:set_maturity_rating, rating}, _from, state) do
+    :ets.insert(@table, {:maturity_rating, rating})
+    {:reply, :ok, state}
   end
 end

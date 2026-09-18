@@ -415,6 +415,18 @@ defmodule SovereignSoulEngineWeb.LandingLive do
         </div>
       </section>
 
+      <%!-- Legal Disclaimer & Informed Consent Notice --%>
+      <div class="border-t border-slate-900 bg-slate-950/80 py-8 px-6 max-w-6xl mx-auto text-center space-y-3">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-mono font-bold">
+          <span>🔞 18+ Mature Roleplay Simulation</span>
+          <span>•</span>
+          <span>Not a Human / Not Therapy</span>
+        </div>
+        <p class="text-[11px] text-slate-500 max-w-3xl mx-auto leading-relaxed">
+          <strong>LEGAL & MEDICAL NOTICE:</strong> Sovereign Souls are autonomous, generative artificial intelligence software entities designed for creative storytelling, game simulation, and companionship. They are <strong>NOT real human beings, licensed medical doctors, psychologists, or mental health therapists</strong>. Do not use this service for crisis intervention or psychiatric care. If you are experiencing a mental health emergency, please contact 988 or local medical emergency services immediately. An emergency dramatic safe word (<code class="text-rose-400">code red</code>) is supported at all times.
+        </p>
+      </div>
+
       <%!-- Footer --%>
       <footer class="border-t border-slate-800 py-10 px-6 max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
         <div>
@@ -422,8 +434,9 @@ defmodule SovereignSoulEngineWeb.LandingLive do
         </div>
         <div class="flex items-center gap-4">
           <.link navigate={~p"/sse/chat"} class="hover:text-slate-300">Chat Room</.link>
-          <.link navigate={~p"/sse/chat/sauce"} class="hover:text-slate-300">Sauce Admin</.link>
+          <.link navigate={~p"/sse/map"} class="hover:text-slate-300">Town Map</.link>
           <.link navigate={~p"/sse/acp"} class="hover:text-slate-300">ACP Panel</.link>
+          <.link navigate={~p"/sse/acp/moderation"} class="hover:text-slate-300 text-rose-400">🛡️ Moderation</.link>
         </div>
       </footer>
     </div>
