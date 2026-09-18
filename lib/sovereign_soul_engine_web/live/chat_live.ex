@@ -1292,54 +1292,60 @@ defmodule SovereignSoulEngineWeb.ChatLive do
     <div data-theme="dark" class="flex h-screen bg-base-100 text-base-content" id="chat-app" phx-hook="AgeGate">
       <%!-- Sidebar --%>
       <aside class="w-80 shrink-0 border-r border-base-300 bg-base-200/50 flex flex-col">
-        <div class="p-4 border-b border-base-300 flex flex-col gap-2.5">
+        <div class="p-4 border-b border-base-300 flex flex-col gap-3">
           <div class="flex items-center justify-between">
             <.link
               navigate={~p"/sse"}
-              class="text-sm text-base-content/50 hover:text-base-content transition-colors inline-flex items-center gap-1"
+              class="text-xs text-base-content/60 hover:text-base-content transition-colors inline-flex items-center gap-1 font-semibold"
             >
-              <.icon name="hero-arrow-left" class="size-4" /> Dashboard
+              <.icon name="hero-arrow-left" class="size-3.5" /> Dashboard
             </.link>
-            <div class="flex items-center gap-1.5">
-              <.link
-                navigate={~p"/sse/chat/sauce"}
-                class="btn btn-ghost btn-xs text-amber-500 font-semibold flex items-center gap-1"
-              >
-                <.icon name="hero-wrench-screwdriver" class="size-3.5" /> Sauce
-              </.link>
-              <.link
-                navigate={~p"/sse/acp"}
-                class="btn btn-ghost btn-xs text-purple-400 font-semibold flex items-center gap-1"
-              >
-                <.icon name="hero-cpu-chip" class="size-3.5" /> ACP
-              </.link>
+            
+            <button
+              phx-click="start_new_group"
+              class="btn btn-primary btn-xs font-semibold flex items-center gap-1 shadow-sm"
+              title="Create a Group Room or Tavern Roundtable"
+            >
+              <.icon name="hero-user-group" class="size-3.5" /> + Group
+            </button>
+          </div>
+          
+          <div class="flex items-center justify-between pt-1">
+            <div>
+              <h2 class="text-lg font-bold text-base-content tracking-tight">Sovereign Chat</h2>
+              <p class="text-[11px] text-base-content/50">Living simulated companions</p>
+            </div>
+            
+            <div class="flex items-center gap-1">
               <.link
                 navigate={~p"/sse/feed"}
-                class="btn btn-ghost btn-xs text-amber-400 font-semibold flex items-center gap-1"
+                class="btn btn-ghost btn-xs text-amber-400 font-semibold p-1.5"
                 title="SoulBook Living Social Feed"
               >
-                <.icon name="hero-newspaper" class="size-3.5" /> Feed
+                <.icon name="hero-newspaper" class="size-4" />
               </.link>
               <.link
                 navigate={~p"/sse/map"}
-                class="btn btn-ghost btn-xs text-teal-400 font-semibold flex items-center gap-1"
-                title="Feannag's Rest Living Map"
+                class="btn btn-ghost btn-xs text-teal-400 font-semibold p-1.5"
+                title="Feannag's Rest Town Map"
               >
-                <.icon name="hero-map" class="size-3.5" /> Map
+                <.icon name="hero-map" class="size-4" />
               </.link>
-              <button
-                phx-click="start_new_group"
-                class="btn btn-ghost btn-xs text-primary font-semibold flex items-center gap-1"
+              <.link
+                navigate={~p"/sse/billing"}
+                class="btn btn-ghost btn-xs text-emerald-400 font-semibold p-1.5"
+                title="Stripe Pass & Tier Billing"
               >
-                <.icon name="hero-plus" class="size-3.5" /> New Group
-              </button>
+                <.icon name="hero-credit-card" class="size-4" />
+              </.link>
+              <.link
+                navigate={~p"/sse/acp"}
+                class="btn btn-ghost btn-xs text-purple-400 font-semibold p-1.5"
+                title="Admin Control Panel"
+              >
+                <.icon name="hero-cpu-chip" class="size-4" />
+              </.link>
             </div>
-          </div>
-          
-          <div>
-            <h2 class="text-lg font-bold text-base-content">Sovereign Chat</h2>
-            
-            <p class="text-xs text-base-content/50">Talk with simulated souls</p>
           </div>
         </div>
         
