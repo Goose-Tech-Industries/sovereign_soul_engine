@@ -19,6 +19,7 @@ defmodule SovereignSoulEngine.Social.GossipNetwork do
   alias SovereignSoulEngine.Ledger.LedgerBuilder
   alias SovereignSoulEngine.Privacy
   alias SovereignSoulEngine.Moderation
+  alias SovereignSoulEngine.World.Control, as: WorldControl
 
   require Logger
 
@@ -45,10 +46,15 @@ defmodule SovereignSoulEngine.Social.GossipNetwork do
     if is_nil(speaker) or is_nil(listener) or is_nil(subject) do
       {:error, :character_not_found}
     else
-      if Privacy.neighborhood_share_allowed?(listener) do
-        do_propagate(speaker, listener, subject, gossip_info, correlation_id)
-      else
-        {:error, :privacy_restricted}
+      cond do
+        WorldControl.paused?() ->
+          {:error, :world_paused}
+
+        not Privacy.neighborhood_share_allowed?(listener) ->
+          {:error, :privacy_restricted}
+
+        true ->
+          do_propagate(speaker, listener, subject, gossip_info, correlation_id)
       end
     end
   end
@@ -203,7 +209,15 @@ defmodule SovereignSoulEngine.Social.GossipNetwork do
     end
   end
 
-  defp commit_gossip_ledger(listener_id, speaker_id, subject_id, summary, deltas, credibility, correlation_id) do
+  defp commit_gossip_ledger(
+         listener_id,
+         speaker_id,
+         subject_id,
+         summary,
+         deltas,
+         credibility,
+         correlation_id
+       ) do
     entry =
       LedgerBuilder.build_event_entry(
         character_id: listener_id,

@@ -57,7 +57,8 @@ defmodule SovereignSoulEngine.Tenants do
   end
 
   @doc "Looks up the active tenant owning this plaintext key, or nil if it's missing/invalid/deactivated."
-  def authenticate(plaintext_key) when is_binary(plaintext_key) and byte_size(plaintext_key) > 0 do
+  def authenticate(plaintext_key)
+      when is_binary(plaintext_key) and byte_size(plaintext_key) > 0 do
     key_hash = hash_key(plaintext_key)
     Repo.get_by(Tenant, api_key_hash: key_hash, active: true)
   end
@@ -81,6 +82,34 @@ defmodule SovereignSoulEngine.Tenants do
   end
 
   def record_llm_call(_), do: {0, []}
+
+  @doc "Total LLM calls across all tenants (usage visibility for the operator)."
+  def total_llm_calls do
+    Repo.aggregate(Tenant, :sum, :llm_call_count) || 0
+  end
+
+  @doc """
+  Whether the global spend cap (`:llm_spend_cap`, a total call count) has been
+  reached. When true, paid LLM generation falls back to the free deterministic
+  offline engine instead of spending more.
+  """
+  def over_spend_cap? do
+    case Application.get_env(:sovereign_soul_engine, :llm_spend_cap) do
+      cap when is_integer(cap) and cap > 0 -> total_llm_calls() >= cap
+      _ -> false
+    end
+  end
+
+  @doc "A usage summary for dashboards: total calls, cap, and whether it's exceeded."
+  def usage do
+    cap = Application.get_env(:sovereign_soul_engine, :llm_spend_cap)
+
+    %{
+      total_calls: total_llm_calls(),
+      cap: cap,
+      over_cap: over_spend_cap?()
+    }
+  end
 
   @doc """
   Configures a tenant's own LLM provider key. Test-calls the real provider
@@ -141,7 +170,8 @@ defmodule SovereignSoulEngine.Tenants do
   @doc "Decrypts ciphertext using the app's secret_key_base and byok context. Returns `{:ok, plaintext}` or `{:error, :invalid_ciphertext}`."
   def decrypt_byok(ciphertext), do: decrypt(ciphertext)
 
-  defp encrypt(plaintext), do: Plug.Crypto.encrypt(secret_key_base(), @byok_encryption_context, plaintext)
+  defp encrypt(plaintext),
+    do: Plug.Crypto.encrypt(secret_key_base(), @byok_encryption_context, plaintext)
 
   defp decrypt(ciphertext) do
     case Plug.Crypto.decrypt(secret_key_base(), @byok_encryption_context, ciphertext) do

@@ -29,6 +29,7 @@ defmodule SovereignSoulEngine.Application do
       SovereignSoulEngine.World.TownMap,
       SovereignSoulEngine.Moderation,
       SovereignSoulEngine.World.Population,
+      SovereignSoulEngine.World.Control,
       # Start to serve requests, typically the last entry
       SovereignSoulEngineWeb.Endpoint
     ]

@@ -91,19 +91,23 @@ defmodule SovereignSoulEngine.World.Simulation do
   # --- Step logic -------------------------------------------------------------
 
   defp do_step(opts) do
-    souls = load_world_souls()
-    cohort_ids = Enum.map(souls, & &1.id)
-    regenerate_stamina(souls)
+    if World.Control.paused?() do
+      %{souls: 0, encounters: [], paused: true}
+    else
+      souls = load_world_souls()
+      cohort_ids = Enum.map(souls, & &1.id)
+      regenerate_stamina(souls)
 
-    encounters =
-      souls
-      |> Enum.filter(&eligible?/1)
-      |> pair_up()
-      |> Enum.map(fn {a, b} -> encounter(a, b, cohort_ids, opts) end)
+      encounters =
+        souls
+        |> Enum.filter(&eligible?/1)
+        |> pair_up()
+        |> Enum.map(fn {a, b} -> encounter(a, b, cohort_ids, opts) end)
 
-    run_drift(souls)
+      run_drift(souls)
 
-    %{souls: length(souls), encounters: encounters}
+      %{souls: length(souls), encounters: encounters}
+    end
   end
 
   # A soul is eligible to meet when it is "in the square" (social intent), has

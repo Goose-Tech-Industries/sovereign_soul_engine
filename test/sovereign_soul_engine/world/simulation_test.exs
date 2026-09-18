@@ -121,4 +121,14 @@ defmodule SovereignSoulEngine.World.SimulationTest do
 
     assert Enum.all?(summary.encounters, fn e -> e.a != "maya" and e.b != "maya" end)
   end
+
+  test "step/1 is a no-op when the world is paused" do
+    SovereignSoulEngine.World.Control.pause()
+    on_exit(fn -> SovereignSoulEngine.World.Control.resume() end)
+
+    {:ok, summary} = Simulation.step()
+
+    assert summary.paused == true
+    assert summary.encounters == []
+  end
 end

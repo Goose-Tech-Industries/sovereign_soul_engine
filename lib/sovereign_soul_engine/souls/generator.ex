@@ -5,12 +5,24 @@ defmodule SovereignSoulEngine.Souls.Generator do
   and deep psychological context (beliefs, triggers, desires, secrets, moral lines).
   """
 
-  alias SovereignSoulEngine.{Characters, Scenes, Relationships, Souls, Memories, Privacy, Repo}
+  alias SovereignSoulEngine.{
+    Characters,
+    Scenes,
+    Relationships,
+    Souls,
+    Memories,
+    Privacy,
+    Repo,
+    Moderation,
+    Tenants
+  }
+
   alias SovereignSoulEngine.LLM.ProviderCascade
   alias SovereignSoulEngine.Souls.ConsequenceEngine
   alias SovereignSoulEngine.Memories.{Memory, MemoryMerger}
   alias SovereignSoulEngine.Actions.ActionIntent
   alias SovereignSoulEngine.TheoryOfMind
+
   alias SovereignSoulEngine.Souls.{
     EmotionalContagion,
     CognitiveLoad,
@@ -42,8 +54,8 @@ defmodule SovereignSoulEngine.Souls.Generator do
 
     cond do
       last_player_message &&
-        (Privacy.safe_word_triggered?(last_player_message.content, privacy_settings) ||
-           Privacy.safe_word_active?(npc)) ->
+          (Privacy.safe_word_triggered?(last_player_message.content, privacy_settings) ||
+             Privacy.safe_word_active?(npc)) ->
         handle_safe_word_freeze(npc, scene, player, last_player_message, privacy_settings)
 
       true ->
@@ -377,21 +389,29 @@ defmodule SovereignSoulEngine.Souls.Generator do
 
     # Involuntary Episodic PTSD Flashback detection
     last_player_text = if last_player_message, do: last_player_message.content, else: ""
-    ptsd_flashback = PTSDFlashback.detect_flashback(memories, scene.context || %{}, last_player_text)
+
+    ptsd_flashback =
+      PTSDFlashback.detect_flashback(memories, scene.context || %{}, last_player_text)
 
     # Acute Neurosis State Machine evaluation
     phobia_triggered? =
       active_triggers != [] or
         (last_player_text != "" and
            Enum.any?(fears, fn f ->
-             String.contains?(String.downcase(last_player_text), String.downcase(f.fear_type || ""))
+             String.contains?(
+               String.downcase(last_player_text),
+               String.downcase(f.fear_type || "")
+             )
            end))
 
     wound_level = (relationship_to_player && relationship_to_player.wound) || 0
-    neurosis = NeurosisState.evaluate(emotional_state, somatic_state, wound_level, phobia_triggered?)
+
+    neurosis =
+      NeurosisState.evaluate(emotional_state, somatic_state, wound_level, phobia_triggered?)
 
     # Ego Defense Mechanisms evaluation
-    ego_defense = DefenseMechanisms.evaluate(emotional_state, somatic_state, profile, relationship_to_player)
+    ego_defense =
+      DefenseMechanisms.evaluate(emotional_state, somatic_state, profile, relationship_to_player)
 
     humor_context = compute_humor_context(profile, emotional_state, relationship_to_player)
 
@@ -599,12 +619,15 @@ defmodule SovereignSoulEngine.Souls.Generator do
     archetype_directive = Privacy.archetype_prompt_directive(archetype, ceiling)
 
     circadian_info = SovereignSoulEngine.Souls.CircadianEngine.current_state(npc)
-    circadian_directive = SovereignSoulEngine.Souls.CircadianEngine.prompt_directive(circadian_info)
+
+    circadian_directive =
+      SovereignSoulEngine.Souls.CircadianEngine.prompt_directive(circadian_info)
 
     dream_context =
       case SovereignSoulEngine.Souls.DreamEngine.get_latest_dream(npc) do
         {:ok, dream} ->
           "SUBALIGNED DREAM MEMORY: While resting in #{dream[:theme] || dream["theme"]}, you dreamed: #{dream[:symbolic_narrative] || dream["symbolic_narrative"]}. Subconscious Epiphany: #{dream[:subconscious_epiphany] || dream["subconscious_epiphany"]}."
+
         _ ->
           ""
       end
@@ -792,7 +815,10 @@ defmodule SovereignSoulEngine.Souls.Generator do
     response =
       cond do
         force_offline ->
-          case SovereignSoulEngine.LLM.LocalProvider.respond(%{system: system_prompt, messages: llm_messages}) do
+          case SovereignSoulEngine.LLM.LocalProvider.respond(%{
+                 system: system_prompt,
+                 messages: llm_messages
+               }) do
             {:ok, resp} ->
               resp
 
@@ -815,406 +841,426 @@ defmodule SovereignSoulEngine.Souls.Generator do
           end
 
         true ->
-          case ProviderCascade.respond(
-                 %{
-                   system: system_prompt,
-                   messages: llm_messages
-                 },
-                 tenant: tenant
-               ) do
-            {:ok, resp} ->
-              resp
-
-            {:error, reason} ->
-              Logger.warning(
-                "LLM Cascade call failed (#{inspect(reason)}) — falling back to sovereign edge survival generation"
+          if Tenants.over_spend_cap?() do
+            fallback =
+              SovereignSoulEngine.Edge.SurvivalMode.generate_offline_fallback(
+                npc,
+                player,
+                history_messages,
+                emotional_state || %{},
+                circadian_info
               )
 
-              fallback =
-                SovereignSoulEngine.Edge.SurvivalMode.generate_offline_fallback(
-                  npc,
-                  player,
-                  history_messages,
-                  emotional_state || %{},
-                  circadian_info
+            %{
+              "public_speech" => fallback["speech"],
+              "private_thought" => fallback["internal_monologue"],
+              "conversation_state" => "continuing",
+              "tone" => "spend_cap_fallback"
+            }
+          else
+            case ProviderCascade.respond(
+                   %{
+                     system: system_prompt,
+                     messages: llm_messages
+                   },
+                   tenant: tenant
+                 ) do
+              {:ok, resp} ->
+                resp
+
+              {:error, reason} ->
+                Logger.warning(
+                  "LLM Cascade call failed (#{inspect(reason)}) — falling back to sovereign edge survival generation"
                 )
 
-              %{
-                "public_speech" => fallback["speech"],
-                "private_thought" => fallback["internal_monologue"],
-                "conversation_state" => "continuing",
-                "tone" => "edge_fallback"
-              }
+                fallback =
+                  SovereignSoulEngine.Edge.SurvivalMode.generate_offline_fallback(
+                    npc,
+                    player,
+                    history_messages,
+                    emotional_state || %{},
+                    circadian_info
+                  )
+
+                %{
+                  "public_speech" => fallback["speech"],
+                  "private_thought" => fallback["internal_monologue"],
+                  "conversation_state" => "continuing",
+                  "tone" => "edge_fallback"
+                }
+            end
           end
       end
 
     correlation_id = Ecto.UUID.generate()
-        action_res = response[:proposed_action] || response["proposed_action"]
+    action_res = response[:proposed_action] || response["proposed_action"]
 
-        action_resolution =
-          if action_res && (action_res[:type] || action_res["type"]) do
-            %{
-              proposed_action:
-                normalize_enum(
-                  action_res[:type] || action_res["type"],
-                  ActionIntent.action_types(),
-                  "none",
-                  "proposed_action"
-                ),
-              confidence: action_res[:confidence] || action_res["confidence"] || 0.0,
-              reason: action_res[:reason] || action_res["reason"] || ""
-            }
-          else
-            nil
+    action_resolution =
+      if action_res && (action_res[:type] || action_res["type"]) do
+        %{
+          proposed_action:
+            normalize_enum(
+              action_res[:type] || action_res["type"],
+              ActionIntent.action_types(),
+              "none",
+              "proposed_action"
+            ),
+          confidence: action_res[:confidence] || action_res["confidence"] || 0.0,
+          reason: action_res[:reason] || action_res["reason"] || ""
+        }
+      else
+        nil
+      end
+
+    memory_candidate =
+      if response[:memory_candidates] || response["memory_candidates"] do
+        mcs = response[:memory_candidates] || response["memory_candidates"]
+        mc = List.first(mcs) || %{}
+
+        %{
+          category:
+            normalize_enum(
+              mc[:category] || mc["category"] || "episodic",
+              Memory.categories(),
+              "episodic",
+              "memory category"
+            ),
+          summary: mc[:summary] || mc["summary"] || "interaction",
+          details: mc[:details] || mc["details"] || "",
+          importance: mc[:importance] || mc["importance"] || 50,
+          emotional_intensity: mc[:emotional_intensity] || mc["emotional_intensity"] || 50,
+          valence: mc[:valence] || mc["valence"] || 0.0,
+          tags: mc[:tags] || mc["tags"] || []
+        }
+      else
+        nil
+      end
+
+    case ConsequenceEngine.resolve(%{
+           character_id: npc.id,
+           source_character_id: npc.id,
+           target_character_id: player.id,
+           scene_id: scene.id,
+           event_type: :speak,
+           event_intensity: 10,
+           message_content:
+             clean_speech(
+               first_non_blank([response[:public_speech], response["public_speech"]]),
+               npc,
+               player,
+               response
+             )
+             |> Moderation.redact(),
+           private_thought:
+             first_non_blank([
+               response[:private_thought],
+               response["private_thought"],
+               response[:thought],
+               response["thought"],
+               response[:internal_thought],
+               response["internal_thought"],
+               response[:internal_monologue],
+               response["internal_monologue"],
+               response[:reflection],
+               response["reflection"],
+               fallback_thought(npc, emotional_state, player, response)
+             ]),
+           action_resolution: action_resolution,
+           memory_candidate: memory_candidate,
+           correlation_id: correlation_id
+         }) do
+      {:ok, result} ->
+        # Create a subconscious shadow log
+        repressed_motive =
+          response[:repressed_motive] || response["repressed_motive"] || "none"
+
+        active_defense = response[:active_defense] || response["active_defense"] || "none"
+
+        private_monologue =
+          first_non_blank([
+            response[:private_thought],
+            response["private_thought"],
+            response[:thought],
+            response["thought"],
+            fallback_thought(npc, emotional_state, player, response)
+          ])
+
+        emotional_drift = %{
+          "anger" => (emotional_state && emotional_state.anger) || 0,
+          "fear" => (emotional_state && emotional_state.fear) || 0,
+          "stress" => (emotional_state && emotional_state.stress) || 0,
+          "attachment" => (emotional_state && emotional_state.attachment) || 0
+        }
+
+        {:ok, _shadow} =
+          Souls.create_soul_shadow(%{
+            character_id: npc.id,
+            scene_id: scene.id,
+            private_monologue: private_monologue,
+            repressed_motive: repressed_motive,
+            active_defense: active_defense,
+            emotional_drift: emotional_drift
+          })
+
+        # Ingest newly acquired fears
+        psych_updates =
+          response[:psychological_updates] || response["psychological_updates"] || %{}
+
+        new_fears = psych_updates[:acquired_fears] || psych_updates["acquired_fears"] || []
+
+        Enum.each(new_fears, fn fear_str ->
+          if String.trim(fear_str) != "" do
+            Souls.create_soul_fear(%{
+              character_id: npc.id,
+              fear_type: String.trim(fear_str),
+              severity: 70,
+              origin: "acquired",
+              status: "active",
+              acquired_in_scene_id: scene.id
+            })
           end
+        end)
 
-        memory_candidate =
-          if response[:memory_candidates] || response["memory_candidates"] do
-            mcs = response[:memory_candidates] || response["memory_candidates"]
-            mc = List.first(mcs) || %{}
+        # Active fears decay loop: if current stress is low, decrement severity
+        latest_state = Souls.get_emotional_state_by_character(npc.id)
+        stress_level = (latest_state && latest_state.stress) || 0
 
-            %{
-              category:
-                normalize_enum(
-                  mc[:category] || mc["category"] || "episodic",
-                  Memory.categories(),
-                  "episodic",
-                  "memory category"
-                ),
-              summary: mc[:summary] || mc["summary"] || "interaction",
-              details: mc[:details] || mc["details"] || "",
-              importance: mc[:importance] || mc["importance"] || 50,
-              emotional_intensity: mc[:emotional_intensity] || mc["emotional_intensity"] || 50,
-              valence: mc[:valence] || mc["valence"] || 0.0,
-              tags: mc[:tags] || mc["tags"] || []
-            }
-          else
-            nil
-          end
+        if stress_level < 30 do
+          Enum.each(fears, fn f ->
+            new_sev = max(f.severity - 5, 0)
 
-        case ConsequenceEngine.resolve(%{
-               character_id: npc.id,
-               source_character_id: npc.id,
-               target_character_id: player.id,
-               scene_id: scene.id,
-               event_type: :speak,
-               event_intensity: 10,
-               message_content:
-                 clean_speech(
-                   first_non_blank([response[:public_speech], response["public_speech"]]),
-                   npc,
-                   player,
-                   response
-                 ),
-               private_thought:
-                 first_non_blank([
-                   response[:private_thought],
-                   response["private_thought"],
-                   response[:thought],
-                   response["thought"],
-                   response[:internal_thought],
-                   response["internal_thought"],
-                   response[:internal_monologue],
-                   response["internal_monologue"],
-                   response[:reflection],
-                   response["reflection"],
-                   fallback_thought(npc, emotional_state, player, response)
-                 ]),
-               action_resolution: action_resolution,
-               memory_candidate: memory_candidate,
-               correlation_id: correlation_id
-             }) do
-          {:ok, result} ->
-            # Create a subconscious shadow log
-            repressed_motive =
-              response[:repressed_motive] || response["repressed_motive"] || "none"
-
-            active_defense = response[:active_defense] || response["active_defense"] || "none"
-
-            private_monologue =
-              first_non_blank([
-                response[:private_thought],
-                response["private_thought"],
-                response[:thought],
-                response["thought"],
-                fallback_thought(npc, emotional_state, player, response)
-              ])
-
-            emotional_drift = %{
-              "anger" => (emotional_state && emotional_state.anger) || 0,
-              "fear" => (emotional_state && emotional_state.fear) || 0,
-              "stress" => (emotional_state && emotional_state.stress) || 0,
-              "attachment" => (emotional_state && emotional_state.attachment) || 0
-            }
-
-            {:ok, _shadow} =
-              Souls.create_soul_shadow(%{
-                character_id: npc.id,
-                scene_id: scene.id,
-                private_monologue: private_monologue,
-                repressed_motive: repressed_motive,
-                active_defense: active_defense,
-                emotional_drift: emotional_drift
-              })
-
-            # Ingest newly acquired fears
-            psych_updates =
-              response[:psychological_updates] || response["psychological_updates"] || %{}
-
-            new_fears = psych_updates[:acquired_fears] || psych_updates["acquired_fears"] || []
-
-            Enum.each(new_fears, fn fear_str ->
-              if String.trim(fear_str) != "" do
-                Souls.create_soul_fear(%{
-                  character_id: npc.id,
-                  fear_type: String.trim(fear_str),
-                  severity: 70,
-                  origin: "acquired",
-                  status: "active",
-                  acquired_in_scene_id: scene.id
-                })
-              end
-            end)
-
-            # Active fears decay loop: if current stress is low, decrement severity
-            latest_state = Souls.get_emotional_state_by_character(npc.id)
-            stress_level = (latest_state && latest_state.stress) || 0
-
-            if stress_level < 30 do
-              Enum.each(fears, fn f ->
-                new_sev = max(f.severity - 5, 0)
-
-                if new_sev == 0 do
-                  Souls.update_soul_fear(f, %{severity: 0, status: "resolved"})
-                else
-                  Souls.update_soul_fear(f, %{severity: new_sev})
-                end
-              end)
+            if new_sev == 0 do
+              Souls.update_soul_fear(f, %{severity: 0, status: "resolved"})
+            else
+              Souls.update_soul_fear(f, %{severity: new_sev})
             end
-
-            # Process new psychological fields from LLM response
-
-            # physical_tell → broadcast as action beat
-            physical_tell = response[:physical_tell] || response["physical_tell"]
-
-            if physical_tell && String.trim(to_string(physical_tell)) != "" do
-              broadcast_action_message(npc, scene, String.trim(to_string(physical_tell)))
-            end
-
-            # shame_or_guilt → update emotional state
-            shame_or_guilt = response[:shame_or_guilt] || response["shame_or_guilt"]
-            current_emotional_state = Souls.get_emotional_state_by_character(npc.id)
-            current_emotional_state = process_shame_guilt(current_emotional_state, shame_or_guilt)
-
-            # rumination_update → update emotional state
-            rumination_upd = response[:rumination_update] || response["rumination_update"]
-
-            current_emotional_state =
-              process_rumination_update(current_emotional_state, rumination_upd)
-
-            # Apply trigger spikes to emotional state for active triggers
-            current_emotional_state =
-              apply_trigger_spikes(current_emotional_state, active_triggers)
-
-            # Persist emotional state changes if there is a real DB record
-            if current_emotional_state && current_emotional_state.id do
-              Souls.update_emotional_state(current_emotional_state, %{
-                shame: current_emotional_state.shame,
-                guilt: current_emotional_state.guilt,
-                rumination_subject: current_emotional_state.rumination_subject,
-                rumination_intensity: current_emotional_state.rumination_intensity,
-                rumination_since: current_emotional_state.rumination_since
-              })
-            end
-
-            # belief_challenge → find matching belief and apply conviction_delta
-            belief_challenge = response[:belief_challenge] || response["belief_challenge"]
-            process_belief_challenge(belief_challenge, beliefs)
-
-            # desire_update → find matching desire or create new one
-            desire_upd = response[:desire_update] || response["desire_update"]
-            process_desire_update(desire_upd, desires, npc.id)
-
-            # Process theory of mind update
-            knowledge_upd = response[:knowledge_update] || response["knowledge_update"]
-
-            if knowledge_upd && player.id do
-              process_knowledge_update(knowledge_upd, npc.id, player.id, characters)
-            end
-
-            # Process goal update
-            goal_upd = response[:goal_update] || response["goal_update"]
-            process_goal_update(goal_upd, active_goals)
-
-            # Process grief response
-            grief_resp = response[:grief_response] || response["grief_response"]
-            process_grief_response(grief_resp, grief_arcs)
-
-            # Process forgiveness signal
-            forgiveness_sig = response[:forgiveness_signal] || response["forgiveness_signal"]
-            process_forgiveness_signal(forgiveness_sig, forgiveness_arcs)
-
-            # Update character description in the database in real-time if returned
-            updated_desc = response[:updated_description] || response["updated_description"]
-
-            if updated_desc && String.trim(to_string(updated_desc)) != "" do
-              {:ok, _updated_npc} =
-                Characters.update_character(npc, %{
-                  description: String.trim(to_string(updated_desc))
-                })
-
-              Phoenix.PubSub.broadcast(
-                SovereignSoulEngine.PubSub,
-                "scenes:list_updates",
-                {:scenes_updated, %{}}
-              )
-            end
-
-            # Dispatch action resolution (e.g. increase trust if protecting)
-            if action_resolution && action_resolution.proposed_action not in [nil, "none"] do
-              dispatch_action(npc, player, scene, action_resolution)
-            end
-
-            # Record that these memories were recalled — boosts their future relevance
-            memory_ids = Enum.map(memories, & &1.id)
-            if memory_ids != [], do: Memories.record_recalls(memory_ids)
-
-            # Schedule background consolidation for minor memory clusters
-            MemoryMerger.consolidate_async(npc.id)
-
-            # Stamp conversation_state/physical_tell/proposed_action into message
-            # metadata so callers (e.g. NPCConversation, the 1:1 chat API) can see
-            # them — every turn, not just on wind-down. proposed_action was
-            # already dispatched above (relationship side-effects, scene
-            # broadcast) — this is purely so the HTTP caller (twisted_paradox)
-            # can also see what the NPC decided, e.g. to detect "join_player".
-            conv_state =
-              response[:conversation_state] || response["conversation_state"] || "continuing"
-
-            metadata_updates =
-              %{}
-              |> maybe_put_metadata(
-                "conversation_state",
-                conv_state in ["winding_down", "concluded"] && conv_state
-              )
-              |> maybe_put_metadata(
-                "physical_tell",
-                physical_tell && String.trim(to_string(physical_tell)) != "" &&
-                  String.trim(to_string(physical_tell))
-              )
-              |> maybe_put_metadata(
-                "proposed_action",
-                action_resolution && action_resolution.proposed_action
-              )
-              |> maybe_put_metadata(
-                "neurosis_state",
-                neurosis.state != :normal && to_string(neurosis.state)
-              )
-              |> maybe_put_metadata(
-                "ptsd_flashback",
-                ptsd_flashback.triggered? && ptsd_flashback.trigger_cue
-              )
-              |> maybe_put_metadata(
-                "active_defense",
-                ego_defense.defense != :none && to_string(ego_defense.defense)
-              )
-              |> maybe_put_metadata("cortisol", neurochem.cortisol)
-              |> maybe_put_metadata("oxytocin", neurochem.oxytocin)
-              |> maybe_put_metadata("dopamine", neurochem.dopamine)
-              |> maybe_put_metadata("serotonin", neurochem.serotonin)
-
-            # Compute and dispatch real-time tactile haptic motor pulse to wearables
-            haptic_signal =
-              if ptsd_flashback.triggered? do
-                SovereignSoulEngine.Wearables.HapticEngine.signal_for_event(
-                  :ptsd_flashback,
-                  bpm: ptsd_flashback.heart_rate_surge
-                )
-              else
-                SovereignSoulEngine.Wearables.HapticEngine.compute(
-                  current_emotional_state,
-                  somatic_state,
-                  neurochem
-                )
-              end
-
-            SovereignSoulEngine.Wearables.HapticEngine.dispatch(npc.id, haptic_signal)
-
-            metadata_updates =
-              metadata_updates
-              |> maybe_put_metadata("haptic_pattern", to_string(haptic_signal.pattern))
-              |> maybe_put_metadata("haptic_bpm", haptic_signal.bpm)
-
-            # If PTSD flashback was triggered, reflect somatic surge and acute stress
-            if ptsd_flashback.triggered? do
-              if somatic_state do
-                Souls.update_somatic_state(somatic_state, %{
-                  fatigue: min(100, (somatic_state.fatigue || 0) + 15)
-                })
-              end
-
-              if current_emotional_state && current_emotional_state.id do
-                Souls.update_emotional_state(current_emotional_state, %{
-                  stress: min(100, max(current_emotional_state.stress || 20, ptsd_flashback.stress_surge))
-                })
-              end
-
-              Phoenix.PubSub.broadcast(
-                SovereignSoulEngine.PubSub,
-                "character:#{npc.id}:biometrics",
-                {:telemetry_received, %{telemetry: %{heart_rate: ptsd_flashback.heart_rate_surge}}}
-              )
-            end
-
-            final_message =
-              if map_size(metadata_updates) > 0 do
-                case Scenes.update_message(result.scene_message, %{
-                       metadata: Map.merge(result.scene_message.metadata || %{}, metadata_updates)
-                     }) do
-                  {:ok, updated_msg} -> updated_msg
-                  _ -> result.scene_message
-                end
-              else
-                result.scene_message
-              end
-
-            # Broadcast new message
-            latest_state_after = Souls.get_emotional_state_by_character(npc.id)
-
-            Phoenix.PubSub.broadcast(
-              SovereignSoulEngine.PubSub,
-              "scene:#{scene.id}",
-              {:new_message, final_message}
-            )
-
-            Phoenix.PubSub.broadcast(
-              SovereignSoulEngine.PubSub,
-              "character:#{npc.id}",
-              {:emotion_updated, latest_state_after}
-            )
-
-            # Trigger asynchronous voice generation if configured
-            if SovereignSoulEngine.Voice.configured?() do
-              SovereignSoulEngine.Voice.speak_message_async(final_message, npc)
-            end
-
-            {:ok, final_message}
-
-          # Ecto.Multi.new() |> Repo.transaction() fails as a 4-tuple —
-          # {:error, reason} here would never match it, so any failed step
-          # (bad enum, constraint violation, etc.) crashed the whole request
-          # with a raw CaseClauseError instead of degrading gracefully. This
-          # is exactly what happened when the LLM proposed a memory
-          # category outside Memory.categories/0 — normalize_enum/4 above
-          # closes off the known cause, but this clause is the backstop for
-          # anything else that can fail inside that transaction.
-          {:error, failed_step, failed_value, _changes_so_far} ->
-            Logger.error(
-              "Consequence resolution failed at step #{inspect(failed_step)}: #{inspect(failed_value)}"
-            )
-
-            {:error, {failed_step, failed_value}}
+          end)
         end
+
+        # Process new psychological fields from LLM response
+
+        # physical_tell → broadcast as action beat
+        physical_tell = response[:physical_tell] || response["physical_tell"]
+
+        if physical_tell && String.trim(to_string(physical_tell)) != "" do
+          broadcast_action_message(npc, scene, String.trim(to_string(physical_tell)))
+        end
+
+        # shame_or_guilt → update emotional state
+        shame_or_guilt = response[:shame_or_guilt] || response["shame_or_guilt"]
+        current_emotional_state = Souls.get_emotional_state_by_character(npc.id)
+        current_emotional_state = process_shame_guilt(current_emotional_state, shame_or_guilt)
+
+        # rumination_update → update emotional state
+        rumination_upd = response[:rumination_update] || response["rumination_update"]
+
+        current_emotional_state =
+          process_rumination_update(current_emotional_state, rumination_upd)
+
+        # Apply trigger spikes to emotional state for active triggers
+        current_emotional_state =
+          apply_trigger_spikes(current_emotional_state, active_triggers)
+
+        # Persist emotional state changes if there is a real DB record
+        if current_emotional_state && current_emotional_state.id do
+          Souls.update_emotional_state(current_emotional_state, %{
+            shame: current_emotional_state.shame,
+            guilt: current_emotional_state.guilt,
+            rumination_subject: current_emotional_state.rumination_subject,
+            rumination_intensity: current_emotional_state.rumination_intensity,
+            rumination_since: current_emotional_state.rumination_since
+          })
+        end
+
+        # belief_challenge → find matching belief and apply conviction_delta
+        belief_challenge = response[:belief_challenge] || response["belief_challenge"]
+        process_belief_challenge(belief_challenge, beliefs)
+
+        # desire_update → find matching desire or create new one
+        desire_upd = response[:desire_update] || response["desire_update"]
+        process_desire_update(desire_upd, desires, npc.id)
+
+        # Process theory of mind update
+        knowledge_upd = response[:knowledge_update] || response["knowledge_update"]
+
+        if knowledge_upd && player.id do
+          process_knowledge_update(knowledge_upd, npc.id, player.id, characters)
+        end
+
+        # Process goal update
+        goal_upd = response[:goal_update] || response["goal_update"]
+        process_goal_update(goal_upd, active_goals)
+
+        # Process grief response
+        grief_resp = response[:grief_response] || response["grief_response"]
+        process_grief_response(grief_resp, grief_arcs)
+
+        # Process forgiveness signal
+        forgiveness_sig = response[:forgiveness_signal] || response["forgiveness_signal"]
+        process_forgiveness_signal(forgiveness_sig, forgiveness_arcs)
+
+        # Update character description in the database in real-time if returned
+        updated_desc = response[:updated_description] || response["updated_description"]
+
+        if updated_desc && String.trim(to_string(updated_desc)) != "" do
+          {:ok, _updated_npc} =
+            Characters.update_character(npc, %{
+              description: String.trim(to_string(updated_desc))
+            })
+
+          Phoenix.PubSub.broadcast(
+            SovereignSoulEngine.PubSub,
+            "scenes:list_updates",
+            {:scenes_updated, %{}}
+          )
+        end
+
+        # Dispatch action resolution (e.g. increase trust if protecting)
+        if action_resolution && action_resolution.proposed_action not in [nil, "none"] do
+          dispatch_action(npc, player, scene, action_resolution)
+        end
+
+        # Record that these memories were recalled — boosts their future relevance
+        memory_ids = Enum.map(memories, & &1.id)
+        if memory_ids != [], do: Memories.record_recalls(memory_ids)
+
+        # Schedule background consolidation for minor memory clusters
+        MemoryMerger.consolidate_async(npc.id)
+
+        # Stamp conversation_state/physical_tell/proposed_action into message
+        # metadata so callers (e.g. NPCConversation, the 1:1 chat API) can see
+        # them — every turn, not just on wind-down. proposed_action was
+        # already dispatched above (relationship side-effects, scene
+        # broadcast) — this is purely so the HTTP caller (twisted_paradox)
+        # can also see what the NPC decided, e.g. to detect "join_player".
+        conv_state =
+          response[:conversation_state] || response["conversation_state"] || "continuing"
+
+        metadata_updates =
+          %{}
+          |> maybe_put_metadata(
+            "conversation_state",
+            conv_state in ["winding_down", "concluded"] && conv_state
+          )
+          |> maybe_put_metadata(
+            "physical_tell",
+            physical_tell && String.trim(to_string(physical_tell)) != "" &&
+              String.trim(to_string(physical_tell))
+          )
+          |> maybe_put_metadata(
+            "proposed_action",
+            action_resolution && action_resolution.proposed_action
+          )
+          |> maybe_put_metadata(
+            "neurosis_state",
+            neurosis.state != :normal && to_string(neurosis.state)
+          )
+          |> maybe_put_metadata(
+            "ptsd_flashback",
+            ptsd_flashback.triggered? && ptsd_flashback.trigger_cue
+          )
+          |> maybe_put_metadata(
+            "active_defense",
+            ego_defense.defense != :none && to_string(ego_defense.defense)
+          )
+          |> maybe_put_metadata("cortisol", neurochem.cortisol)
+          |> maybe_put_metadata("oxytocin", neurochem.oxytocin)
+          |> maybe_put_metadata("dopamine", neurochem.dopamine)
+          |> maybe_put_metadata("serotonin", neurochem.serotonin)
+
+        # Compute and dispatch real-time tactile haptic motor pulse to wearables
+        haptic_signal =
+          if ptsd_flashback.triggered? do
+            SovereignSoulEngine.Wearables.HapticEngine.signal_for_event(
+              :ptsd_flashback,
+              bpm: ptsd_flashback.heart_rate_surge
+            )
+          else
+            SovereignSoulEngine.Wearables.HapticEngine.compute(
+              current_emotional_state,
+              somatic_state,
+              neurochem
+            )
+          end
+
+        SovereignSoulEngine.Wearables.HapticEngine.dispatch(npc.id, haptic_signal)
+
+        metadata_updates =
+          metadata_updates
+          |> maybe_put_metadata("haptic_pattern", to_string(haptic_signal.pattern))
+          |> maybe_put_metadata("haptic_bpm", haptic_signal.bpm)
+
+        # If PTSD flashback was triggered, reflect somatic surge and acute stress
+        if ptsd_flashback.triggered? do
+          if somatic_state do
+            Souls.update_somatic_state(somatic_state, %{
+              fatigue: min(100, (somatic_state.fatigue || 0) + 15)
+            })
+          end
+
+          if current_emotional_state && current_emotional_state.id do
+            Souls.update_emotional_state(current_emotional_state, %{
+              stress:
+                min(100, max(current_emotional_state.stress || 20, ptsd_flashback.stress_surge))
+            })
+          end
+
+          Phoenix.PubSub.broadcast(
+            SovereignSoulEngine.PubSub,
+            "character:#{npc.id}:biometrics",
+            {:telemetry_received, %{telemetry: %{heart_rate: ptsd_flashback.heart_rate_surge}}}
+          )
+        end
+
+        final_message =
+          if map_size(metadata_updates) > 0 do
+            case Scenes.update_message(result.scene_message, %{
+                   metadata: Map.merge(result.scene_message.metadata || %{}, metadata_updates)
+                 }) do
+              {:ok, updated_msg} -> updated_msg
+              _ -> result.scene_message
+            end
+          else
+            result.scene_message
+          end
+
+        # Broadcast new message
+        latest_state_after = Souls.get_emotional_state_by_character(npc.id)
+
+        Phoenix.PubSub.broadcast(
+          SovereignSoulEngine.PubSub,
+          "scene:#{scene.id}",
+          {:new_message, final_message}
+        )
+
+        Phoenix.PubSub.broadcast(
+          SovereignSoulEngine.PubSub,
+          "character:#{npc.id}",
+          {:emotion_updated, latest_state_after}
+        )
+
+        # Trigger asynchronous voice generation if configured
+        if SovereignSoulEngine.Voice.configured?() do
+          SovereignSoulEngine.Voice.speak_message_async(final_message, npc)
+        end
+
+        {:ok, final_message}
+
+      # Ecto.Multi.new() |> Repo.transaction() fails as a 4-tuple —
+      # {:error, reason} here would never match it, so any failed step
+      # (bad enum, constraint violation, etc.) crashed the whole request
+      # with a raw CaseClauseError instead of degrading gracefully. This
+      # is exactly what happened when the LLM proposed a memory
+      # category outside Memory.categories/0 — normalize_enum/4 above
+      # closes off the known cause, but this clause is the backstop for
+      # anything else that can fail inside that transaction.
+      {:error, failed_step, failed_value, _changes_so_far} ->
+        Logger.error(
+          "Consequence resolution failed at step #{inspect(failed_step)}: #{inspect(failed_value)}"
+        )
+
+        {:error, {failed_step, failed_value}}
+    end
   end
 
   defp extract_context_tags(triggers, history_messages, player_id) do
@@ -1959,6 +2005,7 @@ defmodule SovereignSoulEngine.Souls.Generator do
 
   defp strip_speaker_prefix(text, npc_name) do
     first_name = hd(String.split(npc_name))
+
     prefixes = [
       "#{npc_name}:",
       "#{npc_name} :",
@@ -2006,7 +2053,8 @@ defmodule SovereignSoulEngine.Souls.Generator do
       attachment > 60 ->
         "I am listening, #{player_name}. What is on your mind?"
 
-      is_binary(thought) and String.length(thought) > 10 and not String.contains?(String.downcase(thought), "required") ->
+      is_binary(thought) and String.length(thought) > 10 and
+          not String.contains?(String.downcase(thought), "required") ->
         "I hear you, #{player_name}. Let us see where this leads."
 
       tone in ["warm", "friendly", "welcoming"] ->
@@ -2042,7 +2090,8 @@ defmodule SovereignSoulEngine.Souls.Generator do
       attachment > 50 ->
         "There is something disarming about #{player_name}, but I cannot afford to lower my guard prematurely."
 
-      is_binary(tone) and tone not in ["", "neutral"] and is_binary(motivation) and motivation not in ["", "unknown", "respond"] ->
+      is_binary(tone) and tone not in ["", "neutral"] and is_binary(motivation) and
+          motivation not in ["", "unknown", "respond"] ->
         "Maintaining a #{tone} posture. My focus right now is to #{motivation} while reading #{player_name}."
 
       true ->

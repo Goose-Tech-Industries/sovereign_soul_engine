@@ -26,13 +26,21 @@ config :sovereign_soul_engine, SovereignSoulEngineWeb.Endpoint,
 # Peer-to-peer Soul Society relay (RFC-0002 §3). Read at boot so releases can
 # configure peers/secret without a rebuild. Forwarding is hop-limited; an
 # optional shared secret authenticates peers; a cap bounds remote-soul growth.
+llm_spend_cap =
+  case System.get_env("LLM_SPEND_CAP") do
+    nil -> nil
+    "" -> nil
+    val -> String.to_integer(val)
+  end
+
 config :sovereign_soul_engine,
   relay_peers: (System.get_env("RELAY_PEERS") || "") |> String.split(",", trim: true),
   relay_max_hops: String.to_integer(System.get_env("RELAY_MAX_HOPS") || "2"),
   relay_secret: System.get_env("RELAY_SECRET"),
   max_remote_souls: String.to_integer(System.get_env("MAX_REMOTE_SOULS") || "1000"),
   moderation_blocked_terms:
-    (System.get_env("MODERATION_BLOCKED_TERMS") || "") |> String.split(",", trim: true)
+    (System.get_env("MODERATION_BLOCKED_TERMS") || "") |> String.split(",", trim: true),
+  llm_spend_cap: llm_spend_cap
 
 # Error tracking — inert unless SENTRY_DSN is set. Use Req (already a dep) as
 # the HTTP client instead of the default Hackney.
