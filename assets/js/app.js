@@ -127,6 +127,39 @@ const customHooks = {
         localStorage.setItem("sse_age_gate_confirmed", new Date().toISOString());
       });
     }
+  },
+  MapControls: {
+    mounted() {
+      this.handleKeyDown = (e) => {
+        const active = document.activeElement;
+        if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)) {
+          return;
+        }
+        const key = e.key.toLowerCase();
+        if (key === 'w' || key === 'arrowup') {
+          e.preventDefault();
+          this.pushEvent("walk_direction", { direction: "north" });
+        } else if (key === 's' || key === 'arrowdown') {
+          e.preventDefault();
+          this.pushEvent("walk_direction", { direction: "south" });
+        } else if (key === 'a' || key === 'arrowleft') {
+          e.preventDefault();
+          this.pushEvent("walk_direction", { direction: "west" });
+        } else if (key === 'd' || key === 'arrowright') {
+          e.preventDefault();
+          this.pushEvent("walk_direction", { direction: "east" });
+        } else if (key === 'c' || key === 'home') {
+          e.preventDefault();
+          this.pushEvent("walk_direction", { direction: "palace" });
+        }
+      };
+      window.addEventListener("keydown", this.handleKeyDown);
+    },
+    destroyed() {
+      if (this.handleKeyDown) {
+        window.removeEventListener("keydown", this.handleKeyDown);
+      }
+    }
   }
 };
 

@@ -97,8 +97,14 @@ defmodule SovereignSoulEngineWeb.ChatLive do
     end
   end
 
-  def handle_params(%{"character_id" => id}, _uri, socket) do
-    case Enum.find(socket.assigns.npcs, &(&1.id == id)) do
+  def handle_params(%{"npc_id" => id} = params, uri, socket) do
+    handle_params(Map.put(params, "character_id", id), uri, socket)
+  end
+
+  def handle_params(%{"character_id" => id} = params, _uri, socket) do
+    location = Map.get(params, "location")
+
+    case Enum.find(socket.assigns.npcs, &(&1.id == id or &1.slug == id)) do
       nil ->
         {:noreply, socket}
 
@@ -108,6 +114,7 @@ defmodule SovereignSoulEngineWeb.ChatLive do
         socket =
           socket
           |> assign(:creating_group?, false)
+          |> assign(:current_location, location)
           |> load_scenes()
           |> select_scene(scene)
 
