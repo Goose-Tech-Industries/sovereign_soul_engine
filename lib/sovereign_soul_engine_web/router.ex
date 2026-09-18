@@ -154,10 +154,12 @@ defmodule SovereignSoulEngineWeb.Router do
     post "/neighborhood/posts/:id/react", NeighborhoodController, :react
     post "/neighborhood/generate", NeighborhoodController, :autonomous_post
     post "/neighborhood/encounter", NeighborhoodController, :encounter
+    post "/webhooks/stripe", StripeWebhookController, :webhook
   end
 
   # Public webhook ingress under /sse prefix
   scope "/sse/api", SovereignSoulEngineWeb.Api do
+    post "/webhooks/stripe", StripeWebhookController, :webhook
     post "/webhooks/telegram", TelegramWebhookController, :webhook
     post "/alexa", AlexaController, :handle
     post "/relay/inbound", RelayController, :inbound
@@ -193,6 +195,10 @@ defmodule SovereignSoulEngineWeb.Router do
       live "/scenes/:id", SceneLive, :show
       live "/ledger", SoulLedgerLive, :index
       live "/memories", MemoryVaultLive, :index
+      live "/billing", BillingLive, :index
+      live "/billing/success", BillingLive, :index
+      live "/billing/cancel", BillingLive, :index
+      live "/verify_age", BillingLive, :index
     end
   end
 

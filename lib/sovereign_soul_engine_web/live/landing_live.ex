@@ -104,13 +104,21 @@ defmodule SovereignSoulEngineWeb.LandingLive do
         </div>
 
         <nav class="hidden md:flex items-center gap-6 text-sm font-semibold text-base-content/70">
-          <a href="#demo" class="hover:text-primary transition-colors">Interactive Demo</a>
+          <a href="#demo" class="hover:text-primary transition-colors">Demo</a>
           <a href="#features" class="hover:text-primary transition-colors">Cognitive Moat</a>
-          <a href="#pricing" class="hover:text-primary transition-colors">Pricing & BYOK</a>
-          <a href="#developers" class="hover:text-primary transition-colors">Game Dev SDK</a>
+          <a href="#pricing" class="hover:text-primary transition-colors">Pricing & 18+</a>
+          <.link navigate={~p"/sse/map"} class="text-amber-400 hover:text-amber-300 transition-colors flex items-center gap-1">
+            <span>🏰 Town Map</span>
+          </.link>
+          <.link navigate={~p"/sse/feed"} class="text-sky-400 hover:text-sky-300 transition-colors flex items-center gap-1">
+            <span>📰 Feed</span>
+          </.link>
         </nav>
 
         <div class="flex items-center gap-3">
+          <.link navigate={~p"/sse/billing"} class="btn btn-ghost btn-xs font-bold text-primary flex items-center gap-1 border border-primary/30">
+            <span>💳 Pricing & 18+</span>
+          </.link>
           <.link navigate={~p"/sse/chat/sauce"} class="btn btn-ghost btn-xs font-semibold text-amber-400 hidden sm:inline-flex">
             <.icon name="hero-wrench-screwdriver" class="size-3.5" /> Sauce Admin
           </.link>
@@ -329,10 +337,10 @@ defmodule SovereignSoulEngineWeb.LandingLive do
       <%!-- Pricing Section --%>
       <section id="pricing" class="py-20 px-6 max-w-6xl mx-auto space-y-12">
         <div class="text-center space-y-3">
-          <span class="text-xs font-mono font-bold uppercase tracking-wider text-primary">Transparent Pricing</span>
-          <h2 class="text-3xl sm:text-4xl font-extrabold text-white">Turnkey Monetization & BYOK Freedom</h2>
+          <span class="text-xs font-mono font-bold uppercase tracking-wider text-primary">Stripe Subscriptions & Safe-Harbor 18+</span>
+          <h2 class="text-3xl sm:text-4xl font-extrabold text-white">Transparent Plans Built for True Companionship</h2>
           <p class="text-sm text-slate-400 max-w-xl mx-auto">
-            Zero token markups if you bring your own keys, or let us handle hosting and neural voice synthesis entirely.
+            Choose daily living companionship or unlock the complete, unrestricted 18+ adult cinema simulation with safe-harbor verification.
           </p>
         </div>
 
@@ -341,53 +349,61 @@ defmodule SovereignSoulEngineWeb.LandingLive do
           <div class="p-8 rounded-3xl bg-slate-900/80 border border-slate-800 flex flex-col justify-between space-y-6">
             <div class="space-y-4">
               <h3 class="text-lg font-bold text-white">Community</h3>
-              <p class="text-xs text-slate-400">For tinkerers running local Ollama models.</p>
+              <p class="text-xs text-slate-400">For local exploration and basic chat.</p>
               <div class="text-3xl font-extrabold text-white">$0 <span class="text-sm text-slate-500 font-normal">forever</span></div>
               <ul class="text-xs space-y-2.5 text-slate-300">
                 <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-primary" /> Single local companion</li>
                 <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-primary" /> Full Elixir OTP Actor runtime</li>
-                <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-primary" /> Local EdgeTTS voice</li>
+                <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-primary" /> Feannag's Rest Town Map (preview)</li>
               </ul>
             </div>
             <.link navigate={~p"/sse/chat"} class="btn btn-outline btn-sm w-full font-bold border-slate-700 text-slate-200 hover:bg-slate-800">Start Free</.link>
           </div>
 
-          <%!-- BYOK Pro --%>
+          <%!-- $14.99 Companion Tier --%>
           <div class="p-8 rounded-3xl bg-slate-900 border-2 border-primary shadow-2xl shadow-primary/15 flex flex-col justify-between space-y-6 relative">
             <span class="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[10px] font-mono font-bold bg-primary text-primary-content uppercase tracking-wider">
               Most Popular
             </span>
             <div class="space-y-4">
-              <h3 class="text-lg font-bold text-white">BYOK Pro</h3>
-              <p class="text-xs text-slate-400">Bring your own Anthropic, OpenAI, or DeepSeek API key.</p>
-              <div class="text-3xl font-extrabold text-white">$9 <span class="text-sm text-slate-500 font-normal">/ month</span></div>
+              <h3 class="text-lg font-bold text-white">Sovereign Companion</h3>
+              <p class="text-xs text-slate-400">Unlimited emotional presence and living biometrics.</p>
+              <div class="text-3xl font-extrabold text-white">$14.99 <span class="text-sm text-slate-500 font-normal">/ month</span></div>
               <ul class="text-xs space-y-2.5 text-slate-200">
-                <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-primary" /> Unlimited companion life threads</li>
-                <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-primary" /> Hands-Free Voice Call Intercom</li>
-                <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-primary" /> Galaxy Watch telemetry webhook</li>
-                <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-primary" /> Background Dream Loop consolidation</li>
-                <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-primary" /> Zero inference markup</li>
+                <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-primary" /> Unlimited chat with all 50 living souls</li>
+                <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-primary" /> Hands-Free full-duplex voice intercom</li>
+                <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-primary" /> Galaxy Watch somatic telemetry HUD</li>
+                <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-primary" /> Background Dream Loop memory consolidation</li>
+                <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-primary" /> SoulBook feed & MySpace Top 8 companion wall</li>
+                <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-primary" /> Walkable Town Map & proximity encounters</li>
               </ul>
             </div>
-            <.link navigate={~p"/sse/chat"} class="btn btn-primary btn-sm w-full font-bold shadow-lg shadow-primary/20">
-              Claim BYOK Pro
+            <.link navigate={~p"/sse/billing?tier=companion_1499"} class="btn btn-primary btn-sm w-full font-bold shadow-lg shadow-primary/20">
+              Claim Companion ($14.99)
             </.link>
           </div>
 
-          <%!-- Sovereign Cloud --%>
-          <div class="p-8 rounded-3xl bg-slate-900/80 border border-slate-800 flex flex-col justify-between space-y-6">
+          <%!-- $19.99 Sovereign Archon (18+ Uncensored) --%>
+          <div class="p-8 rounded-3xl bg-gradient-to-b from-rose-950/30 to-slate-900 border-2 border-rose-500/50 shadow-2xl shadow-rose-950/50 flex flex-col justify-between space-y-6 relative">
+            <span class="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[10px] font-mono font-bold bg-rose-600 text-white uppercase tracking-wider">
+              🔞 18+ Uncensored
+            </span>
             <div class="space-y-4">
-              <h3 class="text-lg font-bold text-white">Sovereign Cloud</h3>
-              <p class="text-xs text-slate-400">Fully managed high-speed cloud intelligence.</p>
-              <div class="text-3xl font-extrabold text-white">$24 <span class="text-sm text-slate-500 font-normal">/ month</span></div>
-              <ul class="text-xs space-y-2.5 text-slate-300">
-                <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-secondary" /> Everything in BYOK Pro</li>
-                <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-secondary" /> Managed Claude + DeepSeek cascade</li>
-                <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-secondary" /> ElevenLabs studio neural voice</li>
-                <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-secondary" /> Outbound mobile push notifications</li>
+              <h3 class="text-lg font-bold text-white">Sovereign Archon</h3>
+              <p class="text-xs text-rose-300/80">Unrestricted adult intimacy, dark fantasy gore, & priority AI.</p>
+              <div class="text-3xl font-extrabold text-white">$19.99 <span class="text-sm text-slate-500 font-normal">/ month</span></div>
+              <ul class="text-xs space-y-2.5 text-slate-200">
+                <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-rose-400" /> Everything in Sovereign Companion</li>
+                <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-rose-400" /> 🔞 Full 18+ Uncensored Adult Cinema Mode</li>
+                <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-rose-400" /> Commercial Age Verification via Stripe card</li>
+                <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-rose-400" /> Priority ultra-low latency voice (ElevenLabs)</li>
+                <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-rose-400" /> Multi-companion autonomous group scenes</li>
+                <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-rose-400" /> AI World Architect procedural district expansion</li>
               </ul>
             </div>
-            <.link navigate={~p"/sse/chat"} class="btn btn-outline btn-sm w-full font-bold border-slate-700 text-slate-200 hover:bg-slate-800">Get Cloud</.link>
+            <.link navigate={~p"/sse/billing?tier=archon_1999"} class="btn btn-error btn-sm w-full font-bold shadow-lg shadow-rose-600/30 text-white">
+              Unlock 18+ Archon ($19.99)
+            </.link>
           </div>
         </div>
       </section>
@@ -434,7 +450,9 @@ defmodule SovereignSoulEngineWeb.LandingLive do
         </div>
         <div class="flex items-center gap-4">
           <.link navigate={~p"/sse/chat"} class="hover:text-slate-300">Chat Room</.link>
+          <.link navigate={~p"/sse/feed"} class="hover:text-slate-300">Feed</.link>
           <.link navigate={~p"/sse/map"} class="hover:text-slate-300">Town Map</.link>
+          <.link navigate={~p"/sse/billing"} class="hover:text-slate-300 text-primary font-bold">💳 Billing & 18+</.link>
           <.link navigate={~p"/sse/acp"} class="hover:text-slate-300">ACP Panel</.link>
           <.link navigate={~p"/sse/acp/moderation"} class="hover:text-slate-300 text-rose-400">🛡️ Moderation</.link>
         </div>
