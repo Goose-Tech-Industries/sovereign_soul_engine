@@ -60,3 +60,45 @@ func _on_soul_response(speech: String, thought: String, action: Dictionary):
     print("Spoken: ", speech)
     print("Private thought: ", thought)
 ```
+
+---
+
+## 🎲 Unity (C#)
+
+Drop the files from `sdk/unity/` into your Unity project (`Assets/Plugins/SovereignSoul` or any `asmdef`). Zero external dependencies.
+
+```csharp
+using SovereignSoul;
+
+var sse = new SovereignSoulClient(
+    baseUrl: "http://localhost:8561",
+    apiKey: "sse_live_your_tenant_key");
+
+var reply = await sse.ChatAsync(characterSlug: "maya", message: "The forge is cold.");
+Debug.Log($"{reply.npc_name}: {reply.reply}");
+```
+
+Includes RFC 8032 Ed25519 cryptography (`SoulIdentity.cs`), Base58 DID generation, and WebSocket relay (`RelayClient.cs`) for live multi-NPC social gossip.
+
+---
+
+## ⚡ Unreal Engine 5 (C++)
+
+Add `sdk/unreal/` files to your module and include `Http`, `Json`, `WebSockets`, and `Ssl` in your `*.Build.cs`:
+
+```cpp
+#include "SovereignSoul.h"
+
+SovereignSoul* Sse = new SovereignSoul(
+    TEXT("http://localhost:8561"),
+    TEXT("sse_live_your_tenant_key"));
+
+Sse->Chat(TEXT("maya"), TEXT("The forge is cold."),
+    [](bool bOk, const FString& Json)
+    {
+        if (bOk) UE_LOG(LogTemp, Log, TEXT("NPC Reply: %s"), *Json);
+    });
+```
+
+Includes OpenSSL EVP Ed25519 signing (`SoulRelay.h/.cpp`) for decentralized soul identity and live gossip pushes over WebSockets.
+
