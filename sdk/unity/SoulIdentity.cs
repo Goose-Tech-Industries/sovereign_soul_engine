@@ -21,14 +21,12 @@ namespace SovereignSoul
             (BigInteger.One << 252) +
             BigInteger.Parse("27742317777372353535851937790883648493");
 
-        // Twisted Edwards curve constant d = -121665/121666 (mod p),
-        // little-endian canonical encoding.
-        static readonly BigInteger D = FromLittleEndian(
-            HexToBytes("52036cee2b6ffe738cc740797779e89800700a4d4141d8ab75eb4dca135978a3"));
+        // Twisted Edwards curve constant d = -121665/121666 (mod p).
+        // Computed from first principles to avoid any byte-order ambiguity.
+        static readonly BigInteger D = Mod(-121665 * ModInverse(121666, P), P);
 
-        // sqrt(-1) mod p.
-        static readonly BigInteger I = FromLittleEndian(
-            HexToBytes("b0a00e4a271beec478e42fad0618432fa7d7fb3d99004d2b0bdfc14f8024832b"));
+        // sqrt(-1) mod p = 2^((p-1)/4).
+        static readonly BigInteger I = ModPow(2, (P - 1) / 4, P);
 
         // Base point (RFC 8032 §5.1), canonical encoding.
         static readonly byte[] BasePointEnc =
