@@ -1,6 +1,10 @@
 defmodule SovereignSoulEngineWeb.Api.AlexaControllerTest do
   use SovereignSoulEngineWeb.ConnCase
 
+  setup %{conn: conn} do
+    %{conn: authenticate_api(conn)}
+  end
+
   alias SovereignSoulEngine.Characters
   alias SovereignSoulEngine.Souls
 
@@ -176,7 +180,8 @@ defmodule SovereignSoulEngineWeb.Api.AlexaControllerTest do
           "character_slug" => npc.slug
         })
 
-      assert json_response(help_conn, 200)["response"]["outputSpeech"]["text"] =~ "connected directly"
+      assert json_response(help_conn, 200)["response"]["outputSpeech"]["text"] =~
+               "connected directly"
 
       # Stop intent
       stop_conn =

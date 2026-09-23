@@ -1,5 +1,11 @@
 import Config
 
+config :sovereign_soul_engine,
+  admin_user_ids:
+    System.get_env("SSE_ADMIN_USER_IDS", "")
+    |> String.split(",", trim: true)
+    |> Enum.map(&String.trim/1)
+
 # config/runtime.exs is executed for all environments, including
 # during releases. It is executed after compilation and before the
 # system starts, so it is typically used to load production configuration

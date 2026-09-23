@@ -5,12 +5,16 @@ defmodule SovereignSoulEngineWeb.AcpModerationLiveTest do
 
   alias SovereignSoulEngine.Moderation
 
-  setup do
+  setup %{conn: conn} do
     unless Process.whereis(Moderation) do
       start_supervised!(Moderation)
     end
 
-    :ok
+    user = SovereignSoulEngine.AccountsFixtures.user_fixture()
+    previous = Application.get_env(:sovereign_soul_engine, :admin_user_ids, [])
+    Application.put_env(:sovereign_soul_engine, :admin_user_ids, [user.id])
+    on_exit(fn -> Application.put_env(:sovereign_soul_engine, :admin_user_ids, previous) end)
+    %{conn: log_in_user(conn, user)}
   end
 
   test "mounts moderation dashboard and displays overview", %{conn: conn} do
@@ -21,7 +25,12 @@ defmodule SovereignSoulEngineWeb.AcpModerationLiveTest do
     assert html =~ "Blocked Terms &amp; Blacklist"
     assert html =~ "Silenced / Muted Souls"
     assert has_element?(view, "button[phx-click='set_maturity_rating'][phx-value-rating='teen']")
-    assert has_element?(view, "button[phx-click='set_maturity_rating'][phx-value-rating='mature']")
+
+    assert has_element?(
+             view,
+             "button[phx-click='set_maturity_rating'][phx-value-rating='mature']"
+           )
+
     assert has_element?(view, "button[phx-click='set_maturity_rating'][phx-value-rating='adult']")
   end
 

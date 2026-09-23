@@ -17,12 +17,15 @@ primary_region = "iad"
   PHX_HOST = "sovereign-soul-engine.fly.dev"
   PORT = "8080"
 
+[deploy]
+  release_command = "/app/bin/sovereign_soul_engine eval \"SovereignSoulEngine.Release.migrate()\""
+
 [http_service]
   internal_port = 8080
   force_https = true
   auto_stop_machines = "stop"
   auto_start_machines = true
-  min_machines_running = 0
+  min_machines_running = 1
   processes = ["app"]
 
 [[vm]]

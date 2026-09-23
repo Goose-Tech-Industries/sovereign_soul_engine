@@ -1,6 +1,8 @@
 defmodule SovereignSoulEngineWeb.Router do
   use SovereignSoulEngineWeb, :router
 
+  import SovereignSoulEngineWeb.UserAuth
+
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
@@ -8,6 +10,7 @@ defmodule SovereignSoulEngineWeb.Router do
     plug :put_root_layout, html: {SovereignSoulEngineWeb.Layouts, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
+    plug :fetch_current_scope_for_user
   end
 
   pipeline :api do
@@ -28,6 +31,10 @@ defmodule SovereignSoulEngineWeb.Router do
   # unlike carnage_v2 which strips its prefix.
   scope "/sse/api", SovereignSoulEngineWeb.Api do
     pipe_through :api
+
+    post "/webhooks/telegram", TelegramWebhookController, :webhook
+    post "/webhooks/stripe", StripeWebhookController, :webhook
+    post "/alexa", AlexaController, :handle
 
     get "/characters", CharacterController, :index
     post "/characters", CharacterController, :create
@@ -108,9 +115,12 @@ defmodule SovereignSoulEngineWeb.Router do
     post "/neighborhood/encounter", NeighborhoodController, :encounter
   end
 
-  # Public external access for Polsia / Twitter / RSS, Telegram Webhooks, Alexa, and Portable Souls
+  # External API aliases use the same authentication as /sse/api.
   scope "/api", SovereignSoulEngineWeb.Api do
+    pipe_through :api
+
     post "/webhooks/telegram", TelegramWebhookController, :webhook
+    post "/webhooks/stripe", StripeWebhookController, :webhook
     post "/alexa", AlexaController, :handle
     post "/vision/perceive", VisionController, :perceive
     get "/souls/:slug/export", SoulCapsuleController, :export
@@ -154,14 +164,10 @@ defmodule SovereignSoulEngineWeb.Router do
     post "/neighborhood/posts/:id/react", NeighborhoodController, :react
     post "/neighborhood/generate", NeighborhoodController, :autonomous_post
     post "/neighborhood/encounter", NeighborhoodController, :encounter
-    post "/webhooks/stripe", StripeWebhookController, :webhook
   end
 
   # Public webhook ingress under /sse prefix
   scope "/sse/api", SovereignSoulEngineWeb.Api do
-    post "/webhooks/stripe", StripeWebhookController, :webhook
-    post "/webhooks/telegram", TelegramWebhookController, :webhook
-    post "/alexa", AlexaController, :handle
     post "/relay/inbound", RelayController, :inbound
     get "/relay/peers", RelayController, :peers
     get "/world/feed", WorldController, :feed
@@ -177,19 +183,27 @@ defmodule SovereignSoulEngineWeb.Router do
   scope "/", SovereignSoulEngineWeb do
     pipe_through :browser
 
-    live "/", LandingLive, :index
+    live_session :landing,
+      on_mount: [{SovereignSoulEngineWeb.UserAuth, :mount_current_scope}] do
+      live "/", LandingLive, :index
+      live "/terms", TermsLive, :index
+      live "/privacy", PrivacyLive, :index
+    end
+
     get "/chat", PageController, :home
   end
 
   scope "/sse", SovereignSoulEngineWeb do
     pipe_through :browser
 
-    live_session :default do
+    live_session :default,
+      on_mount: [{SovereignSoulEngineWeb.UserAuth, :mount_current_scope}] do
       live "/", DashboardLive, :index
       live "/world", WorldLive, :index
       live "/chat", ChatLive, :index
+      live "/souls/new", SoulCreatorLive, :new
+      live "/create", SoulCreatorLive, :new
       live "/feed", FeedLive, :index
-      live "/map", MapLive, :index
       live "/chat/sauce", ChatSauceLive, :index
       live "/characters/:id", CharacterLive, :show
       live "/souls/:id", CharacterLive, :show
@@ -201,12 +215,15 @@ defmodule SovereignSoulEngineWeb.Router do
       live "/billing/cancel", BillingLive, :index
       live "/verify_age", BillingLive, :index
     end
+
+    get "/map", PageController, :home
   end
 
   scope "/sse/acp", SovereignSoulEngineWeb do
-    pipe_through :browser
+    pipe_through [:browser, :require_authenticated_user, :require_admin_user]
 
-    live_session :acp do
+    live_session :acp,
+      on_mount: [{SovereignSoulEngineWeb.UserAuth, :require_admin}] do
       live "/", AcpDashboardLive, :index
       live "/npcs/new", AcpNpcCreatorLive, :new
       live "/npcs/:id", AcpCharacterLive, :show
@@ -226,5 +243,33 @@ defmodule SovereignSoulEngineWeb.Router do
       live_dashboard "/dashboard", metrics: SovereignSoulEngineWeb.Telemetry
       forward "/mailbox", Plug.Swoosh.MailboxPreview
     end
+  end
+
+  ## Authentication routes
+
+  scope "/", SovereignSoulEngineWeb do
+    pipe_through [:browser, :require_authenticated_user]
+
+    live_session :require_authenticated_user,
+      on_mount: [{SovereignSoulEngineWeb.UserAuth, :require_authenticated}] do
+      live "/users/settings", UserLive.Settings, :edit
+      live "/users/settings/confirm-email/:token", UserLive.Settings, :confirm_email
+    end
+
+    post "/users/update-password", UserSessionController, :update_password
+  end
+
+  scope "/", SovereignSoulEngineWeb do
+    pipe_through [:browser]
+
+    live_session :current_user,
+      on_mount: [{SovereignSoulEngineWeb.UserAuth, :mount_current_scope}] do
+      live "/users/register", UserLive.Registration, :new
+      live "/users/log-in", UserLive.Login, :new
+      live "/users/log-in/:token", UserLive.Confirmation, :new
+    end
+
+    post "/users/log-in", UserSessionController, :create
+    delete "/users/log-out", UserSessionController, :delete
   end
 end

@@ -48,11 +48,63 @@ defmodule SovereignSoulEngineWeb.Api.MemoryPurgeControllerTest do
         certainty: 95
       })
 
-    conn = put_req_header(conn, "authorization", "Bearer twisted_dev_key")
+    conn = authenticate_api(conn)
     %{conn: conn, character: char}
   end
 
   describe "POST /sse/api/memories/purge" do
+    test "rejects missing, blank, and malformed filters without deleting", %{
+      conn: conn,
+      character: char
+    } do
+      for filters <- [
+            %{},
+            %{"topic" => " "},
+            %{"category" => ""},
+            %{"topic" => 12},
+            %{"all" => "yes"}
+          ] do
+        response =
+          post(conn, "/sse/api/memories/purge", Map.put(filters, "character_slug", char.slug))
+
+        assert json_response(response, 400)["error"]
+        assert length(Memories.list_memories_for_character(char.id)) == 2
+        assert length(TheoryOfMind.list_knowledge_about(char.id, char.id)) == 1
+      end
+    end
+
+    test "requires an explicit character even for all", %{conn: conn, character: char} do
+      assert conn |> post("/api/memories/purge", %{all: true}) |> json_response(400)
+      assert length(Memories.list_memories_for_character(char.id)) == 2
+    end
+
+    test "category purge preserves knowledge", %{conn: conn, character: char} do
+      response = post(conn, "/api/memories/purge", %{character_slug: char.slug, category: "core"})
+      assert json_response(response, 200)["memories_deleted"] == 1
+      assert json_response(response, 200)["knowledge_facts_deleted"] == 0
+      assert length(TheoryOfMind.list_knowledge_about(char.id, char.id)) == 1
+    end
+
+    test "domain functions reject unfiltered purges", %{character: char} do
+      for opts <- [[], [topic: " "], [category: ""], [topic: 42], [all: "true"]] do
+        assert {:error, :invalid_purge_filters} =
+                 Memories.purge_memories_for_character(char.id, opts)
+
+        assert {:error, :invalid_purge_filters} =
+                 TheoryOfMind.purge_knowledge_about(char.id, char.id, opts)
+      end
+
+      assert length(Memories.list_memories_for_character(char.id)) == 2
+      assert length(TheoryOfMind.list_knowledge_about(char.id, char.id)) == 1
+    end
+
+    test "SQL wildcard topics are literal", %{character: char} do
+      for topic <- ["%", "_"] do
+        assert {:ok, 0} = Memories.purge_memories_for_character(char.id, topic: topic)
+        assert {:ok, 0} = TheoryOfMind.purge_knowledge_about(char.id, char.id, topic: topic)
+      end
+    end
+
     test "selectively purges memories by topic", %{conn: conn, character: char} do
       payload = %{
         "character_slug" => char.slug,

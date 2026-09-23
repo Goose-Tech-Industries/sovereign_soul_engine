@@ -16,28 +16,45 @@ defmodule SovereignSoulEngineWeb.Api.MemoryPurgeController do
   POST /api/memories/purge
   """
   def purge(conn, params) do
-    character_slug = params["character_slug"] || params["slug"] || "goose"
-    character = resolve_character(character_slug)
+    character_slug = params["character_slug"] || params["slug"]
+    all = params["all"]
 
-    if character do
-      topic = params["topic"] || params["query"]
-      category = params["category"]
-      purge_all = params["all"] == true || params["all"] == "true"
+    all =
+      if all in [nil, false, "false"],
+        do: false,
+        else: if(all in [true, "true"], do: true, else: all)
 
-      opts = []
-      opts = if topic && String.trim(topic) != "", do: Keyword.put(opts, :topic, String.trim(topic)), else: opts
-      opts = if category && String.trim(category) != "", do: Keyword.put(opts, :category, String.trim(category)), else: opts
-      opts = if purge_all, do: Keyword.put(opts, :all, true), else: opts
+    with true <- is_binary(character_slug) and String.trim(character_slug) != "",
+         {:ok, opts} <-
+           Memories.PurgeFilters.validate(
+             topic: params["topic"] || params["query"],
+             category: params["category"],
+             all: all
+           ),
+         %Character{} = character <- resolve_character(character_slug) do
+      topic = opts[:topic]
+      category = opts[:category]
+      purge_all = opts[:all]
 
       {:ok, memories_purged} = Memories.purge_memories_for_character(character.id, opts)
 
       # Also purge from Theory of Mind knowledge base if topic or all specified
       player = Characters.get_character_by_slug("goose") || character
       tom_opts = []
-      tom_opts = if topic && String.trim(topic) != "", do: Keyword.put(tom_opts, :topic, String.trim(topic)), else: tom_opts
+
+      tom_opts =
+        if topic && String.trim(topic) != "",
+          do: Keyword.put(tom_opts, :topic, String.trim(topic)),
+          else: tom_opts
+
       tom_opts = if purge_all, do: Keyword.put(tom_opts, :all, true), else: tom_opts
 
-      {:ok, tom_purged} = TheoryOfMind.purge_knowledge_about(character.id, player.id, tom_opts)
+      {:ok, tom_purged} =
+        if topic || purge_all do
+          TheoryOfMind.purge_knowledge_about(character.id, player.id, tom_opts)
+        else
+          {:ok, 0}
+        end
 
       json(conn, %{
         status: "ok",
@@ -52,9 +69,18 @@ defmodule SovereignSoulEngineWeb.Api.MemoryPurgeController do
         }
       })
     else
-      conn
-      |> put_status(:not_found)
-      |> json(%{error: "Character '#{character_slug}' not found."})
+      false ->
+        conn |> put_status(:bad_request) |> json(%{error: "character_slug is required"})
+
+      {:error, :invalid_purge_filters} ->
+        conn
+        |> put_status(:bad_request)
+        |> json(%{error: "Provide a nonblank topic or category, or all: true"})
+
+      nil ->
+        conn
+        |> put_status(:not_found)
+        |> json(%{error: "Character '#{character_slug}' not found."})
     end
   end
 
@@ -100,9 +126,12 @@ defmodule SovereignSoulEngineWeb.Api.MemoryPurgeController do
           {:ok, uuid} -> Characters.get_character(uuid)
           :error -> nil
         end
-      char -> char
+
+      char ->
+        char
     end
   end
+
   defp resolve_character(%Character{} = c), do: c
   defp resolve_character(_), do: nil
 end

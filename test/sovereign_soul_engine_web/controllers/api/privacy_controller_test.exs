@@ -1,6 +1,10 @@
 defmodule SovereignSoulEngineWeb.Api.PrivacyControllerTest do
   use SovereignSoulEngineWeb.ConnCase
 
+  setup %{conn: conn} do
+    %{conn: authenticate_api(conn)}
+  end
+
   alias SovereignSoulEngine.Characters
   alias SovereignSoulEngine.Privacy
 

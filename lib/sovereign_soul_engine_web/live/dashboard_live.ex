@@ -64,12 +64,15 @@ defmodule SovereignSoulEngineWeb.DashboardLive do
             </p>
           </div>
           
-          <div class="flex gap-3">
+          <div class="flex gap-2.5 items-center">
+            <.link navigate={~p"/sse/souls/new"} class="btn btn-primary btn-sm font-bold shadow-md">
+              <.icon name="hero-sparkles" class="size-4" /> + Summon Soul
+            </.link>
             <.link navigate={~p"/sse/world"} class="btn btn-ghost btn-sm">
               <.icon name="hero-globe-alt" class="size-4" /> World
             </.link>
-            <.link navigate={~p"/sse/map"} class="btn btn-ghost btn-sm text-amber-400 font-semibold">
-              <.icon name="hero-map" class="size-4" /> Town Map (13)
+            <.link navigate={~p"/sse/chat"} class="btn btn-ghost btn-sm text-primary font-semibold">
+              <.icon name="hero-chat-bubble-left-right" class="size-4" /> Chat
             </.link>
             <.link navigate={~p"/sse/ledger"} class="btn btn-ghost btn-sm">
               <.icon name="hero-book-open" class="size-4" /> Soul Ledger

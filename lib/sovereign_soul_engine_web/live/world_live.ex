@@ -34,9 +34,6 @@ defmodule SovereignSoulEngineWeb.WorldLive do
             </p>
           </div>
           <div class="flex items-center gap-2">
-            <.link navigate={~p"/sse/map"} class="btn btn-ghost btn-xs text-amber-400 font-semibold border border-amber-500/30 hover:bg-amber-500/10">
-              <.icon name="hero-map" class="size-3.5" /> Town Map (13)
-            </.link>
             <span class="text-sm px-3 py-1 rounded-full bg-purple-500/15 text-purple-300">
               {@feed.souls} souls
             </span>

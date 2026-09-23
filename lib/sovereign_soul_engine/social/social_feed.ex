@@ -280,7 +280,7 @@ defmodule SovereignSoulEngine.Social.SocialFeed do
     author_id = post.character_id
 
     active_npcs =
-      Characters.list_characters()
+      Characters.list_living_world_characters()
       |> Enum.filter(&(&1.kind == "npc" and &1.status == "active" and &1.id != author_id))
 
     if active_npcs != [] do
@@ -310,7 +310,7 @@ defmodule SovereignSoulEngine.Social.SocialFeed do
   """
   def spark_inter_soul_activity(opts \\ []) do
     all_npcs =
-      Characters.list_characters()
+      Characters.list_living_world_characters()
       |> Enum.filter(&(&1.kind == "npc" and &1.status == "active"))
 
     # Prefer characters that have not posted in the last 15 posts to ensure all 50 rotate
@@ -445,7 +445,7 @@ defmodule SovereignSoulEngine.Social.SocialFeed do
   """
   def generate_all_posts do
     companions =
-      Characters.list_characters()
+      Characters.list_living_world_characters()
       |> Enum.filter(&(&1.kind == "npc" and &1.status == "active"))
 
     Enum.map(companions, fn char ->

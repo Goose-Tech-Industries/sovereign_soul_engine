@@ -1,6 +1,10 @@
 defmodule SovereignSoulEngineWeb.Api.TelegramWebhookControllerTest do
   use SovereignSoulEngineWeb.ConnCase, async: false
 
+  setup %{conn: conn} do
+    %{conn: authenticate_api(conn)}
+  end
+
   alias SovereignSoulEngine.Characters
   alias SovereignSoulEngine.Souls
 

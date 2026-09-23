@@ -12,29 +12,19 @@ defmodule SovereignSoulEngineWeb.Plugs.ApiAuth do
   def init(opts), do: opts
 
   def call(conn, _opts) do
-    dev_key = System.get_env("SOVEREIGN_SOUL_API_KEY") || "twisted_dev_key"
-
-    with {:ok, key} <- fetch_bearer_key(conn) do
-      if key == dev_key do
-        assign(conn, :tenant, %Tenants.Tenant{
-          id: "00000000-0000-0000-0000-000000000000",
-          name: "Twisted Dev",
-          external_source: "twisted"
-        })
-      else
-        with %Tenants.Tenant{} = tenant <- Tenants.authenticate(key),
-             :ok <- check_source_match(tenant, conn.params) do
-          assign(conn, :tenant, tenant)
-        else
-          nil ->
-            reject(conn, 401, "invalid or inactive api key")
-
-          {:error, :source_mismatch} ->
-            reject(conn, 403, "external_source does not match this api key's tenant")
-        end
-      end
+    with {:ok, key} <- fetch_bearer_key(conn),
+         %Tenants.Tenant{} = tenant <- Tenants.authenticate(key),
+         :ok <- check_source_match(tenant, conn.params) do
+      assign(conn, :tenant, tenant)
     else
-      :missing_key -> reject(conn, 401, "missing api key")
+      :missing_key ->
+        reject(conn, 401, "missing api key")
+
+      nil ->
+        reject(conn, 401, "invalid or inactive api key")
+
+      {:error, :source_mismatch} ->
+        reject(conn, 403, "external_source does not match this api key's tenant")
     end
   end
 

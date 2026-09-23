@@ -3,8 +3,19 @@ defmodule SovereignSoulEngineWeb.LandingLive do
 
 
 
+  alias SovereignSoulEngine.Characters
+
   @impl true
   def mount(_params, _session, socket) do
+    user = socket.assigns[:current_scope] && socket.assigns[:current_scope].user
+
+    living_souls =
+      if user do
+        Characters.list_companions_for_user(user.id)
+      else
+        []
+      end
+
     companions = [
       %{slug: "maya", name: "Maya", archetype: "Empathetic Tactician", quote: "I notice how your pulse slows when you're actually telling the truth."},
       %{slug: "ravina", name: "Ravina", archetype: "Cynical Enforcer", quote: "Betrayal leaves scars. Earn my respect, or keep your distance."},
@@ -17,6 +28,10 @@ defmodule SovereignSoulEngineWeb.LandingLive do
     socket =
       socket
       |> assign(:page_title, "Sovereign Soul Engine — Artificial Lives with True Souls")
+      |> assign(:user, user)
+      |> assign(:living_souls, living_souls)
+      |> assign(:carousel_index, 0)
+      |> assign(:active_soul_filter, "all")
       |> assign(:companions, companions)
       |> assign(:selected_companion, selected_companion)
       |> assign(:sandbox_bpm, 74)
@@ -25,6 +40,30 @@ defmodule SovereignSoulEngineWeb.LandingLive do
       |> assign(:active_pricing_cycle, "monthly")
 
     {:ok, socket, layout: false}
+  end
+
+  @impl true
+  def handle_event("next_carousel_soul", _params, socket) do
+    souls = filtered_souls(socket.assigns.living_souls, socket.assigns.active_soul_filter, socket.assigns.user)
+    count = length(souls)
+    new_idx = if count > 0, do: rem(socket.assigns.carousel_index + 1, count), else: 0
+    {:noreply, assign(socket, :carousel_index, new_idx)}
+  end
+
+  @impl true
+  def handle_event("prev_carousel_soul", _params, socket) do
+    souls = filtered_souls(socket.assigns.living_souls, socket.assigns.active_soul_filter, socket.assigns.user)
+    count = length(souls)
+    new_idx = if count > 0, do: if(socket.assigns.carousel_index == 0, do: count - 1, else: socket.assigns.carousel_index - 1), else: 0
+    {:noreply, assign(socket, :carousel_index, new_idx)}
+  end
+
+  @impl true
+  def handle_event("set_soul_filter", %{"filter" => filter}, socket) do
+    {:noreply,
+     socket
+     |> assign(:active_soul_filter, filter)
+     |> assign(:carousel_index, 0)}
   end
 
   @impl true
@@ -58,6 +97,12 @@ defmodule SovereignSoulEngineWeb.LandingLive do
     {:noreply, assign(socket, :active_pricing_cycle, new_cycle)}
   end
 
+  defp filtered_souls(souls, "sanctuary", _user), do: Enum.filter(souls, &(!&1.in_living_world))
+  defp filtered_souls(souls, "living", _user), do: Enum.filter(souls, &(&1.in_living_world))
+  defp filtered_souls(_souls, "mine", nil), do: []
+  defp filtered_souls(souls, "mine", user), do: Enum.filter(souls, &(&1.user_id == user.id))
+  defp filtered_souls(souls, _, _user), do: souls
+
   defp generate_reaction(name, bpm, stress) do
     cond do
       bpm >= 130 or stress >= 75 ->
@@ -89,7 +134,219 @@ defmodule SovereignSoulEngineWeb.LandingLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div data-theme="dark" class="min-h-screen bg-slate-950 text-slate-100 font-sans antialiased selection:bg-primary selection:text-primary-content">
+    <%= if @current_scope && @current_scope.user do %>
+      <div data-theme="dark" class="min-h-screen bg-[#090b14] text-slate-100 font-sans antialiased relative overflow-hidden pb-16 selection:bg-purple-600 selection:text-white">
+        <%!-- Ambient Radial Atmospheric Glow --%>
+        <div class="absolute -top-40 left-1/4 w-[650px] h-[650px] bg-purple-600/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute top-1/3 right-10 w-[550px] h-[550px] bg-indigo-600/10 rounded-full blur-3xl pointer-events-none"></div>
+
+        <%!-- Header --%>
+        <header class="border-b border-slate-800/80 bg-[#0d101e]/80 backdrop-blur-md sticky top-0 z-40 px-6 py-3.5 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="size-8 rounded-xl bg-gradient-to-tr from-violet-600 via-purple-600 to-fuchsia-600 flex items-center justify-center text-white shadow-lg shadow-purple-900/40">
+              <.icon name="hero-sparkles" class="size-4.5" />
+            </div>
+            <div>
+              <span class="font-extrabold text-sm tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-violet-200 to-fuchsia-200 uppercase">
+                Sovereign Souls
+              </span>
+              <span class="block text-[10px] text-slate-400">Companion Sanctuary</span>
+            </div>
+          </div>
+
+          <nav class="hidden md:flex items-center gap-4 text-xs">
+            <.link navigate={~p"/sse/chat"} class="text-slate-300 hover:text-white transition-colors flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-slate-800/60 font-medium">
+              <.icon name="hero-chat-bubble-left-right" class="size-4 text-purple-400" />
+              <span>Chat Room</span>
+            </.link>
+            <.link navigate={~p"/sse/feed"} class="text-slate-300 hover:text-white transition-colors flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-slate-800/60 font-medium">
+              <.icon name="hero-newspaper" class="size-4 text-cyan-400" />
+              <span>SoulBook Feed</span>
+            </.link>
+            <.link navigate={~p"/sse/memories"} class="text-slate-300 hover:text-white transition-colors flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-slate-800/60 font-medium">
+              <.icon name="hero-book-open" class="size-4 text-amber-400" />
+              <span>Memory Vault</span>
+            </.link>
+            <.link navigate={~p"/sse/billing"} class="text-slate-300 hover:text-white transition-colors flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-slate-800/60 font-medium">
+              <.icon name="hero-credit-card" class="size-4 text-emerald-400" />
+              <span>Subscription</span>
+            </.link>
+          </nav>
+
+          <div class="flex items-center gap-3">
+            <.link
+              navigate={~p"/sse/souls/new"}
+              id="header-create-soul-btn"
+              class="btn btn-sm bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white font-bold border-none shadow-md shadow-purple-950/50 rounded-xl flex items-center gap-1.5 text-xs px-4"
+            >
+              <.icon name="hero-sparkles" class="size-4" />
+              <span>+ Summon Soul</span>
+            </.link>
+
+            <div class="hidden sm:flex items-center gap-2 pl-2 border-l border-slate-800 text-xs">
+              <span class="text-slate-300 font-medium">{@current_scope.user.email}</span>
+              <.link href={~p"/users/settings"} class="btn btn-ghost btn-circle btn-xs text-slate-400 hover:text-white" title="Settings">
+                <.icon name="hero-cog-6-tooth" class="size-4" />
+              </.link>
+              <.link href={~p"/users/log-out"} method="delete" class="btn btn-ghost btn-circle btn-xs text-rose-400 hover:text-rose-300" title="Log out">
+                <.icon name="hero-arrow-right-on-rectangle" class="size-4" />
+              </.link>
+            </div>
+          </div>
+        </header>
+
+        <%!-- Main Page Content --%>
+        <main class="max-w-7xl mx-auto px-6 pt-10 pb-6 space-y-10">
+          <%!-- Welcome Hero Banner --%>
+          <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-4 border-b border-slate-800/80">
+            <div>
+              <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-950/60 border border-purple-500/30 text-xs font-semibold text-purple-300 mb-2.5">
+                <span>✨</span>
+                <span>Living Soul Gallery</span>
+              </div>
+              <h1 class="text-3xl sm:text-4xl font-black text-white tracking-tight">
+                Who would you like to talk to?
+              </h1>
+              <p class="text-sm text-slate-400 mt-1">
+                Choose a soul to step into their living presence, or summon a new creation.
+              </p>
+            </div>
+
+            <%!-- Filter Chips --%>
+            <div class="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+              <%= for {key, label, icon} <- [{"all", "All Souls", "hero-sparkles"}, {"sanctuary", "Private Sanctuary", "hero-lock-closed"}, {"living", "Living Realm", "hero-globe-alt"}, {"mine", "My Creations", "hero-user"}] do %>
+                <button
+                  type="button"
+                  phx-click="set_soul_filter"
+                  phx-value-filter={key}
+                  class={[
+                    "px-3.5 py-1.5 rounded-xl border flex items-center gap-1.5 transition-all text-xs font-semibold",
+                    @active_soul_filter == key && "bg-purple-600/20 border-purple-500 text-purple-200 shadow-sm shadow-purple-950/40 font-bold",
+                    @active_soul_filter != key && "bg-slate-900/40 border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
+                  ]}
+                >
+                  <.icon name={icon} class="size-3.5" />
+                  <span>{label}</span>
+                </button>
+              <% end %>
+            </div>
+          </div>
+
+          <%!-- Featured Carousel of Souls --%>
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                <.icon name="hero-sparkles" class="size-4 text-purple-400" />
+                <span>Companion Souls Ready to Talk</span>
+              </span>
+
+              <div class="flex items-center gap-2">
+                <button
+                  type="button"
+                  phx-click="prev_carousel_soul"
+                  class="btn btn-circle btn-sm bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/60 shadow-md"
+                  title="Previous"
+                >
+                  <.icon name="hero-chevron-left" class="size-4" />
+                </button>
+                <button
+                  type="button"
+                  phx-click="next_carousel_soul"
+                  class="btn btn-circle btn-sm bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/60 shadow-md"
+                  title="Next"
+                >
+                  <.icon name="hero-chevron-right" class="size-4" />
+                </button>
+              </div>
+            </div>
+
+            <% filtered = filtered_souls(@living_souls, @active_soul_filter, @current_scope.user) %>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              <%!-- + Summon Soul Card in Carousel --%>
+              <.link
+                navigate={~p"/sse/souls/new"}
+                id="create-soul-card"
+                class="group p-6 rounded-3xl border-2 border-dashed border-purple-500/40 hover:border-purple-500/80 bg-gradient-to-b from-purple-950/20 via-slate-900/30 to-slate-900/60 hover:bg-purple-950/30 transition-all duration-300 flex flex-col items-center justify-center text-center gap-4 min-h-[380px] shadow-xl relative overflow-hidden"
+              >
+                <div class="size-20 rounded-full bg-gradient-to-tr from-violet-600/30 to-fuchsia-600/30 border-2 border-purple-500/50 flex items-center justify-center text-purple-300 group-hover:scale-110 group-hover:border-purple-400 transition-all shadow-lg shadow-purple-950/60">
+                  <.icon name="hero-plus" class="size-8" />
+                </div>
+
+                <div class="space-y-2">
+                  <h3 class="text-lg font-bold text-white group-hover:text-purple-200 transition-colors">
+                    Summon a New Soul
+                  </h3>
+                  <p class="text-xs text-slate-400 max-w-[220px] leading-relaxed">
+                    Craft an AI companion with deterministic emotional psychology, persistent memory, and sacred sanctuary boundaries.
+                  </p>
+                </div>
+
+                <span class="btn btn-xs bg-purple-600/30 hover:bg-purple-600 text-purple-200 hover:text-white border border-purple-500/40 rounded-xl px-4 font-bold shadow-md transition-all">
+                  Breathe Life In →
+                </span>
+              </.link>
+
+              <%!-- Soul Cards --%>
+              <%= for soul <- filtered do %>
+                <div class="group p-6 rounded-3xl border border-slate-800/80 hover:border-purple-500/50 bg-[#0d101e]/90 hover:bg-[#111528] transition-all duration-300 flex flex-col justify-between min-h-[380px] shadow-xl backdrop-blur-xl relative overflow-hidden">
+                  <%!-- Glow --%>
+                  <div class="absolute -top-12 -right-12 size-28 bg-purple-600/10 rounded-full blur-xl group-hover:bg-purple-600/20 transition-all pointer-events-none"></div>
+
+                  <div class="space-y-4">
+                    <%!-- Avatar & Presence --%>
+                    <div class="flex items-start justify-between">
+                      <div class="relative">
+                        <div class="size-18 rounded-full ring-2 ring-purple-500/40 group-hover:ring-purple-400/80 bg-gradient-to-br from-violet-600/30 to-indigo-600/30 flex items-center justify-center font-bold text-2xl text-purple-200 shadow-md transition-all">
+                          {String.first(soul.name)}
+                        </div>
+                        <span class="absolute bottom-0 right-0 size-4 rounded-full bg-emerald-500 ring-2 ring-[#0d101e] animate-pulse"></span>
+                      </div>
+
+                      <%!-- Sanctuary Badge --%>
+                      <span class={[
+                        "px-2.5 py-1 rounded-full text-[10px] font-bold border flex items-center gap-1 shadow-xs",
+                        !soul.in_living_world && "bg-emerald-950/60 border-emerald-500/40 text-emerald-300",
+                        soul.in_living_world && "bg-cyan-950/60 border-cyan-500/40 text-cyan-300"
+                      ]}>
+                        <.icon name={if !soul.in_living_world, do: "hero-lock-closed", else: "hero-globe-alt"} class="size-3" />
+                        <span>{if !soul.in_living_world, do: "Private Sanctuary", else: "Living Realm"}</span>
+                      </span>
+                    </div>
+
+                    <%!-- Name & Archetype --%>
+                    <div class="space-y-1">
+                      <h3 class="text-xl font-bold text-white group-hover:text-purple-200 transition-colors">
+                        {soul.name}
+                      </h3>
+                      <span class="inline-block text-xs font-semibold text-purple-400">
+                        {get_in(soul.metadata || %{}, ["archetype"]) || soul.description || "Companion Soul"}
+                      </span>
+                    </div>
+
+                    <%!-- Description Quote --%>
+                    <p class="text-xs text-slate-300 line-clamp-3 leading-relaxed italic">
+                      "{soul.description}"
+                    </p>
+                  </div>
+
+                  <%!-- Action Footer --%>
+                  <div class="pt-5 border-t border-slate-800/80 mt-4">
+                    <.link
+                      navigate={~p"/sse/chat?character_id=#{soul.id}"}
+                      class="w-full btn btn-sm bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white font-bold border-none rounded-xl shadow-md shadow-purple-950/40 flex items-center justify-center gap-2 group-hover:scale-[1.02] transition-all"
+                    >
+                      <.icon name="hero-chat-bubble-left-right" class="size-4" />
+                      <span>Chat with {soul.name}</span>
+                    </.link>
+                  </div>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        </main>
+      </div>
+    <% else %>
+      <div data-theme="dark" class="min-h-screen bg-slate-950 text-slate-100 font-sans antialiased selection:bg-primary selection:text-primary-content">
       <%!-- Navbar --%>
       <header class="border-b border-slate-800 bg-slate-950/90 backdrop-blur-md sticky top-0 z-50 px-6 py-4 flex items-center justify-between">
         <div class="flex items-center gap-3">
@@ -107,9 +364,6 @@ defmodule SovereignSoulEngineWeb.LandingLive do
           <a href="#demo" class="hover:text-primary transition-colors">Demo</a>
           <a href="#features" class="hover:text-primary transition-colors">Cognitive Moat</a>
           <a href="#pricing" class="hover:text-primary transition-colors">Pricing & 18+</a>
-          <.link navigate={~p"/sse/map"} class="text-amber-400 hover:text-amber-300 transition-colors flex items-center gap-1">
-            <span>🏰 Town Map</span>
-          </.link>
           <.link navigate={~p"/sse/feed"} class="text-sky-400 hover:text-sky-300 transition-colors flex items-center gap-1">
             <span>📰 Feed</span>
           </.link>
@@ -354,7 +608,7 @@ defmodule SovereignSoulEngineWeb.LandingLive do
               <ul class="text-xs space-y-2.5 text-slate-300">
                 <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-primary" /> Single local companion</li>
                 <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-primary" /> Full Elixir OTP Actor runtime</li>
-                <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-primary" /> Feannag's Rest Town Map (preview)</li>
+                <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-primary" /> Private 1-on-1 Sanctuary</li>
               </ul>
             </div>
             <.link navigate={~p"/sse/chat"} class="btn btn-outline btn-sm w-full font-bold border-slate-700 text-slate-200 hover:bg-slate-800">Start Free</.link>
@@ -370,12 +624,12 @@ defmodule SovereignSoulEngineWeb.LandingLive do
               <p class="text-xs text-slate-400">Unlimited emotional presence and living biometrics.</p>
               <div class="text-3xl font-extrabold text-white">$14.99 <span class="text-sm text-slate-500 font-normal">/ month</span></div>
               <ul class="text-xs space-y-2.5 text-slate-200">
-                <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-primary" /> Unlimited chat with all 50 living souls</li>
+                <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-primary" /> Unlimited chat with all living souls</li>
                 <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-primary" /> Hands-Free full-duplex voice intercom</li>
                 <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-primary" /> Galaxy Watch somatic telemetry HUD</li>
                 <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-primary" /> Background Dream Loop memory consolidation</li>
                 <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-primary" /> SoulBook feed & MySpace Top 8 companion wall</li>
-                <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-primary" /> Walkable Town Map & proximity encounters</li>
+                <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-primary" /> Optional Living World Participation (Opt-In / Out)</li>
               </ul>
             </div>
             <.link navigate={~p"/sse/billing?tier=companion_1499"} class="btn btn-primary btn-sm w-full font-bold shadow-lg shadow-primary/20">
@@ -398,7 +652,7 @@ defmodule SovereignSoulEngineWeb.LandingLive do
                 <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-rose-400" /> Commercial Age Verification via Stripe card</li>
                 <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-rose-400" /> Priority ultra-low latency voice (ElevenLabs)</li>
                 <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-rose-400" /> Multi-companion autonomous group scenes</li>
-                <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-rose-400" /> AI World Architect procedural district expansion</li>
+                <li class="flex items-center gap-2"><.icon name="hero-check" class="size-4 text-rose-400" /> Complete Private Sanctuary & Custom Persona Creation</li>
               </ul>
             </div>
             <.link navigate={~p"/sse/billing?tier=archon_1999"} class="btn btn-error btn-sm w-full font-bold shadow-lg shadow-rose-600/30 text-white">
@@ -448,16 +702,18 @@ defmodule SovereignSoulEngineWeb.LandingLive do
         <div>
           © 2026 Goose Tech Industries • Sovereign Soul Engine
         </div>
-        <div class="flex items-center gap-4">
+        <div class="flex items-center gap-4 flex-wrap">
           <.link navigate={~p"/sse/chat"} class="hover:text-slate-300">Chat Room</.link>
           <.link navigate={~p"/sse/feed"} class="hover:text-slate-300">Feed</.link>
-          <.link navigate={~p"/sse/map"} class="hover:text-slate-300">Town Map</.link>
           <.link navigate={~p"/sse/billing"} class="hover:text-slate-300 text-primary font-bold">💳 Billing & 18+</.link>
+          <.link navigate={~p"/terms"} class="hover:text-slate-300">Terms</.link>
+          <.link navigate={~p"/privacy"} class="hover:text-slate-300">Privacy</.link>
           <.link navigate={~p"/sse/acp"} class="hover:text-slate-300">ACP Panel</.link>
           <.link navigate={~p"/sse/acp/moderation"} class="hover:text-slate-300 text-rose-400">🛡️ Moderation</.link>
         </div>
       </footer>
     </div>
+    <% end %>
     """
   end
 end

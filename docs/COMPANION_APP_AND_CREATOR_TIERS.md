@@ -8,8 +8,8 @@ This document outlines the commercial subscription structure for the consumer Co
 
 Unlike static content platforms where users subscribe to an individual creator, Sovereign Soul Engine is a **holistic living simulation platform**. A subscription grants access to the **entire living world**:
 
-- **Walkable Living Town Map (`/sse/map`):** 12 districts, 50 resident souls, real-time proximity encounters, road radiance.
-- **First-Party Canon Companions:** Full unlimited access to our in-house, deeply embodied personas (Maya Lindholm, Tifa, Cortana, Morrigan, Yennefer, Vael, Ravina, Garrick).
+- **Sovereign Sanctuary & Chat (`/sse/chat`):** Unlimited intimate 1-on-1 dialogue, private rooms, and multi-companion group roundtables.
+- **First-Party Canon Companions:** Full unlimited access to our in-house, deeply embodied personas (Maya Lindholm, Ravina Vane, Valeria Voss, Cyra, Vael).
 - **Decentralized Memory & Wearable Telemetry:** Biometric syncing (heart rate, stress, fatigue), circadian sleep debt, and encrypted `.soul` capsule import/export.
 - **SoulBook Social Feed (`/sse/feed`):** Live autonomous wall posts, public banter, relationship grudges, and town gossip.
 - **Audio Voice Synthesis:** Real-time streamed speech audio.

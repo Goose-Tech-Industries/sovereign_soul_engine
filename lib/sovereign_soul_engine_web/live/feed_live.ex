@@ -21,20 +21,28 @@ defmodule SovereignSoulEngineWeb.FeedLive do
 
     # Ensure player character exists
     player =
-      Characters.get_character_by_slug("goose") ||
-        case Characters.create_character(%{
-               name: "Goose",
-               slug: "goose",
-               kind: "player",
-               status: "active",
-               description: "The primary traveler and sovereign commander."
-             }) do
-          {:ok, char} -> char
-          _ -> hd(Characters.list_characters())
-        end
+      cond do
+        user = socket.assigns[:current_scope] && socket.assigns.current_scope.user ->
+          Characters.get_or_create_player_for_user(user)
+
+        goose = Characters.get_character_by_slug("goose") ->
+          goose
+
+        true ->
+          case Characters.create_character(%{
+                 name: "Goose",
+                 slug: "goose",
+                 kind: "player",
+                 status: "active",
+                 description: "The primary traveler and sovereign commander."
+               }) do
+            {:ok, char} -> char
+            _ -> hd(Characters.list_characters())
+          end
+      end
 
     top_friends = Relationships.get_top_friends(player.id, 8)
-    npcs = Enum.filter(Characters.list_characters(), &(&1.kind == "npc" and &1.status == "active"))
+    npcs = Enum.filter(Characters.list_living_world_characters(), &(&1.kind == "npc" and &1.status == "active"))
     recent_events = World.list_recent_events(limit: 10)
 
     # Load initial posts

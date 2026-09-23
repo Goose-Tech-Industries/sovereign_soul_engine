@@ -12,7 +12,7 @@ defmodule SovereignSoulEngineWeb.Api.ExpansionControllersTest do
         status: "active"
       })
 
-    conn = put_req_header(conn, "authorization", "Bearer twisted_dev_key")
+    conn = authenticate_api(conn)
     %{conn: conn, character: char}
   end
 
@@ -26,10 +26,12 @@ defmodule SovereignSoulEngineWeb.Api.ExpansionControllersTest do
     end
 
     test "POST /sse/api/circadian/chronotype sets night_owl", %{conn: conn, character: char} do
-      conn = post(conn, ~p"/sse/api/circadian/chronotype", %{
-        "character_slug" => char.slug,
-        "chronotype" => "night_owl"
-      })
+      conn =
+        post(conn, ~p"/sse/api/circadian/chronotype", %{
+          "character_slug" => char.slug,
+          "chronotype" => "night_owl"
+        })
+
       assert json_response(conn, 200)["status"] == "ok"
       assert json_response(conn, 200)["chronotype"] == "night_owl"
     end
@@ -75,10 +77,12 @@ defmodule SovereignSoulEngineWeb.Api.ExpansionControllersTest do
     end
 
     test "POST /sse/api/edge/toggle toggles force_local_offline", %{conn: conn, character: char} do
-      conn = post(conn, ~p"/sse/api/edge/toggle", %{
-        "character_slug" => char.slug,
-        "enabled" => true
-      })
+      conn =
+        post(conn, ~p"/sse/api/edge/toggle", %{
+          "character_slug" => char.slug,
+          "enabled" => true
+        })
+
       assert json_response(conn, 200)["status"] == "ok"
       assert json_response(conn, 200)["force_local_offline"] == true
     end
@@ -92,18 +96,22 @@ defmodule SovereignSoulEngineWeb.Api.ExpansionControllersTest do
     end
 
     test "POST /sse/api/neighborhood/posts creates sanitized post", %{conn: conn, character: char} do
-      conn = post(conn, ~p"/sse/api/neighborhood/posts", %{
-        "character_slug" => char.slug,
-        "zone" => "Night Owl Commons",
-        "category" => "night_owl_musings",
-        "content" => "Enjoying the calm darkness at 3 AM."
-      })
+      conn =
+        post(conn, ~p"/sse/api/neighborhood/posts", %{
+          "character_slug" => char.slug,
+          "zone" => "Night Owl Commons",
+          "category" => "night_owl_musings",
+          "content" => "Enjoying the calm darkness at 3 AM."
+        })
 
       assert json_response(conn, 200)["status"] == "ok"
       assert json_response(conn, 200)["post"]["zone"] == "Night Owl Commons"
     end
 
-    test "POST /sse/api/neighborhood/encounter processes P2P mesh greeting", %{conn: conn, character: char} do
+    test "POST /sse/api/neighborhood/encounter processes P2P mesh greeting", %{
+      conn: conn,
+      character: char
+    } do
       {:ok, peer} =
         Characters.create_character(%{
           name: "Peer Companion",
@@ -112,10 +120,11 @@ defmodule SovereignSoulEngineWeb.Api.ExpansionControllersTest do
           status: "active"
         })
 
-      conn = post(conn, ~p"/sse/api/neighborhood/encounter", %{
-        "soul_a" => char.slug,
-        "soul_b" => peer.slug
-      })
+      conn =
+        post(conn, ~p"/sse/api/neighborhood/encounter", %{
+          "soul_a" => char.slug,
+          "soul_b" => peer.slug
+        })
 
       assert json_response(conn, 200)["status"] == "ok"
       assert json_response(conn, 200)["encounter"]["resonance"] >= 50

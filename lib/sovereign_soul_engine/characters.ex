@@ -4,10 +4,74 @@ defmodule SovereignSoulEngine.Characters do
   """
 
   alias SovereignSoulEngine.Characters.Character
+  alias SovereignSoulEngine.Accounts.User
   alias SovereignSoulEngine.Repo
+  import Ecto.Query
 
   def list_characters do
     Repo.all(Character)
+  end
+
+  @doc """
+  Returns characters that participate in the public living world.
+  Excludes characters whose owner has opted out of the living world,
+  or characters explicitly set to in_living_world: false.
+  """
+  def list_living_world_characters do
+    from(c in Character,
+      left_join: u in User,
+      on: c.user_id == u.id,
+      where:
+        c.in_living_world == true and
+          (is_nil(c.user_id) or u.opt_out_living_world == false) and
+          c.status == "active"
+    )
+    |> Repo.all()
+  end
+
+  @doc """
+  Lists companions visible to a given user.
+  Includes canon/platform companions (user_id is nil) plus the user's custom companions.
+  """
+  def list_companions_for_user(user_id) do
+    from(c in Character,
+      where: (is_nil(c.user_id) or c.user_id == ^user_id) and c.kind == "npc" and c.status == "active",
+      order_by: [asc: c.name]
+    )
+    |> Repo.all()
+  end
+
+  @doc """
+  Gets or provisions the personal player profile for an authenticated user.
+  """
+  def get_or_create_player_for_user(%User{} = user) do
+    slug = "user-" <> (user.id |> String.replace("-", "") |> String.slice(0, 12))
+    name = user.email |> String.split("@") |> List.first() |> String.capitalize()
+
+    case Repo.get_by(Character, user_id: user.id, kind: "player") do
+      nil ->
+        case create_character(%{
+               name: name,
+               slug: slug,
+               kind: "player",
+               status: "active",
+               description: "Personal companion chat persona for #{user.email}",
+               user_id: user.id
+             }) do
+          {:ok, player} -> player
+          {:error, _} -> Repo.get_by!(Character, slug: slug)
+        end
+
+      player ->
+        player
+    end
+  end
+
+  @doc """
+  Toggles whether a companion participates in the living world.
+  """
+  def set_companion_living_world(%Character{} = character, in_living_world) when is_boolean(in_living_world) do
+    update_character(character, %{in_living_world: in_living_world})
   end
 
   def get_character!(id), do: Repo.get!(Character, id)

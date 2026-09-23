@@ -19,7 +19,10 @@ defmodule SovereignSoulEngine.TheoryOfMind do
   # Delegations to the pure cognitive Engine
   defdelegate attribute_intent(statement, sentiment, relationship), to: Engine
   defdelegate evaluate_boundary(statement, defensiveness, trust, sensitive_topics), to: Engine
-  defdelegate analyze_information_asymmetry(knower_facts, subject_facts, knower_secrets), to: Engine
+
+  defdelegate analyze_information_asymmetry(knower_facts, subject_facts, knower_secrets),
+    to: Engine
+
   defdelegate detect_proactive_opportunity(known_facts, relationship, hours_silent), to: Engine
   defdelegate build_tom_brief(params), to: Engine
 
@@ -96,26 +99,29 @@ defmodule SovereignSoulEngine.TheoryOfMind do
   Purges knowledge entries held by a character about a subject based on optional topic query or all.
   """
   def purge_knowledge_about(knower_id, subject_id, opts \\ []) do
-    query =
-      from(k in CharacterKnowledge,
-        where: k.knower_character_id == ^knower_id and k.subject_character_id == ^subject_id
-      )
+    with {:ok, opts} <- SovereignSoulEngine.Memories.PurgeFilters.validate(opts, [:topic]) do
+      query =
+        from(k in CharacterKnowledge,
+          where: k.knower_character_id == ^knower_id and k.subject_character_id == ^subject_id
+        )
 
-    query =
-      cond do
-        Keyword.get(opts, :all) == true ->
-          query
+      query =
+        cond do
+          Keyword.get(opts, :all) == true ->
+            query
 
-        topic = Keyword.get(opts, :topic) || Keyword.get(opts, :query) ->
-          search = "%#{topic}%"
-          from(k in query, where: ilike(k.known_fact, ^search))
+          topic = Keyword.get(opts, :topic) || Keyword.get(opts, :query) ->
+            from(k in query,
+              where: fragment("strpos(lower(?), lower(?)) > 0", k.known_fact, ^topic)
+            )
 
-        true ->
-          query
-      end
+          true ->
+            query
+        end
 
-    {count, _} = Repo.delete_all(query)
-    {:ok, count}
+      {count, _} = Repo.delete_all(query)
+      {:ok, count}
+    end
   end
 
   # ── Theory of Mind 2.0 High-Level Briefing ─────────────────────────

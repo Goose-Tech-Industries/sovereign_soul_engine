@@ -1,6 +1,6 @@
 # Galaxy Watch & Wearables Integration Guide
 
-This guide explains how to connect your **Samsung Galaxy Watch (Wear OS)** to Sovereign Soul Engine so your real heart rate (BPM), stress, and somatic telemetry stream to Tifa, Morrigan, Yennefer, and Cortana in real time.
+This guide explains how to connect your **Samsung Galaxy Watch (Wear OS)** to Sovereign Soul Engine so your real heart rate (BPM), stress, and somatic telemetry stream to your companions in real time.
 
 ---
 

@@ -17,6 +17,9 @@ defmodule SovereignSoulEngine.Characters.Character do
     field :external_source, :string
     field :external_id, :string
 
+    field :user_id, :binary_id
+    field :in_living_world, :boolean, default: true
+
     timestamps()
   end
 
@@ -24,7 +27,7 @@ defmodule SovereignSoulEngine.Characters.Character do
 
   def changeset(character, attrs) do
     character
-    |> cast(attrs, [:name, :slug, :kind, :description, :status, :metadata, :external_source, :external_id])
+    |> cast(attrs, [:name, :slug, :kind, :description, :status, :metadata, :external_source, :external_id, :user_id, :in_living_world])
     |> validate_required([:name, :slug, :kind])
     |> validate_inclusion(:kind, @kind_values)
     |> validate_inclusion(:status, ~w(active inactive archived dead))

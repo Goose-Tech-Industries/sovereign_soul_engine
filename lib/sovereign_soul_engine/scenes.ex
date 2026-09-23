@@ -167,4 +167,16 @@ defmodule SovereignSoulEngine.Scenes do
   def change_message(%SceneMessage{} = message, attrs \\ %{}) do
     SceneMessage.changeset(message, attrs)
   end
+
+  @doc """
+  Counts the total number of dialogue messages sent by a character.
+  Used to track free trial message limits.
+  """
+  def count_character_messages(character_id) do
+    Repo.one(
+      from m in SceneMessage,
+        where: m.character_id == ^character_id and m.message_type == "dialogue",
+        select: count(m.id)
+    ) || 0
+  end
 end

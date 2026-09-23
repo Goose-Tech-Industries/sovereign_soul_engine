@@ -12,7 +12,7 @@ defmodule SovereignSoulEngineWeb.Api.RoboticsControllerTest do
         status: "active"
       })
 
-    conn = put_req_header(conn, "authorization", "Bearer twisted_dev_key")
+    conn = authenticate_api(conn)
     %{conn: conn, character: char}
   end
 

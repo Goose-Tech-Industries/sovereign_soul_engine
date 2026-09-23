@@ -16,17 +16,25 @@ defmodule SovereignSoulEngineWeb.BillingLive do
   @impl true
   def mount(_params, _session, socket) do
     player =
-      Characters.get_character_by_slug("goose") ||
-        case Characters.create_character(%{
-               name: "Goose",
-               slug: "goose",
-               kind: "player",
-               status: "active",
-               description: "Primary player character"
-             }) do
-          {:ok, p} -> p
-          {:error, _} -> List.first(Characters.list_characters())
-        end
+      cond do
+        user = socket.assigns[:current_scope] && socket.assigns.current_scope.user ->
+          Characters.get_or_create_player_for_user(user)
+
+        goose = Characters.get_character_by_slug("goose") ->
+          goose
+
+        true ->
+          case Characters.create_character(%{
+                 name: "Goose",
+                 slug: "goose",
+                 kind: "player",
+                 status: "active",
+                 description: "Primary player character"
+               }) do
+            {:ok, p} -> p
+            {:error, _} -> List.first(Characters.list_characters())
+          end
+      end
 
     if connected?(socket) do
       Phoenix.PubSub.subscribe(SovereignSoulEngine.PubSub, Billing.pubsub_topic())
@@ -62,6 +70,10 @@ defmodule SovereignSoulEngineWeb.BillingLive do
     # User was redirected back from completed checkout
     tier_id = Map.get(params, "tier", "companion_1499")
     Billing.handle_checkout_completed(%{tier: tier_id, subscription: session_id})
+
+    if user = socket.assigns[:current_scope] && socket.assigns.current_scope.user do
+      SovereignSoulEngine.Accounts.update_user_subscription(user, %{subscription_tier: tier_id})
+    end
 
     # Refresh status
     subscription = Billing.get_subscription(socket.assigns.player.id)

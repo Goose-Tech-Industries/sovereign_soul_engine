@@ -72,6 +72,10 @@ defmodule SovereignSoulEngine.Wearables.SmartHomeBridgeTest do
   end
 
   describe "SmartHome API endpoints" do
+    setup %{conn: conn} do
+      %{conn: authenticate_api(conn)}
+    end
+
     test "GET /api/smart_home/ambient returns active lighting payload", %{conn: conn, npc: npc} do
       conn = get(conn, ~p"/api/smart_home/ambient", %{"character_slug" => npc.slug})
       assert json = json_response(conn, 200)

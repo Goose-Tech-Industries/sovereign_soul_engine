@@ -160,26 +160,27 @@ defmodule SovereignSoulEngine.Memories do
   Returns `{:ok, deleted_count}`.
   """
   def purge_memories_for_character(character_id, opts \\ []) do
-    query = from(m in Memory, where: m.owner_character_id == ^character_id)
+    with {:ok, opts} <- SovereignSoulEngine.Memories.PurgeFilters.validate(opts) do
+      query = from(m in Memory, where: m.owner_character_id == ^character_id)
 
-    query =
-      cond do
-        Keyword.get(opts, :all) == true ->
-          query
+      query =
+        cond do
+          Keyword.get(opts, :all) == true ->
+            query
 
-        topic = Keyword.get(opts, :topic) || Keyword.get(opts, :query) ->
-          search = "%#{topic}%"
-          from(m in query, where: ilike(m.summary, ^search))
+          topic = Keyword.get(opts, :topic) || Keyword.get(opts, :query) ->
+            from(m in query, where: fragment("strpos(lower(?), lower(?)) > 0", m.summary, ^topic))
 
-        category = Keyword.get(opts, :category) ->
-          cat_str = to_string(category)
-          from(m in query, where: m.category == ^cat_str)
+          category = Keyword.get(opts, :category) ->
+            cat_str = to_string(category)
+            from(m in query, where: m.category == ^cat_str)
 
-        true ->
-          query
-      end
+          true ->
+            query
+        end
 
-    {count, _} = Repo.delete_all(query)
-    {:ok, count}
+      {count, _} = Repo.delete_all(query)
+      {:ok, count}
+    end
   end
 end

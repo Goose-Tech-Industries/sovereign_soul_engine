@@ -46,7 +46,7 @@ defmodule SovereignSoulEngineWeb.Api.CoreApiControllersTest do
         status: "active"
       })
 
-    conn = put_req_header(conn, "authorization", "Bearer twisted_dev_key")
+    conn = authenticate_api(conn)
     %{conn: conn, npc: char, player: player}
   end
 
@@ -102,7 +102,10 @@ defmodule SovereignSoulEngineWeb.Api.CoreApiControllersTest do
       assert json_response(missing_conn, 404)["error"] == "character not found"
     end
 
-    test "GET /sse/api/characters/:id/intent returns deterministic spatial intent", %{conn: conn, npc: npc} do
+    test "GET /sse/api/characters/:id/intent returns deterministic spatial intent", %{
+      conn: conn,
+      npc: npc
+    } do
       conn_intent = get(conn, ~p"/sse/api/characters/#{npc.id}/intent")
       body = json_response(conn_intent, 200)
       assert body["character_id"] == npc.id
@@ -115,7 +118,10 @@ defmodule SovereignSoulEngineWeb.Api.CoreApiControllersTest do
   end
 
   describe "NpcChatController" do
-    test "POST /sse/api/npc_chat handles player dialogue and returns NPC reply", %{conn: conn, npc: npc} do
+    test "POST /sse/api/npc_chat handles player dialogue and returns NPC reply", %{
+      conn: conn,
+      npc: npc
+    } do
       conn =
         post(conn, ~p"/sse/api/npc_chat", %{
           "external_source" => "twisted",
@@ -131,7 +137,10 @@ defmodule SovereignSoulEngineWeb.Api.CoreApiControllersTest do
       assert is_binary(body["reply"])
     end
 
-    test "GET /sse/api/npc_chat/relationship returns known: false for new encounters", %{conn: conn, npc: npc} do
+    test "GET /sse/api/npc_chat/relationship returns known: false for new encounters", %{
+      conn: conn,
+      npc: npc
+    } do
       conn =
         get(
           conn,
@@ -172,15 +181,22 @@ defmodule SovereignSoulEngineWeb.Api.CoreApiControllersTest do
   end
 
   describe "NpcActionsController" do
-    test "GET /sse/api/npc_actions/pending requires types and returns pending actions", %{conn: conn, npc: npc} do
-      conn = get(conn, ~p"/sse/api/npc_actions/pending?npc_id=#{npc.id}&types=join_player,lock_door")
+    test "GET /sse/api/npc_actions/pending requires types and returns pending actions", %{
+      conn: conn,
+      npc: npc
+    } do
+      conn =
+        get(conn, ~p"/sse/api/npc_actions/pending?npc_id=#{npc.id}&types=join_player,lock_door")
+
       assert json_response(conn, 200)["actions"] != nil
 
       missing_types = get(conn, ~p"/sse/api/npc_actions/pending?npc_id=#{npc.id}")
       assert json_response(missing_types, 422)["error"] == "types is required"
     end
 
-    test "POST /sse/api/npc_actions/:id/consume returns 404 for non-existent action", %{conn: conn} do
+    test "POST /sse/api/npc_actions/:id/consume returns 404 for non-existent action", %{
+      conn: conn
+    } do
       random_uuid = Ecto.UUID.generate()
       conn = post(conn, ~p"/sse/api/npc_actions/#{random_uuid}/consume")
       assert json_response(conn, 404)["error"] == "action not found"
@@ -188,10 +204,16 @@ defmodule SovereignSoulEngineWeb.Api.CoreApiControllersTest do
   end
 
   describe "SoulCapsuleController" do
-    test "GET /sse/api/souls/:slug/export produces downloadable .soul capsule", %{conn: conn, npc: npc} do
+    test "GET /sse/api/souls/:slug/export produces downloadable .soul capsule", %{
+      conn: conn,
+      npc: npc
+    } do
       conn = get(conn, ~p"/sse/api/souls/#{npc.slug}/export")
       assert response(conn, 200) =~ "\"format\""
-      assert get_resp_header(conn, "content-disposition") == ["attachment; filename=\"#{npc.slug}.soul\""]
+
+      assert get_resp_header(conn, "content-disposition") == [
+               "attachment; filename=\"#{npc.slug}.soul\""
+             ]
     end
 
     test "GET /sse/api/souls/:slug/export returns 404 for unknown slug", %{conn: conn} do
@@ -199,14 +221,19 @@ defmodule SovereignSoulEngineWeb.Api.CoreApiControllersTest do
       assert json_response(conn, 404)["error"] =~ "not found"
     end
 
-    test "POST /sse/api/souls/import reconstitutes soul capsule and rejects tampered ones", %{conn: conn, npc: npc} do
+    test "POST /sse/api/souls/import reconstitutes soul capsule and rejects tampered ones", %{
+      conn: conn,
+      npc: npc
+    } do
       # 1. Export capsule
       export_conn = get(conn, ~p"/sse/api/souls/#{npc.slug}/export")
       capsule_json = response(export_conn, 200)
       parsed = Jason.decode!(capsule_json)
 
       # 2. Reconstitute authentic capsule with overwrite: true
-      import_conn = post(conn, ~p"/sse/api/souls/import", %{"capsule" => parsed, "overwrite" => true})
+      import_conn =
+        post(conn, ~p"/sse/api/souls/import", %{"capsule" => parsed, "overwrite" => true})
+
       assert json_response(import_conn, 201)["status"] == "ok"
       assert json_response(import_conn, 201)["character_slug"] == npc.slug
 
@@ -218,7 +245,10 @@ defmodule SovereignSoulEngineWeb.Api.CoreApiControllersTest do
   end
 
   describe "SmartHomeController" do
-    test "GET /sse/api/smart_home/ambient returns lighting profile and neurochemistry", %{conn: conn, npc: npc} do
+    test "GET /sse/api/smart_home/ambient returns lighting profile and neurochemistry", %{
+      conn: conn,
+      npc: npc
+    } do
       conn = get(conn, ~p"/sse/api/smart_home/ambient?character_slug=#{npc.slug}")
       assert json_response(conn, 200)["status"] == "ok"
       body = json_response(conn, 200)
@@ -227,7 +257,10 @@ defmodule SovereignSoulEngineWeb.Api.CoreApiControllersTest do
       assert is_binary(body["lighting"]["hex"])
     end
 
-    test "POST /sse/api/smart_home/sync synchronizes environmental lighting", %{conn: conn, npc: npc} do
+    test "POST /sse/api/smart_home/sync synchronizes environmental lighting", %{
+      conn: conn,
+      npc: npc
+    } do
       conn = post(conn, ~p"/sse/api/smart_home/sync", %{"character_slug" => npc.slug})
       assert json_response(conn, 200)["status"] == "ok"
       assert json_response(conn, 200)["synced"] == true
@@ -235,7 +268,11 @@ defmodule SovereignSoulEngineWeb.Api.CoreApiControllersTest do
   end
 
   describe "VisionController" do
-    test "POST /sse/api/vision/perceive executes multimodal perception", %{conn: conn, npc: npc, player: player} do
+    test "POST /sse/api/vision/perceive executes multimodal perception", %{
+      conn: conn,
+      npc: npc,
+      player: player
+    } do
       # Enable camera vision in privacy settings for player
       Privacy.update_settings(player, %{"camera_vision" => true})
 
@@ -277,7 +314,10 @@ defmodule SovereignSoulEngineWeb.Api.CoreApiControllersTest do
       assert is_list(json_response(conn, 200)["posts"])
     end
 
-    test "POST /sse/api/social/generate creates autonomous post for character", %{conn: conn, npc: npc} do
+    test "POST /sse/api/social/generate creates autonomous post for character", %{
+      conn: conn,
+      npc: npc
+    } do
       conn = post(conn, ~p"/sse/api/social/generate", %{"slug" => npc.slug})
       assert json_response(conn, 201)["status"] == "ok"
       body = json_response(conn, 201)

@@ -40,10 +40,14 @@ defmodule SovereignSoulEngineWeb.Api.TelemetryControllerTest do
   end
 
   describe "POST /sse/api/telemetry/somatic" do
-    test "ingests galaxy watch heart rate and stress metrics", %{conn: conn, player: player, npc: npc} do
+    test "ingests galaxy watch heart rate and stress metrics", %{
+      conn: conn,
+      player: player,
+      npc: npc
+    } do
       conn =
         conn
-        |> put_req_header("authorization", "Bearer twisted_dev_key")
+        |> authenticate_api()
         |> post(~p"/sse/api/telemetry/somatic", %{
           "character_slug" => player.slug,
           "device" => "galaxy_watch_10",
@@ -70,7 +74,7 @@ defmodule SovereignSoulEngineWeb.Api.TelemetryControllerTest do
     test "handles sleep data and smart glasses ambient noise", %{conn: conn, player: player} do
       conn =
         conn
-        |> put_req_header("authorization", "Bearer twisted_dev_key")
+        |> authenticate_api()
         |> post(~p"/sse/api/telemetry/wearable", %{
           "character_slug" => player.slug,
           "device" => "smart_glasses",
@@ -90,7 +94,7 @@ defmodule SovereignSoulEngineWeb.Api.TelemetryControllerTest do
     } do
       conn =
         conn
-        |> put_req_header("authorization", "Bearer twisted_dev_key")
+        |> authenticate_api()
         |> post(~p"/sse/api/telemetry/wearable", %{
           "character_slug" => player.slug,
           "device" => "oura_ring_gen4",
@@ -120,7 +124,7 @@ defmodule SovereignSoulEngineWeb.Api.TelemetryControllerTest do
 
       conn =
         conn
-        |> put_req_header("authorization", "Bearer twisted_dev_key")
+        |> authenticate_api()
         |> post(~p"/sse/api/telemetry/somatic", %{
           "character_slug" => player.slug,
           "device" => "galaxy_watch_10",
@@ -135,7 +139,7 @@ defmodule SovereignSoulEngineWeb.Api.TelemetryControllerTest do
     test "returns 404 for unknown character", %{conn: conn} do
       conn =
         conn
-        |> put_req_header("authorization", "Bearer twisted_dev_key")
+        |> authenticate_api()
         |> post(~p"/sse/api/telemetry/somatic", %{
           "character_slug" => "non_existent_ghost"
         })
@@ -148,7 +152,7 @@ defmodule SovereignSoulEngineWeb.Api.TelemetryControllerTest do
     test "returns somatic and emotional profile", %{conn: conn, player: player} do
       conn =
         conn
-        |> put_req_header("authorization", "Bearer twisted_dev_key")
+        |> authenticate_api()
         |> get(~p"/sse/api/telemetry/#{player.slug}")
 
       assert json = json_response(conn, 200)
