@@ -61,11 +61,14 @@ defmodule SovereignSoulEngine.Voice.LocalTTS do
       clean_spoken_text = sanitize_for_speech(trimmed)
 
       cmd =
-        System.find_executable("edge-tts") || System.find_executable("edge-tts.exe") || "edge-tts"
+        Keyword.get(opts, :command) ||
+          System.find_executable("edge-tts") || System.find_executable("edge-tts.exe") ||
+          "edge-tts"
 
       args = ["--voice", voice, "--text", clean_spoken_text, "--write-media", file_path]
+      command_runner = Keyword.get(opts, :cmd_fun, &System.cmd/3)
 
-      case System.cmd(cmd, args, stderr_to_stdout: true) do
+      case command_runner.(cmd, args, stderr_to_stdout: true) do
         {_output, 0} ->
           if File.exists?(file_path) do
             bytes = File.stat!(file_path).size
