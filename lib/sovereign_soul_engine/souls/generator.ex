@@ -22,6 +22,7 @@ defmodule SovereignSoulEngine.Souls.Generator do
   alias SovereignSoulEngine.Memories.{Memory, MemoryMerger}
   alias SovereignSoulEngine.Actions.ActionIntent
   alias SovereignSoulEngine.TheoryOfMind
+  alias SovereignSoulEngine.Safety.Grounding
 
   alias SovereignSoulEngine.Souls.{
     EmotionalContagion,
@@ -57,6 +58,9 @@ defmodule SovereignSoulEngine.Souls.Generator do
           (Privacy.safe_word_triggered?(last_player_message.content, privacy_settings) ||
              Privacy.safe_word_active?(npc)) ->
         handle_safe_word_freeze(npc, scene, player, last_player_message, privacy_settings)
+
+      last_player_message && Grounding.enabled?(scene.context || %{}) ->
+        handle_grounding_response(npc, scene, last_player_message)
 
       true ->
         run_generation_pipeline(
@@ -2179,6 +2183,33 @@ defmodule SovereignSoulEngine.Souls.Generator do
 
       error ->
         error
+    end
+  end
+
+  defp handle_grounding_response(npc, scene, last_player_message) do
+    context = Map.put(scene.context || %{}, :statement, last_player_message.content)
+
+    with {:ok, plan} <- Grounding.plan(context),
+         {:ok, message} <-
+           Scenes.create_message(%{
+             scene_id: scene.id,
+             character_id: npc.id,
+             content: Grounding.render(plan, npc.name),
+             message_type: "dialogue",
+             metadata: %{
+               "grounding_mode" => true,
+               "grounding_style" => plan.style,
+               "grounding_escalated" => plan.escalate,
+               "trusted_adult_required" => plan.trusted_adult_required
+             }
+           }) do
+      Phoenix.PubSub.broadcast(
+        SovereignSoulEngine.PubSub,
+        "scene:#{scene.id}",
+        {:new_message, message}
+      )
+
+      {:ok, message}
     end
   end
 end

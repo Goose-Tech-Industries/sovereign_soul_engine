@@ -57,6 +57,39 @@ defmodule SovereignSoulEngine.Safety.Grounding do
 
   def plan(_), do: {:error, :not_enabled}
 
+  @doc "Renders a grounding plan as short companion-facing dialogue."
+  @spec render(plan(), String.t()) :: String.t()
+  def render(plan, companion_name \\ "Your companion") when is_map(plan) do
+    intro =
+      case plan.style do
+        "direct" ->
+          "#{companion_name}: Pause with me. We are going to orient to what is here and choose one safe next step."
+
+        "sensory" ->
+          "#{companion_name}: Stay with me for a moment. Let us use your senses to come back to the present."
+
+        "breathing" ->
+          "#{companion_name}: Stay with me. We can slow this down with a gentle breath and steady footing."
+
+        _ ->
+          "#{companion_name}: I am here with you. We can slow down and get oriented to the present together."
+      end
+
+    steps =
+      plan.steps
+      |> Enum.with_index(1)
+      |> Enum.map_join("\n", fn {step, index} -> "#{index}. #{step}" end)
+
+    escalation = if plan.escalation_message, do: "\n\n#{plan.escalation_message}", else: ""
+
+    trusted_adult =
+      if plan.trusted_adult_required,
+        do: "\nPlease involve a trusted adult with you now.",
+        else: ""
+
+    "#{intro}\n\n#{plan.reality_anchor}\n\n#{steps}#{trusted_adult}#{escalation}"
+  end
+
   def enabled?(context),
     do:
       Map.get(context, "grounding_enabled") == true or

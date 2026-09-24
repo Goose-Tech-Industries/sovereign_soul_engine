@@ -61,4 +61,18 @@ defmodule SovereignSoulEngine.Safety.GroundingTest do
     assert plan.trusted_adult_required
     assert plan.escalation_message =~ "emergency"
   end
+
+  test "renders a companion-facing plan with safety language" do
+    assert {:ok, plan} =
+             Grounding.plan(%{
+               grounding_enabled: true,
+               style: :direct,
+               statement: "I feel unsafe"
+             })
+
+    rendered = Grounding.render(plan, "Kade")
+    assert rendered =~ "Kade: Pause with me"
+    assert rendered =~ "Check the date and time."
+    assert rendered =~ "cannot verify"
+  end
 end
