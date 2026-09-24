@@ -197,7 +197,8 @@ defmodule SovereignSoulEngineWeb.ChatLiveTest do
       "location" => "Obsidian Spire",
       "mood" => "electric",
       "weather" => "crimson aurora",
-      "narrative" => "Thunder echoes across the sky."
+      "narrative" => "Thunder echoes across the sky.",
+      "grounding_enabled" => "true"
     })
     |> render_submit()
 
@@ -205,6 +206,7 @@ defmodule SovereignSoulEngineWeb.ChatLiveTest do
     assert updated.location == "Obsidian Spire"
     assert updated.context["mood"] == "electric"
     assert updated.context["weather"] == "crimson aurora"
+    assert updated.context["grounding_enabled"] == true
   end
 
   test "applies somatic biometric telemetry simulation", %{conn: conn, player: player} do

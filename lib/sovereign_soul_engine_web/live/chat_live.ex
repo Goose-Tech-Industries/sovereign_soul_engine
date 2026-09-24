@@ -665,16 +665,21 @@ defmodule SovereignSoulEngineWeb.ChatLive do
   @impl true
   def handle_event(
         "save_scenario",
-        %{"location" => location, "mood" => mood, "weather" => weather, "narrative" => narrative},
+        %{"location" => location, "mood" => mood, "weather" => weather, "narrative" => narrative} =
+          params,
         socket
       ) do
     scene = socket.assigns.selected_scene
     location = String.trim(location)
 
+    grounding_enabled =
+      params["grounding_enabled"] in [true, "true", "on", "1"]
+
     context = %{
       "mood" => String.trim(mood),
       "weather" => String.trim(weather),
-      "narrative" => String.trim(narrative)
+      "narrative" => String.trim(narrative),
+      "grounding_enabled" => grounding_enabled
     }
 
     {:ok, updated_scene} = Scenes.update_scene(scene, %{location: location, context: context})
@@ -3167,6 +3172,24 @@ defmodule SovereignSoulEngineWeb.ChatLive do
                 class="w-full textarea textarea-bordered text-sm leading-relaxed"
               >{get_in(@selected_scene.context || %{}, ["narrative"]) || ""}</textarea>
             </div>
+
+            <label class="flex items-start gap-3 rounded-xl border border-amber-400/20 bg-amber-950/20 p-3 cursor-pointer">
+              <input
+                type="checkbox"
+                name="grounding_enabled"
+                value="true"
+                checked={get_in(@selected_scene.context || %{}, ["grounding_enabled"]) == true}
+                class="checkbox checkbox-sm checkbox-warning mt-0.5"
+              />
+              <span>
+                <span class="block text-xs font-bold text-amber-200">
+                  Enable grounding support mode
+                </span>
+                <span class="block text-[11px] leading-relaxed text-base-content/60 mt-0.5">
+                  The companion will pause roleplay and use present-moment, reality-based support on the next turn. This is optional and does not diagnose or replace professional care.
+                </span>
+              </span>
+            </label>
 
             <div class="flex gap-3 justify-end pt-2">
               <button
