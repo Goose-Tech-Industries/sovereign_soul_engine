@@ -43,15 +43,36 @@ defmodule SovereignSoulEngine.Cognition.Checkpoints do
     Repo.all(from c in Checkpoint, order_by: [desc: c.inserted_at], limit: ^limit)
   end
 
-  def resume(%Checkpoint{} = checkpoint) do
+  @doc "Resumes a paused or interrupted checkpoint after an explicit decision."
+  def resume(%Checkpoint{status: status} = checkpoint) when status in ["paused", "interrupted"] do
     checkpoint
     |> Checkpoint.changeset(%{status: "running"})
     |> Repo.update()
   end
 
+  def resume(%Checkpoint{}), do: {:error, :not_resumable}
+
+  @doc "Resumes the latest checkpoint for a durable cognition thread."
+  def resume_latest(character_id, thread_id) do
+    case latest(character_id, thread_id) do
+      nil -> {:error, :not_found}
+      checkpoint -> resume(checkpoint)
+    end
+  end
+
   def interrupt(%Checkpoint{} = checkpoint, interrupt) when is_map(interrupt) do
     checkpoint
     |> Checkpoint.changeset(%{status: "interrupted", interrupt: interrupt})
+    |> Repo.update()
+  end
+
+  @doc "Cancels a checkpoint and records the cancellation reason for recovery tools."
+  def cancel(%Checkpoint{} = checkpoint, reason \\ "cancelled") do
+    checkpoint
+    |> Checkpoint.changeset(%{
+      status: "cancelled",
+      interrupt: %{"reason" => to_string(reason)}
+    })
     |> Repo.update()
   end
 
