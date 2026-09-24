@@ -23,17 +23,17 @@ defmodule SovereignSoulEngine.Relay.Forwarder do
   Returns a list of per-peer results (`:ok` | `{:error, term}`).
   """
   @spec forward(map(), non_neg_integer()) :: [:ok | {:error, term()}]
-  def forward(envelope, hops) when is_integer(hops) do
+  def forward(envelope, hops, opts \\ []) when is_integer(hops) do
     peers_list = peers()
 
     if peers_list == [] or hops > max_hops() do
       []
     else
-      Enum.map(peers_list, &post(&1, envelope, hops))
+      Enum.map(peers_list, &post(&1, envelope, hops, opts))
     end
   end
 
-  defp post(peer, envelope, hops) do
+  defp post(peer, envelope, hops, opts) do
     url = String.trim_trailing(peer, "/") <> "/sse/api/relay/inbound"
 
     headers =
@@ -42,13 +42,17 @@ defmodule SovereignSoulEngine.Relay.Forwarder do
         secret -> [{"x-relay-secret", secret}]
       end
 
-    case Req.post(url,
-           json: %{"envelope" => envelope, "hops" => hops},
-           headers: headers,
-           receive_timeout: 3000,
-           connect_options: [timeout: 1500],
-           retry: false
-         ) do
+    request_options =
+      [
+        json: %{"envelope" => envelope, "hops" => hops},
+        headers: headers,
+        receive_timeout: 3000,
+        connect_options: [timeout: 1500],
+        retry: false
+      ]
+      |> Keyword.merge(Keyword.get(opts, :req_options, []))
+
+    case Req.post(url, request_options) do
       {:ok, %{status: status}} when status in 200..299 -> :ok
       other -> {:error, other}
     end
