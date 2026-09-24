@@ -94,7 +94,28 @@ defmodule SovereignSoulEngine.MixProject do
         "esbuild sovereign_soul_engine --minify",
         "phx.digest"
       ],
-      precommit: ["compile --warnings-as-errors", "deps.unlock --unused", "format", "test"]
+      # `deps.unlock --unused` mutates the dependency tree and, on Windows,
+      # can leave Mix's parallel test compiler resolving project tests under a
+      # dependency directory. Keep dependency maintenance separate from the
+      # deterministic source/test quality gate.
+      # Run tests in a fresh Mix process. Keeping the test compiler isolated
+      # avoids a Windows/Elixir parallel-compiler path leak after compilation.
+      precommit: [&precommit/1]
     ]
+  end
+
+  defp precommit(_args) do
+    run_precommit_command(["compile", "--warnings-as-errors"])
+    run_precommit_command(["test"])
+    run_precommit_command(["format"])
+  end
+
+  defp run_precommit_command(args) do
+    {_output, status} =
+      System.cmd("mix", args, into: IO.stream(:stdio, :line), stderr_to_stdout: true)
+
+    if status != 0 do
+      Mix.raise("mix #{Enum.join(args, " ")} failed with exit status #{status}")
+    end
   end
 end
