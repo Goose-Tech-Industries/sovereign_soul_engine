@@ -67,7 +67,11 @@ defmodule SovereignSoulEngine.Voice.ElevenLabs do
         {"accept", "audio/mpeg"}
       ]
 
-      case Req.post(url, json: payload, headers: headers, receive_timeout: 30_000) do
+      request_options =
+        [json: payload, headers: headers, receive_timeout: 30_000]
+        |> Keyword.merge(Keyword.get(opts, :req_options, []))
+
+      case Req.post(url, request_options) do
         {:ok, %{status: 200, body: audio_binary}} when is_binary(audio_binary) ->
           save_audio_file(audio_binary, opts)
 
@@ -91,7 +95,11 @@ defmodule SovereignSoulEngine.Voice.ElevenLabs do
       url = "#{@base_url}/voices"
       headers = [{"xi-api-key", api_key}]
 
-      case Req.get(url, headers: headers, receive_timeout: 15_000) do
+      request_options =
+        [headers: headers, receive_timeout: 15_000]
+        |> Keyword.merge(Keyword.get(opts, :req_options, []))
+
+      case Req.get(url, request_options) do
         {:ok, %{status: 200, body: %{"voices" => voices}}} ->
           formatted =
             Enum.map(voices, fn v ->
@@ -125,7 +133,11 @@ defmodule SovereignSoulEngine.Voice.ElevenLabs do
       url = "#{@base_url}/user/subscription"
       headers = [{"xi-api-key", api_key}]
 
-      case Req.get(url, headers: headers, receive_timeout: 15_000) do
+      request_options =
+        [headers: headers, receive_timeout: 15_000]
+        |> Keyword.merge(Keyword.get(opts, :req_options, []))
+
+      case Req.get(url, request_options) do
         {:ok, %{status: 200, body: body}} ->
           {:ok,
            %{
