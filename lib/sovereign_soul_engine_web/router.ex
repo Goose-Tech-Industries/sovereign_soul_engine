@@ -63,6 +63,10 @@ defmodule SovereignSoulEngineWeb.Router do
     post "/cognition/approvals/:id/approve", CognitionController, :approve
     post "/cognition/approvals/:id/reject", CognitionController, :reject
     post "/cognition/approvals/:id/execute", CognitionController, :execute
+    post "/cognition/branches", BranchController, :create
+    get "/cognition/branches/:scene_id/:branch_id", BranchController, :show
+    post "/cognition/branches/:scene_id/:branch_id/messages", BranchController, :append
+    delete "/cognition/branches/:scene_id/:branch_id", BranchController, :discard
 
     # Wearables & Smart Glasses Biometric Telemetry
     post "/telemetry/somatic", TelemetryController, :create

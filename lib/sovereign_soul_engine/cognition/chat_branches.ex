@@ -8,6 +8,9 @@ defmodule SovereignSoulEngine.Cognition.ChatBranches do
   """
 
   alias SovereignSoulEngine.Scenes
+  alias SovereignSoulEngine.Repo
+  alias SovereignSoulEngine.Scenes.SceneMessage
+  import Ecto.Query
 
   @spec fork(binary(), binary(), keyword()) :: {:ok, map()} | {:error, term()}
   def fork(scene_id, message_id, opts \\ []) do
@@ -64,5 +67,16 @@ defmodule SovereignSoulEngine.Cognition.ChatBranches do
       |> Kernel.++(Enum.filter(canonical, &(&1.id == fork_message_id)))
 
     prefix ++ Enum.filter(branch_messages, &(Map.get(&1.metadata, "branch_id") == branch_id))
+  end
+
+  @doc "Discards alternate messages while preserving the canonical scene timeline."
+  def discard(scene_id, branch_id) when is_binary(scene_id) and is_binary(branch_id) do
+    Repo.delete_all(
+      from m in SceneMessage,
+        where: m.scene_id == ^scene_id,
+        where: fragment("?->>'branch_id' = ?", m.metadata, ^branch_id)
+    )
+
+    :ok
   end
 end
