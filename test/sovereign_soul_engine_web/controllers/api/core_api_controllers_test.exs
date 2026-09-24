@@ -117,6 +117,17 @@ defmodule SovereignSoulEngineWeb.Api.CoreApiControllersTest do
     end
   end
 
+  describe "WorldController" do
+    test "GET /sse/api/world/feed returns the world observability summary", %{conn: conn} do
+      response = conn |> get(~p"/sse/api/world/feed") |> json_response(200)
+
+      assert Map.has_key?(response, "scene_id")
+      assert is_integer(response["souls"])
+      assert is_integer(response["relationships"])
+      assert is_list(response["recent_events"])
+    end
+  end
+
   describe "NpcChatController" do
     test "POST /sse/api/npc_chat handles player dialogue and returns NPC reply", %{
       conn: conn,
