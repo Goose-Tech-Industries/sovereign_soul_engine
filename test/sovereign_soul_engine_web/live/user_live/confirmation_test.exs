@@ -1,5 +1,5 @@
 defmodule SovereignSoulEngineWeb.UserLive.ConfirmationTest do
-  use SovereignSoulEngineWeb.ConnCase, async: true
+  use SovereignSoulEngineWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
   import SovereignSoulEngine.AccountsFixtures

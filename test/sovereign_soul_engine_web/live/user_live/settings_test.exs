@@ -1,5 +1,5 @@
 defmodule SovereignSoulEngineWeb.UserLive.SettingsTest do
-  use SovereignSoulEngineWeb.ConnCase, async: true
+  use SovereignSoulEngineWeb.ConnCase, async: false
 
   alias SovereignSoulEngine.Accounts
   import Phoenix.LiveViewTest
