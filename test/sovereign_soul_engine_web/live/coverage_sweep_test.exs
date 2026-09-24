@@ -35,11 +35,16 @@ defmodule SovereignSoulEngineWeb.CoverageSweepTest do
     assert {:ok, _view, dashboard_html} = live(conn, "/sse/acp")
     assert dashboard_html =~ "Character Registry"
 
-    assert {:ok, _view, creator_html} = live(conn, "/sse/acp/npcs/new")
+    assert {:ok, creator_view, creator_html} = live(conn, "/sse/acp/npcs/new")
     assert creator_html =~ "NPC" or creator_html =~ "Character"
+    render_click(element(creator_view, "button[phx-click='next_step']"))
 
-    assert {:ok, _view, social_html} = live(conn, "/sse/acp/social")
+    assert {:ok, social_view, social_html} = live(conn, "/sse/acp/social")
     assert social_html =~ "Social" or social_html =~ "social"
+
+    if has_element?(social_view, "button[phx-click='trigger_tick']") do
+      render_click(element(social_view, "button[phx-click='trigger_tick']"))
+    end
   end
 
   test "mounts ACP character tabs and renders a real character", %{conn: conn} do
