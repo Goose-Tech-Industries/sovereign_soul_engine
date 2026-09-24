@@ -94,11 +94,16 @@ defmodule SovereignSoulEngine.LLM.LocalProvider do
     url = base_url()
     timeout = Keyword.get(opts, :timeout_ms, 120_000)
 
-    case Req.post(url,
-           json: body,
-           headers: [{"authorization", "Bearer ollama"}],
-           receive_timeout: timeout
-         ) do
+    request_options =
+      [
+        json: body,
+        headers: [{"authorization", "Bearer ollama"}],
+        receive_timeout: timeout,
+        connect_options: [timeout: 5000]
+      ]
+      |> Keyword.merge(Keyword.get(opts, :req_options, []))
+
+    case Req.post(url, request_options) do
       {:ok, %{status: 200, body: resp_body}} ->
         {:ok, resp_body}
 

@@ -29,7 +29,7 @@ defmodule SovereignSoulEngine.LLM.OpenAIProvider do
   def respond(input, opts \\ []) do
     with {:ok, key} <- require_api_key(opts),
          {:ok, body} <- build_request_body(input),
-         {:ok, response} <- send_request(key, body),
+         {:ok, response} <- send_request(key, body, opts),
          {:ok, parsed} <- parse_response(response) do
       {:ok, parsed}
     end
@@ -78,19 +78,23 @@ defmodule SovereignSoulEngine.LLM.OpenAIProvider do
 
   # ── HTTP Request ─────────────────────────────────────────────
 
-  defp send_request(api_key, body) do
+  defp send_request(api_key, body, opts) do
     headers = [
       {"authorization", "Bearer #{api_key}"},
       {"content-type", "application/json"}
     ]
 
-    case Req.post(@base_url,
-           json: body,
-           headers: headers,
-           max_retries: 1,
-           connect_options: [timeout: 5000],
-           receive_timeout: 25_000
-         ) do
+    request_options =
+      [
+        json: body,
+        headers: headers,
+        max_retries: 1,
+        connect_options: [timeout: 5000],
+        receive_timeout: 25_000
+      ]
+      |> Keyword.merge(Keyword.get(opts, :req_options, []))
+
+    case Req.post(@base_url, request_options) do
       {:ok, %{status: 200, body: response_body}} ->
         {:ok, response_body}
 

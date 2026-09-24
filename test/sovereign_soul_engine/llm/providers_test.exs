@@ -122,4 +122,76 @@ defmodule SovereignSoulEngine.LLM.ProvidersTest do
                )
     end
   end
+
+  describe "deterministic HTTP contracts for OpenAI-compatible providers" do
+    test "OpenAI parses a valid response and preserves malformed text safely" do
+      Req.Test.stub(__MODULE__, fn conn ->
+        Req.Test.json(conn, %{
+          "choices" => [%{"message" => %{"content" => ~s({"public_speech":"hello"})}}]
+        })
+      end)
+
+      assert {:ok, %{"public_speech" => "hello"}} = respond(OpenAIProvider, "openai")
+
+      Req.Test.stub(__MODULE__, fn conn ->
+        Req.Test.json(conn, %{"choices" => [%{"message" => %{"content" => "plain"}}]})
+      end)
+
+      assert {:ok, %{public_speech: "plain"}} = respond(OpenAIProvider, "openai")
+    end
+
+    test "Anthropic parses content blocks and malformed text fallback" do
+      Req.Test.stub(__MODULE__, fn conn ->
+        Req.Test.json(conn, %{"content" => [%{"text" => ~s({"public_speech":"hello"})}]})
+      end)
+
+      assert {:ok, %{"public_speech" => "hello"}} = respond(AnthropicProvider, "anthropic")
+
+      Req.Test.stub(__MODULE__, fn conn ->
+        Req.Test.json(conn, %{"content" => [%{"text" => "plain"}]})
+      end)
+
+      assert {:ok, %{public_speech: "plain"}} = respond(AnthropicProvider, "anthropic")
+    end
+
+    for {provider, name} <- [
+          {DeepSeekProvider, "deepseek"},
+          {XAIProvider, "xai"}
+        ] do
+      test "#{name} parses valid JSON and handles unexpected response shape" do
+        Req.Test.stub(__MODULE__, fn conn ->
+          Req.Test.json(conn, %{
+            "choices" => [%{"message" => %{"content" => ~s({"public_speech":"hello"})}}]
+          })
+        end)
+
+        assert {:ok, %{"public_speech" => "hello"}} = respond(unquote(provider), unquote(name))
+
+        Req.Test.stub(__MODULE__, fn conn -> Req.Test.json(conn, %{"unexpected" => true}) end)
+        assert {:error, "unexpected_response_shape"} = respond(unquote(provider), unquote(name))
+      end
+    end
+
+    for {provider, name, prefix} <- [
+          {OpenAIProvider, "openai", "openai"},
+          {AnthropicProvider, "anthropic", "anthropic"},
+          {DeepSeekProvider, "deepseek", "deepseek"},
+          {XAIProvider, "xai", "xai"}
+        ] do
+      test "#{name} maps HTTP failures to a provider error" do
+        Req.Test.stub(__MODULE__, fn conn -> Plug.Conn.send_resp(conn, 503, "offline") end)
+
+        assert {:error, unquote(prefix) <> "_http_503"} =
+                 respond(unquote(provider), unquote(name))
+      end
+    end
+  end
+
+  defp respond(provider, name) do
+    provider.respond(
+      %{messages: [%{role: "user", content: "Hi"}]},
+      api_key: "test-#{name}",
+      req_options: [plug: {Req.Test, __MODULE__}]
+    )
+  end
 end
