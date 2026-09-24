@@ -25,8 +25,11 @@ defmodule SovereignSoulEngineWeb.Api.NpcActionsController do
 
       json(conn, %{actions: actions})
     else
-      :error -> conn |> put_status(:unprocessable_entity) |> json(%{error: "invalid npc_id"})
-      {:error, :invalid_types} -> conn |> put_status(:unprocessable_entity) |> json(%{error: "invalid types"})
+      :error ->
+        conn |> put_status(:unprocessable_entity) |> json(%{error: "invalid npc_id"})
+
+      {:error, :invalid_types} ->
+        conn |> put_status(:unprocessable_entity) |> json(%{error: "invalid types"})
     end
   end
 

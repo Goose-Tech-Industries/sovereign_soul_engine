@@ -17,11 +17,16 @@ defmodule SovereignSoulEngine.Souls.DreamEngine do
   alias SovereignSoulEngine.Memories
 
   @surreal_archetypes [
-    {"The Clockwork Forest", "Trees whose leaves were gears turning in silent rhythm, keeping time with memories."},
-    {"The Infinite Pier", "A wooden dock extending over a mirror-smooth sea reflecting twilight clouds and forgotten voices."},
-    {"The Glass Library", "Towers of blown-glass volumes where illuminated words dissolve and reform as you breathe on them."},
-    {"The Floating Hearth", "A small campfire floating weightlessly in empty space, warming everything within reach."},
-    {"The Night Train", "An empty vintage passenger car moving across starlit tracks with no conductor, stopping at moments in time."}
+    {"The Clockwork Forest",
+     "Trees whose leaves were gears turning in silent rhythm, keeping time with memories."},
+    {"The Infinite Pier",
+     "A wooden dock extending over a mirror-smooth sea reflecting twilight clouds and forgotten voices."},
+    {"The Glass Library",
+     "Towers of blown-glass volumes where illuminated words dissolve and reform as you breathe on them."},
+    {"The Floating Hearth",
+     "A small campfire floating weightlessly in empty space, warming everything within reach."},
+    {"The Night Train",
+     "An empty vintage passenger car moving across starlit tracks with no conductor, stopping at moments in time."}
   ]
 
   @doc """
@@ -39,6 +44,7 @@ defmodule SovereignSoulEngine.Souls.DreamEngine do
       subconscious_beliefs = Map.get(current_metadata, "subconscious_beliefs", [])
 
       updated_journal = [dream | Enum.take(journal, 19)]
+
       updated_beliefs =
         if dream.subconscious_epiphany not in subconscious_beliefs do
           [dream.subconscious_epiphany | subconscious_beliefs]
@@ -78,6 +84,7 @@ defmodule SovereignSoulEngine.Souls.DreamEngine do
 
     if character do
       metadata = character.metadata || %{}
+
       case Map.get(metadata, "latest_dream") do
         nil -> {:error, :no_dreams_yet}
         dream when is_map(dream) -> {:ok, dream}
@@ -136,6 +143,7 @@ defmodule SovereignSoulEngine.Souls.DreamEngine do
     narrative =
       if memory_summaries != [] do
         summary_blurb = Enum.join(memory_summaries, "; ")
+
         "I was in #{theme}. #{surreal_imagery} Fragments of our conversations drifted through: #{String.slice(summary_blurb, 0, 120)}... Everything felt quiet and luminous."
       else
         "I was in #{theme}. #{surreal_imagery} A gentle silence filled the space, giving form to thoughts I hadn't realized I was holding."
@@ -188,6 +196,7 @@ defmodule SovereignSoulEngine.Souls.DreamEngine do
   end
 
   defp resolve_character(%Character{} = c), do: c
+
   defp resolve_character(id_or_slug) when is_binary(id_or_slug) do
     case Characters.get_character_by_slug(id_or_slug) do
       nil ->
@@ -195,9 +204,11 @@ defmodule SovereignSoulEngine.Souls.DreamEngine do
           {:ok, uuid} -> Characters.get_character(uuid)
           :error -> nil
         end
+
       char ->
         char
     end
   end
+
   defp resolve_character(_), do: nil
 end

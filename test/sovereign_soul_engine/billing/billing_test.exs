@@ -50,7 +50,9 @@ defmodule SovereignSoulEngine.BillingTest do
         "mature_consent" => true
       }
 
-      assert {:error, :underage, msg} = Billing.verify_age_by_dob(player, underage_date, attestations)
+      assert {:error, :underage, msg} =
+               Billing.verify_age_by_dob(player, underage_date, attestations)
+
       assert msg =~ "at least 18 years old"
     end
 
@@ -63,7 +65,8 @@ defmodule SovereignSoulEngine.BillingTest do
         "mature_consent" => true
       }
 
-      assert {:error, :missing_consent, _msg} = Billing.verify_age_by_dob(player, valid_adult_date, missing_consent)
+      assert {:error, :missing_consent, _msg} =
+               Billing.verify_age_by_dob(player, valid_adult_date, missing_consent)
     end
 
     test "approves valid 18+ birth date with consent and saves metadata", %{player: player} do
@@ -82,7 +85,9 @@ defmodule SovereignSoulEngine.BillingTest do
     end
 
     test "awards commercial credit card verification", %{player: player} do
-      assert {:ok, verif} = Billing.verify_age_by_credit_card(player, %{session_id: "cs_test_123"})
+      assert {:ok, verif} =
+               Billing.verify_age_by_credit_card(player, %{session_id: "cs_test_123"})
+
       assert verif["verified"] == true
       assert verif["method"] == "credit_card_stripe"
       assert Billing.age_verified?(player)
@@ -115,7 +120,9 @@ defmodule SovereignSoulEngine.BillingTest do
       assert sub.maturity_rating == "mature"
     end
 
-    test "activates $19.99 Archon tier and automatically awards 18+ verification", %{player: player} do
+    test "activates $19.99 Archon tier and automatically awards 18+ verification", %{
+      player: player
+    } do
       assert {:ok, sub} = Billing.set_subscription(player, "archon_1999")
       assert sub.tier_id == "archon_1999"
       assert sub.price_usd == 19.99

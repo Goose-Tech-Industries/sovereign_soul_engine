@@ -138,7 +138,11 @@ defmodule SovereignSoulEngine.Souls.EmotionEngine do
 
           effective =
             if neurochem do
-              SovereignSoulEngine.Souls.Neurochemistry.modulate_delta(dim, round(effective), neurochem)
+              SovereignSoulEngine.Souls.Neurochemistry.modulate_delta(
+                dim,
+                round(effective),
+                neurochem
+              )
             else
               effective
             end
@@ -276,18 +280,24 @@ defmodule SovereignSoulEngine.Souls.EmotionEngine do
       cond do
         somatic.hunger > 80 ->
           Map.merge(deltas, %{anger: 10, stress: 8, confidence: -5})
+
         somatic.hunger > 60 ->
           Map.merge(deltas, %{anger: 5, stress: 3})
-        true -> deltas
+
+        true ->
+          deltas
       end
 
     deltas =
       cond do
         somatic.pain > 80 ->
           Map.merge(deltas, %{stress: 15, confidence: -10})
+
         somatic.pain > 50 ->
           Map.merge(deltas, %{stress: 8, anger: 5, sadness: 3})
-        true -> deltas
+
+        true ->
+          deltas
       end
 
     deltas =
@@ -295,9 +305,12 @@ defmodule SovereignSoulEngine.Souls.EmotionEngine do
         somatic.fatigue > 80 ->
           current_negatives = %{anger: 5, fear: 5, stress: 5, sadness: 5, shame: 5, guilt: 5}
           Map.merge(deltas, Map.merge(current_negatives, %{confidence: -15}))
+
         somatic.fatigue > 60 ->
           Map.merge(deltas, %{confidence: -5, sadness: 3, stress: 5})
-        true -> deltas
+
+        true ->
+          deltas
       end
 
     deltas =

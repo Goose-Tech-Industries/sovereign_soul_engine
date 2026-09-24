@@ -104,4 +104,21 @@ defmodule SovereignSoulEngineWeb.SoulChannelTest do
 
     SovereignSoulEngine.Moderation.unmute_did(from_did)
   end
+
+  test "UserSocket.connect/3 assigns authenticated tenant" do
+    {:ok, tenant, key} = SovereignSoulEngine.Tenants.create_tenant("Socket Test", "socket", 100)
+    assert {:ok, socket} = UserSocket.connect(%{"api_key" => key}, %Phoenix.Socket{}, %{})
+    assert socket.assigns.tenant.id == tenant.id
+  end
+
+  test "UserSocket.connect/3 rejects unauthenticated connections when require_connect_auth is true" do
+    Application.put_env(:sovereign_soul_engine, :require_connect_auth, true)
+
+    on_exit(fn ->
+      Application.put_env(:sovereign_soul_engine, :require_connect_auth, false)
+    end)
+
+    assert :error = UserSocket.connect(%{}, %Phoenix.Socket{}, %{})
+    assert :error = UserSocket.connect(%{"api_key" => "invalid"}, %Phoenix.Socket{}, %{})
+  end
 end

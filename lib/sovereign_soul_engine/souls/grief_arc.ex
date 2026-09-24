@@ -23,7 +23,16 @@ defmodule SovereignSoulEngine.Souls.GriefArc do
 
   def changeset(arc, attrs) do
     arc
-    |> cast(attrs, [:character_id, :subject, :loss_type, :stage, :intensity, :triggered_at, :last_progressed_at, :is_resolved])
+    |> cast(attrs, [
+      :character_id,
+      :subject,
+      :loss_type,
+      :stage,
+      :intensity,
+      :triggered_at,
+      :last_progressed_at,
+      :is_resolved
+    ])
     |> validate_required([:character_id, :subject, :triggered_at])
     |> validate_inclusion(:stage, @valid_stages)
     |> validate_inclusion(:loss_type, @valid_loss_types)

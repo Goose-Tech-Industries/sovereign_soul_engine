@@ -38,9 +38,11 @@ defmodule SovereignSoulEngine.Memories.DreamLoop do
     dream_residue = SovereignSoulEngine.Memories.DreamResidue.synthesize(character_id)
 
     # Apply lingering subconscious waking emotional deltas
-    if is_map(dream_residue.waking_emotional_delta) and map_size(dream_residue.waking_emotional_delta) > 0 do
+    if is_map(dream_residue.waking_emotional_delta) and
+         map_size(dream_residue.waking_emotional_delta) > 0 do
       apply_dream_deltas(character_id, dream_residue.waking_emotional_delta)
     end
+
     commit_ledger_dream_entry(character_id, emotional_res, distillation_res, correlation_id)
 
     # Broadcast dream completion on PubSub
@@ -81,7 +83,11 @@ defmodule SovereignSoulEngine.Memories.DreamLoop do
           %{},
           fn emotion, acc ->
             current = Map.get(emotional_state, emotion, 0) || 0
-            base = Map.get(baseline, emotion, Map.get(baseline, Atom.to_string(emotion), current)) || current
+
+            base =
+              Map.get(baseline, emotion, Map.get(baseline, Atom.to_string(emotion), current)) ||
+                current
+
             new_val = round(current - (current - base) * decay_factor)
             clamped = max(0, min(100, new_val))
             Map.put(acc, emotion, clamped)
@@ -166,7 +172,9 @@ defmodule SovereignSoulEngine.Memories.DreamLoop do
       subject_character_id: subject_id,
       category: "core",
       summary: distilled_summary,
-      details: %{"description" => "Consolidated from #{length(group)} events during dream sleep cycle."},
+      details: %{
+        "description" => "Consolidated from #{length(group)} events during dream sleep cycle."
+      },
       importance: min(100, avg_importance + 20),
       emotional_intensity: avg_emotional_intensity,
       valence: 0.0,
@@ -195,7 +203,8 @@ defmodule SovereignSoulEngine.Memories.DreamLoop do
         entry_type: :dream_consolidation_completed,
         source: "dream_loop",
         label: "Dream Consolidation",
-        summary: "Dream loop completed: emotional residue settled, #{length(distilled)} memories distilled.",
+        summary:
+          "Dream loop completed: emotional residue settled, #{length(distilled)} memories distilled.",
         delta: %{
           emotional_decay: emotional_res,
           distilled_count: length(distilled)

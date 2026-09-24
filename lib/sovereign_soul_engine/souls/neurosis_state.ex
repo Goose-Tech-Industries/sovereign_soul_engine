@@ -39,6 +39,7 @@ defmodule SovereignSoulEngine.Souls.NeurosisState do
       # 1. Panic Spiral: Phobia trigger with high stress, or acute overwhelming terror
       phobia_triggered? and (stress >= 60 or fear >= 65) ->
         panic_intensity = min(100, fear + 25)
+
         %__MODULE__{
           state: :panic_spiral,
           intensity: panic_intensity,
@@ -60,6 +61,7 @@ defmodule SovereignSoulEngine.Souls.NeurosisState do
       # 2. Dissociation / Depersonalization: Extreme stress + deep emotional wound/shame
       stress >= 80 and (wound >= 60 or shame >= 75) ->
         dissoc_intensity = min(100, div(stress + wound, 2))
+
         %__MODULE__{
           state: :dissociation,
           intensity: dissoc_intensity,
@@ -69,7 +71,8 @@ defmodule SovereignSoulEngine.Souls.NeurosisState do
             "Derealization (environment feels synthetic or muffled)",
             "Absence of autonomic emotional reaction"
           ],
-          cognitive_filter: "Ego boundary collapsed. Perceptions are distant, muffled, and detached.",
+          cognitive_filter:
+            "Ego boundary collapsed. Perceptions are distant, muffled, and detached.",
           prompt_directive: """
           ACUTE NEUROSIS — DISSOCIATION / DEPERSONALIZATION (Intensity #{dissoc_intensity}/100):
           You have detached from your own emotions to survive overwhelming psychological trauma.
@@ -82,6 +85,7 @@ defmodule SovereignSoulEngine.Souls.NeurosisState do
       # 3. Paranoid Ideation: Severe fear paired with complete trust collapse
       fear >= 70 and (anger >= 50 or wound >= 50) ->
         paranoia_intensity = min(100, div(fear + anger + wound, 3))
+
         %__MODULE__{
           state: :paranoia,
           intensity: paranoia_intensity,
@@ -103,6 +107,7 @@ defmodule SovereignSoulEngine.Souls.NeurosisState do
       # 4. Depressive Inertia: Overwhelming sadness, psychic exhaustion, and fatigue
       sadness >= 75 and (fatigue >= 60 or pain >= 50) ->
         inertia_intensity = min(100, div(sadness + fatigue, 2))
+
         %__MODULE__{
           state: :depressive_inertia,
           intensity: inertia_intensity,
@@ -112,7 +117,8 @@ defmodule SovereignSoulEngine.Souls.NeurosisState do
             "Exhaustion carrying every spoken sentence",
             "Zero proactive motivation"
           ],
-          cognitive_filter: "Hopeless resignation. All effort feels physically and spiritually impossible.",
+          cognitive_filter:
+            "Hopeless resignation. All effort feels physically and spiritually impossible.",
           prompt_directive: """
           ACUTE NEUROSIS — DEPRESSIVE INERTIA (Intensity #{inertia_intensity}/100):
           You are crushed by profound depressive exhaustion. Every sentence takes physical effort to pronounce.

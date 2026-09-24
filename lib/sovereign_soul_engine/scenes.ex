@@ -20,6 +20,7 @@ defmodule SovereignSoulEngine.Scenes do
 
   def list_autonomous_scenes(opts \\ []) do
     limit = Keyword.get(opts, :limit, 20)
+
     Repo.all(
       from s in Scene,
         where: s.is_autonomous == true,

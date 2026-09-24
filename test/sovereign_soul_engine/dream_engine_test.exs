@@ -16,7 +16,9 @@ defmodule SovereignSoulEngine.Souls.DreamEngineTest do
     %{character: char}
   end
 
-  test "consolidate_and_dream/2 synthesizes symbolic dream and updates metadata", %{character: character} do
+  test "consolidate_and_dream/2 synthesizes symbolic dream and updates metadata", %{
+    character: character
+  } do
     {:ok, dream} = DreamEngine.consolidate_and_dream(character.id)
 
     assert is_binary(dream.id)

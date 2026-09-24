@@ -80,7 +80,9 @@ defmodule SovereignSoulEngineWeb.ChatTrialAndCreationTest do
       assert html =~ "⚡ Upgrade Now"
 
       # Attempting to send message 16 should trigger upgrade modal and not send message
-      render_submit(element(view, "#chat-form"), %{message: %{content: "Another message past limit"}})
+      render_submit(element(view, "#chat-form"), %{
+        message: %{content: "Another message past limit"}
+      })
 
       updated_html = render(view)
       assert updated_html =~ "You have reached your 15 free trial messages"
@@ -90,7 +92,8 @@ defmodule SovereignSoulEngineWeb.ChatTrialAndCreationTest do
     end
 
     test "paid subscription user has unlimited messages", %{conn: conn, user: user} do
-      {:ok, _user} = Accounts.update_user_subscription(user, %{subscription_tier: "companion_1499"})
+      {:ok, _user} =
+        Accounts.update_user_subscription(user, %{subscription_tier: "companion_1499"})
 
       {:ok, _view, html} = live(conn, ~p"/sse/chat")
 
@@ -142,7 +145,9 @@ defmodule SovereignSoulEngineWeb.ChatTrialAndCreationTest do
       assert updated_html =~ "Welcome. I&#39;ve been waiting for you."
 
       # Verify database record
-      seraphina = Characters.list_companions_for_user(user.id) |> Enum.find(&(&1.name == "Seraphina"))
+      seraphina =
+        Characters.list_companions_for_user(user.id) |> Enum.find(&(&1.name == "Seraphina"))
+
       assert seraphina != nil
       assert seraphina.user_id == user.id
       assert seraphina.in_living_world == false

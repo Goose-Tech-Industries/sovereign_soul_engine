@@ -38,7 +38,9 @@ defmodule Mix.Tasks.Sse.SetByok do
             )
 
           {:error, :invalid_provider} ->
-            Mix.raise("unknown provider #{inspect(provider)} — must be one of: anthropic, openai, deepseek, xai, gemini")
+            Mix.raise(
+              "unknown provider #{inspect(provider)} — must be one of: anthropic, openai, deepseek, xai, gemini"
+            )
 
           {:error, :key_test_failed, reason} ->
             Mix.raise("key rejected — test call to #{provider} failed: #{inspect(reason)}")

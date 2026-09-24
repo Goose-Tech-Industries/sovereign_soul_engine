@@ -35,7 +35,8 @@ defmodule SovereignSoulEngine.Characters do
   """
   def list_companions_for_user(user_id) do
     from(c in Character,
-      where: (is_nil(c.user_id) or c.user_id == ^user_id) and c.kind == "npc" and c.status == "active",
+      where:
+        (is_nil(c.user_id) or c.user_id == ^user_id) and c.kind == "npc" and c.status == "active",
       order_by: [asc: c.name]
     )
     |> Repo.all()
@@ -70,7 +71,8 @@ defmodule SovereignSoulEngine.Characters do
   @doc """
   Toggles whether a companion participates in the living world.
   """
-  def set_companion_living_world(%Character{} = character, in_living_world) when is_boolean(in_living_world) do
+  def set_companion_living_world(%Character{} = character, in_living_world)
+      when is_boolean(in_living_world) do
     update_character(character, %{in_living_world: in_living_world})
   end
 
@@ -114,7 +116,10 @@ defmodule SovereignSoulEngine.Characters do
   def get_or_create_external_player(external_source, external_id, name) do
     case Repo.get_by(Character, external_source: external_source, external_id: external_id) do
       nil ->
-        slug = "#{external_source}-#{external_id}" |> String.downcase() |> String.replace(~r/[^a-z0-9-]/, "-")
+        slug =
+          "#{external_source}-#{external_id}"
+          |> String.downcase()
+          |> String.replace(~r/[^a-z0-9-]/, "-")
 
         %Character{}
         |> Character.changeset(%{

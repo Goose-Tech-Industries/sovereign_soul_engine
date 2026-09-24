@@ -64,10 +64,12 @@ defmodule SovereignSoulEngine.Souls.IntentEngine do
       fatigue >= @fatigue_idle_threshold
   end
 
-  defp incapacitation_reason(%{pain: pain}) when pain >= @pain_idle_threshold, do: "in too much pain to move"
+  defp incapacitation_reason(%{pain: pain}) when pain >= @pain_idle_threshold,
+    do: "in too much pain to move"
 
-  defp incapacitation_reason(%{illness_severity: illness}) when illness >= @illness_idle_threshold,
-    do: "too ill to move"
+  defp incapacitation_reason(%{illness_severity: illness})
+       when illness >= @illness_idle_threshold,
+       do: "too ill to move"
 
   defp incapacitation_reason(_), do: "too exhausted to move"
 

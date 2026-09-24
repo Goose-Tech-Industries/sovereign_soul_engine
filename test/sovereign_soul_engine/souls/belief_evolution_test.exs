@@ -64,6 +64,7 @@ defmodule SovereignSoulEngine.Souls.BeliefEvolutionTest do
     } do
       # Set up profile with cynical solitary belief
       profile = Souls.get_soul_profile_by_character(char_a.id)
+
       {:ok, updated_profile} =
         Souls.update_soul_profile(profile, %{
           core_values: ["Strength is self-reliance", "Watch your own back"]

@@ -22,7 +22,9 @@ defmodule SovereignSoulEngine.Voice.ProsodyEngine do
   """
   def compute_prosody(character_or_neurochem, opts \\ []) do
     neurochem = extract_neurochem(character_or_neurochem)
-    circadian = Keyword.get(opts, :circadian) || CircadianEngine.current_state(character_or_neurochem)
+
+    circadian =
+      Keyword.get(opts, :circadian) || CircadianEngine.current_state(character_or_neurochem)
 
     valence = Map.get(neurochem, :valence, 50.0)
     arousal = Map.get(neurochem, :arousal, 50.0)
@@ -35,9 +37,9 @@ defmodule SovereignSoulEngine.Voice.ProsodyEngine do
     # 1. Pitch Shift (-3.5 to +3.5 semitones)
     # High cortisol tightens vocal cords (+); oxytocin and night focus warm/drop pitch (-); melatonin deepens tone
     raw_pitch =
-      (cortisol / 100.0) * 3.0 -
-      (oxytocin / 100.0) * 1.8 -
-      (melatonin / 100.0) * 1.5
+      cortisol / 100.0 * 3.0 -
+        oxytocin / 100.0 * 1.8 -
+        melatonin / 100.0 * 1.5
 
     pitch_st = min(max(raw_pitch, -3.5), 3.5)
 
@@ -45,15 +47,15 @@ defmodule SovereignSoulEngine.Voice.ProsodyEngine do
     # High dopamine/arousal accelerates tempo; melatonin/groggy slows pace
     raw_rate =
       1.0 +
-      ((dopamine - 50.0) / 100.0) * 0.35 +
-      ((arousal - 50.0) / 100.0) * 0.20 -
-      ((melatonin - 10.0) / 100.0) * 0.30
+        (dopamine - 50.0) / 100.0 * 0.35 +
+        (arousal - 50.0) / 100.0 * 0.20 -
+        (melatonin - 10.0) / 100.0 * 0.30
 
     rate_multiplier = min(max(raw_rate, 0.72), 1.35)
 
     # 3. Breathiness (0.10 to 0.95)
     # Intimacy/oxytocin and late night winding down elevate breathiness
-    raw_breath = 0.20 + (oxytocin / 100.0) * 0.45 + (melatonin / 100.0) * 0.30
+    raw_breath = 0.20 + oxytocin / 100.0 * 0.45 + melatonin / 100.0 * 0.30
     breathiness = min(max(raw_breath, 0.10), 0.95)
 
     # 4. Vocal Tremor / Jitter (0.0 to 0.85)
@@ -118,15 +120,15 @@ defmodule SovereignSoulEngine.Voice.ProsodyEngine do
     clean_text = String.replace(annotated, ~r/<break[^>]*\/>/, " ")
 
     if ElevenLabs.configured?() and not Keyword.get(opts, :force_local, false) do
-      ElevenLabs.generate_speech(clean_text, [
+      ElevenLabs.generate_speech(clean_text,
         voice_settings: prosody.eleven_labs_settings,
         voice_id: opts[:voice_id]
-      ])
+      )
     else
-      LocalTTS.generate_speech(clean_text, [
+      LocalTTS.generate_speech(clean_text,
         character: character && character.slug,
         voice: opts[:voice]
-      ])
+      )
     end
   end
 
@@ -167,6 +169,7 @@ defmodule SovereignSoulEngine.Voice.ProsodyEngine do
           dopamine: safe_float(Map.get(nc, "dopamine"), 50.0),
           oxytocin: safe_float(Map.get(nc, "oxytocin"), 50.0)
         }
+
       _ ->
         %{valence: 50.0, arousal: 50.0, cortisol: 15.0, dopamine: 50.0, oxytocin: 50.0}
     end
@@ -182,20 +185,24 @@ defmodule SovereignSoulEngine.Voice.ProsodyEngine do
     }
   end
 
-  defp extract_neurochem(_), do: %{valence: 50.0, arousal: 50.0, cortisol: 15.0, dopamine: 50.0, oxytocin: 50.0}
+  defp extract_neurochem(_),
+    do: %{valence: 50.0, arousal: 50.0, cortisol: 15.0, dopamine: 50.0, oxytocin: 50.0}
 
   defp safe_float(nil, default), do: default * 1.0
   defp safe_float(v, _default) when is_float(v), do: v
   defp safe_float(v, _default) when is_integer(v), do: v * 1.0
+
   defp safe_float(v, default) when is_binary(v) do
     case Float.parse(v) do
       {f, _} -> f
       :error -> default * 1.0
     end
   end
+
   defp safe_float(_, default), do: default * 1.0
 
   defp resolve_character(%Character{} = c), do: c
+
   defp resolve_character(id_or_slug) when is_binary(id_or_slug) do
     case Characters.get_character_by_slug(id_or_slug) do
       nil ->
@@ -203,9 +210,11 @@ defmodule SovereignSoulEngine.Voice.ProsodyEngine do
           {:ok, uuid} -> Characters.get_character(uuid)
           :error -> nil
         end
+
       char ->
         char
     end
   end
+
   defp resolve_character(_), do: nil
 end

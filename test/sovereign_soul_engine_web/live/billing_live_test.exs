@@ -50,7 +50,10 @@ defmodule SovereignSoulEngineWeb.BillingLiveTest do
 
     html =
       view
-      |> element("button[phx-value-tier_id='archon_1999']", "⚡ Test Switch to Sovereign Archon (Dev Bypass)")
+      |> element(
+        "button[phx-value-tier_id='archon_1999']",
+        "⚡ Test Switch to Sovereign Archon (Dev Bypass)"
+      )
       |> render_click()
 
     assert html =~ "Activated Sovereign Archon"
@@ -58,7 +61,8 @@ defmodule SovereignSoulEngineWeb.BillingLiveTest do
   end
 
   test "handles completed checkout session return", %{conn: conn} do
-    {:ok, _view, html} = live(conn, "/sse/billing?session_id=cs_test_mock_123&tier=companion_1499")
+    {:ok, _view, html} =
+      live(conn, "/sse/billing?session_id=cs_test_mock_123&tier=companion_1499")
 
     assert html =~ "Stripe checkout successful" or html =~ "Sovereign Companion"
   end

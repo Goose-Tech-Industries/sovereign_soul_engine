@@ -60,7 +60,10 @@ defmodule SovereignSoulEngineWeb.Api.SocialPostController do
       else
         companions =
           Characters.list_characters()
-          |> Enum.filter(&(&1.kind == "npc" and &1.status == "active" and &1.slug in ~w(maya ravina valeria cyra)))
+          |> Enum.filter(
+            &(&1.kind == "npc" and &1.status == "active" and
+                &1.slug in ~w(maya ravina valeria cyra))
+          )
 
         case Enum.random(companions) do
           nil -> {:error, :no_active_companions}

@@ -37,7 +37,11 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "serene")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "Morrígan") or String.contains?(&1, "sanctuary"))
+
+      assert Enum.any?(
+               posts,
+               &(String.contains?(&1, "Morrígan") or String.contains?(&1, "sanctuary"))
+             )
     end
 
     test "returns at least 4 unique thoughts for Kael" do
@@ -61,7 +65,11 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "vigilant")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "Bastion") or String.contains?(&1, "sentinel"))
+
+      assert Enum.any?(
+               posts,
+               &(String.contains?(&1, "Bastion") or String.contains?(&1, "sentinel"))
+             )
     end
 
     test "returns at least 4 unique thoughts for Ravina" do
@@ -69,7 +77,7 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "calculating")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "Mire") or String.contains?(&1, "Leverage"))
+      assert Enum.any?(posts, &(String.contains?(&1, "Mire") or String.contains?(&1, "Leverage")))
     end
 
     test "returns at least 4 unique thoughts for Maya" do
@@ -77,7 +85,7 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "focused")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "Steel") or String.contains?(&1, "forge"))
+      assert Enum.any?(posts, &(String.contains?(&1, "Steel") or String.contains?(&1, "forge")))
     end
 
     test "returns at least 4 unique thoughts for Valeria" do
@@ -93,7 +101,11 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "analytical")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "telemetry") or String.contains?(&1, "sensor"))
+
+      assert Enum.any?(
+               posts,
+               &(String.contains?(&1, "telemetry") or String.contains?(&1, "sensor"))
+             )
     end
 
     test "returns at least 4 unique thoughts for Bram" do
@@ -101,7 +113,11 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "jovial")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "Boar's Tusk") or String.contains?(&1, "mead"))
+
+      assert Enum.any?(
+               posts,
+               &(String.contains?(&1, "Boar's Tusk") or String.contains?(&1, "mead"))
+             )
     end
 
     test "returns at least 4 unique thoughts for Elowen" do
@@ -109,7 +125,11 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "gentle")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "remedy") or String.contains?(&1, "medicine"))
+
+      assert Enum.any?(
+               posts,
+               &(String.contains?(&1, "remedy") or String.contains?(&1, "medicine"))
+             )
     end
 
     test "returns at least 4 unique thoughts for Vael" do
@@ -117,7 +137,7 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "grim")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "dead") or String.contains?(&1, "cairns"))
+      assert Enum.any?(posts, &(String.contains?(&1, "dead") or String.contains?(&1, "cairns")))
     end
 
     test "returns at least 4 unique thoughts for Lyra" do
@@ -125,7 +145,7 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "creative")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "loom") or String.contains?(&1, "tapestry"))
+      assert Enum.any?(posts, &(String.contains?(&1, "loom") or String.contains?(&1, "tapestry")))
     end
 
     test "returns at least 4 unique thoughts for Sera" do
@@ -133,7 +153,12 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "lyrical")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "lute") or String.contains?(&1, "ballad") or String.contains?(&1, "melody"))
+
+      assert Enum.any?(
+               posts,
+               &(String.contains?(&1, "lute") or String.contains?(&1, "ballad") or
+                   String.contains?(&1, "melody"))
+             )
     end
 
     test "returns at least 4 unique thoughts for Lys" do
@@ -141,7 +166,12 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "focused")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "alembic") or String.contains?(&1, "distill") or String.contains?(&1, "precipitate"))
+
+      assert Enum.any?(
+               posts,
+               &(String.contains?(&1, "alembic") or String.contains?(&1, "distill") or
+                   String.contains?(&1, "precipitate"))
+             )
     end
 
     test "returns at least 4 unique thoughts for Tamsin" do
@@ -149,7 +179,12 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "measured")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "map") or String.contains?(&1, "sextant") or String.contains?(&1, "parchment"))
+
+      assert Enum.any?(
+               posts,
+               &(String.contains?(&1, "map") or String.contains?(&1, "sextant") or
+                   String.contains?(&1, "parchment"))
+             )
     end
 
     test "returns at least 4 unique thoughts for Oswin" do
@@ -157,7 +192,12 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "steady")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "granite") or String.contains?(&1, "chisel") or String.contains?(&1, "stone"))
+
+      assert Enum.any?(
+               posts,
+               &(String.contains?(&1, "granite") or String.contains?(&1, "chisel") or
+                   String.contains?(&1, "stone"))
+             )
     end
 
     test "returns at least 4 unique thoughts for Mara" do
@@ -165,7 +205,12 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "patient")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "drift net") or String.contains?(&1, "Blackwater") or String.contains?(&1, "river"))
+
+      assert Enum.any?(
+               posts,
+               &(String.contains?(&1, "drift net") or String.contains?(&1, "Blackwater") or
+                   String.contains?(&1, "river"))
+             )
     end
 
     test "returns at least 4 unique thoughts for Hale" do
@@ -173,7 +218,12 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "alert")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "falcon") or String.contains?(&1, "tiercel") or String.contains?(&1, "hawk"))
+
+      assert Enum.any?(
+               posts,
+               &(String.contains?(&1, "falcon") or String.contains?(&1, "tiercel") or
+                   String.contains?(&1, "hawk"))
+             )
     end
 
     test "returns at least 4 unique thoughts for Isolde" do
@@ -181,7 +231,12 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "clinical")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "bandage") or String.contains?(&1, "surgical") or String.contains?(&1, "pulse"))
+
+      assert Enum.any?(
+               posts,
+               &(String.contains?(&1, "bandage") or String.contains?(&1, "surgical") or
+                   String.contains?(&1, "pulse"))
+             )
     end
 
     test "returns at least 4 unique thoughts for Rook" do
@@ -189,7 +244,12 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "silent")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "wolf") or String.contains?(&1, "scout") or String.contains?(&1, "trail"))
+
+      assert Enum.any?(
+               posts,
+               &(String.contains?(&1, "wolf") or String.contains?(&1, "scout") or
+                   String.contains?(&1, "trail"))
+             )
     end
 
     test "returns at least 4 unique thoughts for Bella" do
@@ -197,7 +257,12 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "cheerful")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "sourdough") or String.contains?(&1, "loaves") or String.contains?(&1, "bread"))
+
+      assert Enum.any?(
+               posts,
+               &(String.contains?(&1, "sourdough") or String.contains?(&1, "loaves") or
+                   String.contains?(&1, "bread"))
+             )
     end
 
     test "returns at least 4 unique thoughts for Jasper" do
@@ -205,7 +270,12 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "boisterous")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "stout") or String.contains?(&1, "cask") or String.contains?(&1, "keg"))
+
+      assert Enum.any?(
+               posts,
+               &(String.contains?(&1, "stout") or String.contains?(&1, "cask") or
+                   String.contains?(&1, "keg"))
+             )
     end
 
     test "returns at least 4 unique thoughts for Nadia" do
@@ -213,7 +283,12 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "calm")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "candle") or String.contains?(&1, "tallow") or String.contains?(&1, "beeswax"))
+
+      assert Enum.any?(
+               posts,
+               &(String.contains?(&1, "candle") or String.contains?(&1, "tallow") or
+                   String.contains?(&1, "beeswax"))
+             )
     end
 
     test "returns at least 4 unique thoughts for Percival" do
@@ -221,7 +296,12 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "resonant")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "herald") or String.contains?(&1, "decree") or String.contains?(&1, "horn"))
+
+      assert Enum.any?(
+               posts,
+               &(String.contains?(&1, "herald") or String.contains?(&1, "decree") or
+                   String.contains?(&1, "horn"))
+             )
     end
 
     test "returns at least 4 unique thoughts for Rowan" do
@@ -229,7 +309,12 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "steady")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "oak") or String.contains?(&1, "joinery") or String.contains?(&1, "wood"))
+
+      assert Enum.any?(
+               posts,
+               &(String.contains?(&1, "oak") or String.contains?(&1, "joinery") or
+                   String.contains?(&1, "wood"))
+             )
     end
 
     test "returns at least 4 unique thoughts for Sable" do
@@ -237,7 +322,12 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "gruff")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "leather") or String.contains?(&1, "hide") or String.contains?(&1, "tallow"))
+
+      assert Enum.any?(
+               posts,
+               &(String.contains?(&1, "leather") or String.contains?(&1, "hide") or
+                   String.contains?(&1, "tallow"))
+             )
     end
 
     test "returns at least 4 unique thoughts for Thorne" do
@@ -245,7 +335,12 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "hardened")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "mine") or String.contains?(&1, "ore") or String.contains?(&1, "pick"))
+
+      assert Enum.any?(
+               posts,
+               &(String.contains?(&1, "mine") or String.contains?(&1, "ore") or
+                   String.contains?(&1, "pick"))
+             )
     end
 
     test "returns at least 4 unique thoughts for Una" do
@@ -253,7 +348,12 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "earthy")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "clay") or String.contains?(&1, "wheel") or String.contains?(&1, "kiln"))
+
+      assert Enum.any?(
+               posts,
+               &(String.contains?(&1, "clay") or String.contains?(&1, "wheel") or
+                   String.contains?(&1, "kiln"))
+             )
     end
 
     test "returns at least 4 unique thoughts for Wren" do
@@ -261,7 +361,12 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "focused")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "glass") or String.contains?(&1, "blowpipe") or String.contains?(&1, "alembic"))
+
+      assert Enum.any?(
+               posts,
+               &(String.contains?(&1, "glass") or String.contains?(&1, "blowpipe") or
+                   String.contains?(&1, "alembic"))
+             )
     end
 
     test "returns at least 4 unique thoughts for Ansel" do
@@ -269,7 +374,12 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "even")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "mill") or String.contains?(&1, "spelt") or String.contains?(&1, "flour"))
+
+      assert Enum.any?(
+               posts,
+               &(String.contains?(&1, "mill") or String.contains?(&1, "spelt") or
+                   String.contains?(&1, "flour"))
+             )
     end
 
     test "returns at least 4 unique thoughts for Briar" do
@@ -277,7 +387,12 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "expressive")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "dye") or String.contains?(&1, "indigo") or String.contains?(&1, "madder"))
+
+      assert Enum.any?(
+               posts,
+               &(String.contains?(&1, "dye") or String.contains?(&1, "indigo") or
+                   String.contains?(&1, "madder"))
+             )
     end
 
     test "returns at least 4 unique thoughts for Cedric" do
@@ -285,7 +400,12 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "plain")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "wagon") or String.contains?(&1, "wheel") or String.contains?(&1, "axle"))
+
+      assert Enum.any?(
+               posts,
+               &(String.contains?(&1, "wagon") or String.contains?(&1, "wheel") or
+                   String.contains?(&1, "axle"))
+             )
     end
 
     test "returns at least 4 unique thoughts for Galen" do
@@ -293,7 +413,12 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "learned")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "remedy") or String.contains?(&1, "tincture") or String.contains?(&1, "botanical"))
+
+      assert Enum.any?(
+               posts,
+               &(String.contains?(&1, "remedy") or String.contains?(&1, "tincture") or
+                   String.contains?(&1, "botanical"))
+             )
     end
 
     test "returns at least 4 unique thoughts for Hollis" do
@@ -301,7 +426,12 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "handy")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "boot") or String.contains?(&1, "sole") or String.contains?(&1, "leather"))
+
+      assert Enum.any?(
+               posts,
+               &(String.contains?(&1, "boot") or String.contains?(&1, "sole") or
+                   String.contains?(&1, "leather"))
+             )
     end
 
     test "returns at least 4 unique thoughts for Ivy" do
@@ -309,7 +439,12 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "methodical")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "archive") or String.contains?(&1, "codices") or String.contains?(&1, "manuscript"))
+
+      assert Enum.any?(
+               posts,
+               &(String.contains?(&1, "archive") or String.contains?(&1, "codices") or
+                   String.contains?(&1, "manuscript"))
+             )
     end
 
     test "returns at least 4 unique thoughts for Kestrel" do
@@ -317,7 +452,12 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "quiet")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "bow") or String.contains?(&1, "yew") or String.contains?(&1, "feather"))
+
+      assert Enum.any?(
+               posts,
+               &(String.contains?(&1, "bow") or String.contains?(&1, "yew") or
+                   String.contains?(&1, "feather"))
+             )
     end
 
     test "returns at least 4 unique thoughts for Lark" do
@@ -325,7 +465,12 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "quick")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "dispatch") or String.contains?(&1, "messenger") or String.contains?(&1, "scroll"))
+
+      assert Enum.any?(
+               posts,
+               &(String.contains?(&1, "dispatch") or String.contains?(&1, "messenger") or
+                   String.contains?(&1, "scroll"))
+             )
     end
 
     test "returns at least 4 unique thoughts for Merritt" do
@@ -333,7 +478,12 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "steady")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "horse") or String.contains?(&1, "stable") or String.contains?(&1, "stallion"))
+
+      assert Enum.any?(
+               posts,
+               &(String.contains?(&1, "horse") or String.contains?(&1, "stable") or
+                   String.contains?(&1, "stallion"))
+             )
     end
 
     test "returns at least 4 unique thoughts for Nissa" do
@@ -341,7 +491,12 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "loyal")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "hound") or String.contains?(&1, "mastiff") or String.contains?(&1, "pack"))
+
+      assert Enum.any?(
+               posts,
+               &(String.contains?(&1, "hound") or String.contains?(&1, "mastiff") or
+                   String.contains?(&1, "pack"))
+             )
     end
 
     test "returns at least 4 unique thoughts for Orin" do
@@ -349,7 +504,12 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "vigilant")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "watch") or String.contains?(&1, "lantern") or String.contains?(&1, "patrol"))
+
+      assert Enum.any?(
+               posts,
+               &(String.contains?(&1, "watch") or String.contains?(&1, "lantern") or
+                   String.contains?(&1, "patrol"))
+             )
     end
 
     test "returns at least 4 unique thoughts for Rhea" do
@@ -357,7 +517,12 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "sure")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "ferry") or String.contains?(&1, "river") or String.contains?(&1, "barge"))
+
+      assert Enum.any?(
+               posts,
+               &(String.contains?(&1, "ferry") or String.contains?(&1, "river") or
+                   String.contains?(&1, "barge"))
+             )
     end
 
     test "returns at least 4 unique thoughts for Soren" do
@@ -365,7 +530,12 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "peaceful")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "garden") or String.contains?(&1, "silence") or String.contains?(&1, "temple"))
+
+      assert Enum.any?(
+               posts,
+               &(String.contains?(&1, "garden") or String.contains?(&1, "silence") or
+                   String.contains?(&1, "temple"))
+             )
     end
 
     test "returns at least 4 unique thoughts for Tavish" do
@@ -373,7 +543,12 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "affable")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "watergate") or String.contains?(&1, "culvert") or String.contains?(&1, "cargo"))
+
+      assert Enum.any?(
+               posts,
+               &(String.contains?(&1, "watergate") or String.contains?(&1, "culvert") or
+                   String.contains?(&1, "cargo"))
+             )
     end
 
     test "returns at least 4 unique thoughts for Ulric" do
@@ -381,7 +556,12 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "strong")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "basalt") or String.contains?(&1, "gargoyle") or String.contains?(&1, "chisel"))
+
+      assert Enum.any?(
+               posts,
+               &(String.contains?(&1, "basalt") or String.contains?(&1, "gargoyle") or
+                   String.contains?(&1, "chisel"))
+             )
     end
 
     test "returns at least 4 unique thoughts for Vesper" do
@@ -389,7 +569,12 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "stargazing")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "astrolabe") or String.contains?(&1, "planet") or String.contains?(&1, "star"))
+
+      assert Enum.any?(
+               posts,
+               &(String.contains?(&1, "astrolabe") or String.contains?(&1, "planet") or
+                   String.contains?(&1, "star"))
+             )
     end
 
     test "returns at least 4 unique thoughts for Winona" do
@@ -397,7 +582,12 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "warm")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "cry") or String.contains?(&1, "generation") or String.contains?(&1, "birth"))
+
+      assert Enum.any?(
+               posts,
+               &(String.contains?(&1, "cry") or String.contains?(&1, "generation") or
+                   String.contains?(&1, "birth"))
+             )
     end
 
     test "returns at least 4 unique thoughts for Xanthe" do
@@ -405,7 +595,12 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "patient")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "frost-rose") or String.contains?(&1, "soil") or String.contains?(&1, "garden"))
+
+      assert Enum.any?(
+               posts,
+               &(String.contains?(&1, "frost-rose") or String.contains?(&1, "soil") or
+                   String.contains?(&1, "garden"))
+             )
     end
 
     test "returns at least 4 unique thoughts for Yorick" do
@@ -413,7 +608,12 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "somber")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "cairn") or String.contains?(&1, "barrow") or String.contains?(&1, "slate"))
+
+      assert Enum.any?(
+               posts,
+               &(String.contains?(&1, "cairn") or String.contains?(&1, "barrow") or
+                   String.contains?(&1, "slate"))
+             )
     end
   end
 
@@ -423,7 +623,7 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "steady")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "anvil") or String.contains?(&1, "forge"))
+      assert Enum.any?(posts, &(String.contains?(&1, "anvil") or String.contains?(&1, "forge")))
     end
 
     test "matches alchemist archetype keywords" do
@@ -431,7 +631,11 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "focused")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "alembic") or String.contains?(&1, "retorts"))
+
+      assert Enum.any?(
+               posts,
+               &(String.contains?(&1, "alembic") or String.contains?(&1, "retorts"))
+             )
     end
 
     test "matches herbalist apothecary keywords" do
@@ -439,7 +643,7 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "calm")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "yarrow") or String.contains?(&1, "herbal"))
+      assert Enum.any?(posts, &(String.contains?(&1, "yarrow") or String.contains?(&1, "herbal")))
     end
 
     test "matches guard / sentry keywords" do
@@ -447,7 +651,7 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "alert")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "watch") or String.contains?(&1, "patrol"))
+      assert Enum.any?(posts, &(String.contains?(&1, "watch") or String.contains?(&1, "patrol")))
     end
 
     test "matches tavern innkeeper keywords" do
@@ -455,7 +659,7 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "hospitable")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "hearth") or String.contains?(&1, "loaves"))
+      assert Enum.any?(posts, &(String.contains?(&1, "hearth") or String.contains?(&1, "loaves")))
     end
 
     test "matches minstrel / bard keywords" do
@@ -463,7 +667,7 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "lyrical")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "lute") or String.contains?(&1, "verses"))
+      assert Enum.any?(posts, &(String.contains?(&1, "lute") or String.contains?(&1, "verses")))
     end
 
     test "matches weaver / textile keywords" do
@@ -471,7 +675,7 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "patient")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "loom") or String.contains?(&1, "wool"))
+      assert Enum.any?(posts, &(String.contains?(&1, "loom") or String.contains?(&1, "wool")))
     end
 
     test "matches stone mason keywords" do
@@ -479,7 +683,11 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "sturdy")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "granite") or String.contains?(&1, "chisel"))
+
+      assert Enum.any?(
+               posts,
+               &(String.contains?(&1, "granite") or String.contains?(&1, "chisel"))
+             )
     end
 
     test "matches merchant / trader keywords" do
@@ -487,11 +695,15 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       posts = SocialFeed.candidate_fallback_posts(char, "ambitious")
 
       assert length(posts) >= 4
-      assert Enum.any?(posts, &String.contains?(&1, "ledger") or String.contains?(&1, "market"))
+      assert Enum.any?(posts, &(String.contains?(&1, "ledger") or String.contains?(&1, "market")))
     end
 
     test "provides rich general candidate pool for unclassified souls" do
-      char = %Character{slug: "wanderer", description: "A mysterious traveler from the western peaks"}
+      char = %Character{
+        slug: "wanderer",
+        description: "A mysterious traveler from the western peaks"
+      }
+
       posts = SocialFeed.candidate_fallback_posts(char, "quiet")
 
       assert length(posts) >= 5
@@ -515,7 +727,11 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       neutral = SocialFeed.candidate_fallback_posts(char, "calm")
 
       assert length(tense) > length(neutral)
-      assert Enum.any?(tense, &String.contains?(&1, "jitter") or String.contains?(&1, "Anomaly"))
+
+      assert Enum.any?(
+               tense,
+               &(String.contains?(&1, "jitter") or String.contains?(&1, "Anomaly"))
+             )
     end
 
     test "appends wary thoughts when Quill is wary" do
@@ -524,7 +740,11 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       neutral = SocialFeed.candidate_fallback_posts(char, "calm")
 
       assert length(wary) > length(neutral)
-      assert Enum.any?(wary, &String.contains?(&1, "treaties") or String.contains?(&1, "register"))
+
+      assert Enum.any?(
+               wary,
+               &(String.contains?(&1, "treaties") or String.contains?(&1, "register"))
+             )
     end
   end
 
@@ -549,6 +769,7 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
       # It should NOT match any candidate exactly, but be a variation of one
       refute picked in candidates
       assert String.length(picked) > 10
+
       assert Enum.any?(
                [
                  "As dusk settles",
@@ -625,6 +846,7 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
 
       assert length(variations) >= 8
       assert length(Enum.uniq(variations)) == length(variations)
+
       for var <- variations do
         assert String.ends_with?(var, base)
       end
@@ -646,6 +868,7 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
 
       for {slug_a, pool_a} <- pools, {slug_b, pool_b} <- pools, slug_a < slug_b do
         intersection = MapSet.intersection(MapSet.new(pool_a), MapSet.new(pool_b))
+
         assert MapSet.size(intersection) == 0,
                "Found overlapping fallback thoughts between #{slug_a} and #{slug_b}: #{inspect(intersection)}"
       end
@@ -654,11 +877,15 @@ defmodule SovereignSoulEngine.Social.SocialFeedVarietyTest do
     test "matches smuggler and woodworker keywords for dynamic characters" do
       smuggler = %Character{slug: "rogue", description: "Clandestine harbor smuggler"}
       posts_s = SocialFeed.candidate_fallback_posts(smuggler, "wary")
-      assert Enum.any?(posts_s, &String.contains?(&1, "aqueducts") or String.contains?(&1, "cargo"))
+
+      assert Enum.any?(
+               posts_s,
+               &(String.contains?(&1, "aqueducts") or String.contains?(&1, "cargo"))
+             )
 
       woodworker = %Character{slug: "joiner", description: "Master carpenter of oak rafters"}
       posts_w = SocialFeed.candidate_fallback_posts(woodworker, "steady")
-      assert Enum.any?(posts_w, &String.contains?(&1, "oak") or String.contains?(&1, "rafters"))
+      assert Enum.any?(posts_w, &(String.contains?(&1, "oak") or String.contains?(&1, "rafters")))
     end
   end
 end

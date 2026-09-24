@@ -27,7 +27,9 @@ defmodule SovereignSoulEngine.Ledger.SoulLedger do
 
   @entry_types ~w(
     emotion_change relationship_change memory_created memory_recalled
-    memory_resolved memory_promoted action_proposed action_validated
+    memory_resolved memory_promoted memory_corrected memory_deleted memory_exported
+    fact_superseded
+    action_proposed action_validated
     action_resolved action_rejected event_injected scene_created
     scene_closed character_created soul_profile_updated wound_created
     scene_message_created

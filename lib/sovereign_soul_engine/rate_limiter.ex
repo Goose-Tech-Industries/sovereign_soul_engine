@@ -39,7 +39,14 @@ defmodule SovereignSoulEngine.RateLimiter do
 
   @impl true
   def init(:ok) do
-    :ets.new(@table, [:named_table, :public, :set, read_concurrency: true, write_concurrency: true])
+    :ets.new(@table, [
+      :named_table,
+      :public,
+      :set,
+      read_concurrency: true,
+      write_concurrency: true
+    ])
+
     schedule_sweep()
     {:ok, %{}}
   end
@@ -53,6 +60,11 @@ defmodule SovereignSoulEngine.RateLimiter do
     ])
 
     schedule_sweep()
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_info(_msg, state) do
     {:noreply, state}
   end
 

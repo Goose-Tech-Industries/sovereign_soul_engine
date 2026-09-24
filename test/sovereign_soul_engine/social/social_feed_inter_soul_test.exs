@@ -43,11 +43,18 @@ defmodule SovereignSoulEngine.Social.SocialFeedInterSoulTest do
     end
 
     assert fia.description =~ "empathetic" or fia.description =~ "jeweler"
-    assert cipher.description =~ "cryptographer" or cipher.description =~ "telemetry" or cipher.description =~ "architect"
+
+    assert cipher.description =~ "cryptographer" or cipher.description =~ "telemetry" or
+             cipher.description =~ "architect"
+
     assert dove.description =~ "shepherd" or dove.description =~ "Sanctuary"
     assert quill.description =~ "Chronicler" or quill.description =~ "archivist"
-    assert kael.description =~ "Harbormaster" or kael.description =~ "docks" or kael.description =~ "Blackwater"
-    assert egon.description =~ "sentinel" or egon.description =~ "soil" or egon.description =~ "King's Plaza"
+
+    assert kael.description =~ "Harbormaster" or kael.description =~ "docks" or
+             kael.description =~ "Blackwater"
+
+    assert egon.description =~ "sentinel" or egon.description =~ "soil" or
+             egon.description =~ "King's Plaza"
   end
 
   test "generate_npc_comment_reply provides rich, persona-specific responses to user comments", %{
@@ -65,7 +72,11 @@ defmodule SovereignSoulEngine.Social.SocialFeedInterSoulTest do
 
     # User comments on fear/shadow
     {:ok, _post, comment_1} =
-      SocialFeed.generate_npc_comment_reply(post.id, fia.id, "I fear the darkness in the lower ward.")
+      SocialFeed.generate_npc_comment_reply(
+        post.id,
+        fia.id,
+        "I fear the darkness in the lower ward."
+      )
 
     assert comment_1["author_slug"] == "fia"
     assert comment_1["content"] =~ "shadow" or comment_1["content"] =~ "heart"
@@ -76,14 +87,18 @@ defmodule SovereignSoulEngine.Social.SocialFeedInterSoulTest do
       SocialFeed.generate_npc_comment_reply(post.id, cipher.id, "Is the perimeter network safe?")
 
     assert comment_2["author_slug"] == "cipher"
-    assert comment_2["content"] =~ "cryptographic" or comment_2["content"] =~ "SHA-256" or comment_2["content"] =~ "Telemetry"
+
+    assert comment_2["content"] =~ "cryptographic" or comment_2["content"] =~ "SHA-256" or
+             comment_2["content"] =~ "Telemetry"
 
     # User comments to Corvus
     {:ok, _post, comment_3} =
       SocialFeed.generate_npc_comment_reply(post.id, corvus.id, "Keep watch tonight.")
 
     assert comment_3["author_slug"] == "corvus"
-    assert comment_3["content"] =~ "garrison" or comment_3["content"] =~ "alert" or comment_3["content"] =~ "perimeter"
+
+    assert comment_3["content"] =~ "garrison" or comment_3["content"] =~ "alert" or
+             comment_3["content"] =~ "perimeter"
   end
 
   test "generate_inter_soul_reply creates authentic peer dialogue between two NPCs", %{
@@ -106,12 +121,16 @@ defmodule SovereignSoulEngine.Social.SocialFeedInterSoulTest do
     {:ok, _post1, cipher_reply} = SocialFeed.generate_inter_soul_reply(fia_post.id, cipher.id)
     assert cipher_reply["author_slug"] == "cipher"
     assert cipher_reply["content"] =~ "Fia"
-    assert cipher_reply["content"] =~ "telemetry" or cipher_reply["content"] =~ "harmonic" or cipher_reply["content"] =~ "pulse"
+
+    assert cipher_reply["content"] =~ "telemetry" or cipher_reply["content"] =~ "harmonic" or
+             cipher_reply["content"] =~ "pulse"
 
     # Dove replies to Fia
     {:ok, updated_post, dove_reply} = SocialFeed.generate_inter_soul_reply(fia_post.id, dove.id)
     assert dove_reply["author_slug"] == "dove"
-    assert dove_reply["content"] =~ "Morrígan" or dove_reply["content"] =~ "sanctuary" or dove_reply["content"] =~ "fires"
+
+    assert dove_reply["content"] =~ "Morrígan" or dove_reply["content"] =~ "sanctuary" or
+             dove_reply["content"] =~ "fires"
 
     # Verify comments metadata contains both replies
     comments = updated_post.metadata["comments"]
@@ -130,7 +149,9 @@ defmodule SovereignSoulEngine.Social.SocialFeedInterSoulTest do
     {:ok, _post, egon_reply} = SocialFeed.generate_inter_soul_reply(kael_post.id, egon.id)
     assert egon_reply["author_slug"] == "egon"
     assert egon_reply["content"] =~ "Kael"
-    assert egon_reply["content"] =~ "manifest" or egon_reply["content"] =~ "seals" or egon_reply["content"] =~ "King's Plaza"
+
+    assert egon_reply["content"] =~ "manifest" or egon_reply["content"] =~ "seals" or
+             egon_reply["content"] =~ "King's Plaza"
   end
 
   test "trigger_inter_soul_response automatically dispatches peer comments and reactions", %{
@@ -178,13 +199,17 @@ defmodule SovereignSoulEngine.Social.SocialFeedInterSoulTest do
     {:ok, post} =
       SocialFeed.create_post(%{
         character_id: ravina.id,
-        content: "A ledger of debts is sharper than a silver stiletto if you know when to turn the page.",
+        content:
+          "A ledger of debts is sharper than a silver stiletto if you know when to turn the page.",
         mood: "calculating",
         platform: "soulbook"
       })
 
-    {:ok, post_after_tavish, tavish_reply} = SocialFeed.generate_inter_soul_reply(post.id, tavish.id)
-    {:ok, post_after_rowan, rowan_reply} = SocialFeed.generate_inter_soul_reply(post_after_tavish.id, rowan.id)
+    {:ok, post_after_tavish, tavish_reply} =
+      SocialFeed.generate_inter_soul_reply(post.id, tavish.id)
+
+    {:ok, post_after_rowan, rowan_reply} =
+      SocialFeed.generate_inter_soul_reply(post_after_tavish.id, rowan.id)
 
     # Neither uses the old generic catchphrase
     refute tavish_reply["content"] =~ "stands with you on this"
@@ -192,10 +217,15 @@ defmodule SovereignSoulEngine.Social.SocialFeedInterSoulTest do
 
     # Both replies are in-character to their specific trade and the post topic
     assert tavish_reply["author_slug"] == "tavish"
-    assert tavish_reply["content"] =~ "docks" or tavish_reply["content"] =~ "stiletto" or tavish_reply["content"] =~ "Discretion" or tavish_reply["content"] =~ "coin" or tavish_reply["content"] =~ "ledger"
+
+    assert tavish_reply["content"] =~ "docks" or tavish_reply["content"] =~ "stiletto" or
+             tavish_reply["content"] =~ "Discretion" or tavish_reply["content"] =~ "coin" or
+             tavish_reply["content"] =~ "ledger"
 
     assert rowan_reply["author_slug"] == "rowan"
-    assert rowan_reply["content"] =~ "oak" or rowan_reply["content"] =~ "joint" or rowan_reply["content"] =~ "beam" or rowan_reply["content"] =~ "blade"
+
+    assert rowan_reply["content"] =~ "oak" or rowan_reply["content"] =~ "joint" or
+             rowan_reply["content"] =~ "beam" or rowan_reply["content"] =~ "blade"
 
     # The two replies are completely distinct
     refute tavish_reply["content"] == rowan_reply["content"]

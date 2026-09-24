@@ -35,6 +35,7 @@ defmodule SovereignSoulEngine.TheoryOfMind.ProactiveDispatcherTest do
     } do
       # 1. Arm a thread that is already due (hours: -1)
       statement = "I'm going to propose to her tonight."
+
       {:ok, thread} =
         TheoryOfMind.record_life_thread_if_detected(knower.id, subject.id, statement, hours: -1)
 
@@ -51,7 +52,9 @@ defmodule SovereignSoulEngine.TheoryOfMind.ProactiveDispatcherTest do
       assert length(messages) >= 1
       last_msg = List.last(messages)
       assert last_msg.character_id == knower.id
-      assert String.contains?(last_msg.content, "propose") or String.contains?(last_msg.content, "hear how it went")
+
+      assert String.contains?(last_msg.content, "propose") or
+               String.contains?(last_msg.content, "hear how it went")
 
       # 4. Verify thread check_in_sent_at was marked
       active_due = TheoryOfMind.list_threads_due_for_checkin()

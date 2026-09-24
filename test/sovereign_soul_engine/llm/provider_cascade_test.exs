@@ -9,7 +9,9 @@ defmodule SovereignSoulEngine.LLM.ProviderCascadeTest do
     FakeProvider.reset(pid)
 
     cascade_config = [providers: [FakeProvider], timeout_ms: 1_000]
-    initial_providers = Application.get_env(:sovereign_soul_engine, :llm_providers, [FakeProvider])
+
+    initial_providers =
+      Application.get_env(:sovereign_soul_engine, :llm_providers, [FakeProvider])
 
     on_exit(fn ->
       Application.put_env(:sovereign_soul_engine, :llm_providers, initial_providers)

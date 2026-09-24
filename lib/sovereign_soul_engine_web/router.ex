@@ -19,10 +19,19 @@ defmodule SovereignSoulEngineWeb.Router do
     plug SovereignSoulEngineWeb.Plugs.RateLimit
   end
 
-  # Peer-to-peer relay traffic is authenticated per-message by Ed25519 envelope
-  # signature, not by tenant API key.
-  pipeline :relay do
+  pipeline :stripe_webhook do
     plug :accepts, ["json"]
+  end
+
+  # Webhook ingress authenticated cryptographically by Stripe signature
+  scope "/sse/api", SovereignSoulEngineWeb.Api do
+    pipe_through :stripe_webhook
+    post "/webhooks/stripe", StripeWebhookController, :webhook
+  end
+
+  scope "/api", SovereignSoulEngineWeb.Api do
+    pipe_through :stripe_webhook
+    post "/webhooks/stripe", StripeWebhookController, :webhook
   end
 
   # Scoped under /sse to match every other route in this app (see
@@ -33,7 +42,6 @@ defmodule SovereignSoulEngineWeb.Router do
     pipe_through :api
 
     post "/webhooks/telegram", TelegramWebhookController, :webhook
-    post "/webhooks/stripe", StripeWebhookController, :webhook
     post "/alexa", AlexaController, :handle
 
     get "/characters", CharacterController, :index
@@ -50,6 +58,11 @@ defmodule SovereignSoulEngineWeb.Router do
 
     get "/npc_actions/pending", NpcActionsController, :pending
     post "/npc_actions/:id/consume", NpcActionsController, :consume
+
+    get "/cognition/approvals", CognitionController, :approvals
+    post "/cognition/approvals/:id/approve", CognitionController, :approve
+    post "/cognition/approvals/:id/reject", CognitionController, :reject
+    post "/cognition/approvals/:id/execute", CognitionController, :execute
 
     # Wearables & Smart Glasses Biometric Telemetry
     post "/telemetry/somatic", TelemetryController, :create
@@ -120,7 +133,6 @@ defmodule SovereignSoulEngineWeb.Router do
     pipe_through :api
 
     post "/webhooks/telegram", TelegramWebhookController, :webhook
-    post "/webhooks/stripe", StripeWebhookController, :webhook
     post "/alexa", AlexaController, :handle
     post "/vision/perceive", VisionController, :perceive
     get "/souls/:slug/export", SoulCapsuleController, :export
@@ -209,6 +221,7 @@ defmodule SovereignSoulEngineWeb.Router do
       live "/souls/:id", CharacterLive, :show
       live "/scenes/:id", SceneLive, :show
       live "/ledger", SoulLedgerLive, :index
+      live "/cognition", CognitionLive, :index
       live "/memories", MemoryVaultLive, :index
       live "/billing", BillingLive, :index
       live "/billing/success", BillingLive, :index

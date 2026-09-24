@@ -33,7 +33,8 @@ defmodule SovereignSoulEngine.Billing.AgeVerification do
     case parse_and_validate_dob(birth_date_input) do
       {:ok, birth_date, age} ->
         if age < 18 do
-          {:error, :underage, "You must be at least 18 years old to access mature and adult content (calculated age: #{age})."}
+          {:error, :underage,
+           "You must be at least 18 years old to access mature and adult content (calculated age: #{age})."}
         else
           # Check mandatory informed consent declarations
           if attestations_valid?(attestations) do
@@ -49,7 +50,8 @@ defmodule SovereignSoulEngine.Billing.AgeVerification do
 
             save_verification(character, verification_payload)
           else
-            {:error, :missing_consent, "You must confirm the 18+ certification and AI disclaimer declarations."}
+            {:error, :missing_consent,
+             "You must confirm the 18+ certification and AI disclaimer declarations."}
           end
         end
 
@@ -99,7 +101,11 @@ defmodule SovereignSoulEngine.Billing.AgeVerification do
 
     %{
       verified?: verified,
-      method: if(is_archon and not Map.get(verif, "verified", false), do: "credit_card_stripe", else: Map.get(verif, "method", "none")),
+      method:
+        if(is_archon and not Map.get(verif, "verified", false),
+          do: "credit_card_stripe",
+          else: Map.get(verif, "method", "none")
+        ),
       verified_at: Map.get(verif, "verified_at"),
       birth_date: Map.get(verif, "birth_date"),
       tier: tier,
@@ -117,7 +123,8 @@ defmodule SovereignSoulEngine.Billing.AgeVerification do
   defp resolve_character(id_or_slug) when is_binary(id_or_slug) do
     case Ecto.UUID.cast(id_or_slug) do
       {:ok, uuid} ->
-        Characters.get_character(uuid) || Characters.get_character_by_slug(id_or_slug) || get_or_create_default_player()
+        Characters.get_character(uuid) || Characters.get_character_by_slug(id_or_slug) ||
+          get_or_create_default_player()
 
       :error ->
         Characters.get_character_by_slug(id_or_slug) || get_or_create_default_player()
@@ -163,7 +170,8 @@ defmodule SovereignSoulEngine.Billing.AgeVerification do
   defp calculate_age(birth_date, today) do
     years = today.year - birth_date.year
 
-    if today.month < birth_date.month or (today.month == birth_date.month and today.day < birth_date.day) do
+    if today.month < birth_date.month or
+         (today.month == birth_date.month and today.day < birth_date.day) do
       years - 1
     else
       years
@@ -177,6 +185,7 @@ defmodule SovereignSoulEngine.Billing.AgeVerification do
 
     cert_18 and ai_ack and mature_ack
   end
+
   defp attestations_valid?(_), do: false
 
   defp save_verification(character, verification_payload) do

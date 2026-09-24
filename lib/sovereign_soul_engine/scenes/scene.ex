@@ -32,7 +32,18 @@ defmodule SovereignSoulEngine.Scenes.Scene do
 
   def changeset(scene, attrs) do
     scene
-    |> cast(attrs, [:title, :status, :location, :context, :started_at, :ended_at, :metadata, :is_autonomous, :external_source, :external_id])
+    |> cast(attrs, [
+      :title,
+      :status,
+      :location,
+      :context,
+      :started_at,
+      :ended_at,
+      :metadata,
+      :is_autonomous,
+      :external_source,
+      :external_id
+    ])
     |> validate_required([:title, :status])
     |> validate_inclusion(:status, @status_values)
     |> unique_constraint([:external_source, :external_id])

@@ -103,14 +103,20 @@ defmodule SovereignSoulEngine.LLM.GeminiProvider do
   # ── HTTP Request ─────────────────────────────────────────────
 
   defp send_request(api_key, {model, body}) do
-    url =
-      "https://generativelanguage.googleapis.com/v1beta/models/#{model}:generateContent?key=#{api_key}"
+    url = "https://generativelanguage.googleapis.com/v1beta/models/#{model}:generateContent"
 
     headers = [
+      {"x-goog-api-key", api_key},
       {"content-type", "application/json"}
     ]
 
-    case Req.post(url, json: body, headers: headers, max_retries: 1, receive_timeout: 25_000) do
+    case Req.post(url,
+           json: body,
+           headers: headers,
+           max_retries: 1,
+           connect_options: [timeout: 5000],
+           receive_timeout: 25_000
+         ) do
       {:ok, %{status: 200, body: response_body}} ->
         {:ok, response_body}
 

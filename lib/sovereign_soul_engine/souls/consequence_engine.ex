@@ -258,7 +258,10 @@ defmodule SovereignSoulEngine.Souls.ConsequenceEngine do
              ) do
           {:ok, updated_map, _deltas} ->
             changes = map_to_rel_changes(updated_map)
-            clamped_affinity = SovereignSoulEngine.Privacy.clamp_intimacy(changes.affinity, target_id)
+
+            clamped_affinity =
+              SovereignSoulEngine.Privacy.clamp_intimacy(changes.affinity, target_id)
+
             changes = %{changes | affinity: clamped_affinity}
             now = DateTime.utc_now()
 

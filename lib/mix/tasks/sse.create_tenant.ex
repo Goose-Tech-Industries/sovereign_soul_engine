@@ -20,9 +20,16 @@ defmodule Mix.Tasks.Sse.CreateTenant do
     Mix.Task.run("app.start")
 
     case args do
-      [name, external_source] -> create(name, external_source, 60)
-      [name, external_source, rate_limit] -> create(name, external_source, String.to_integer(rate_limit))
-      _ -> Mix.raise("usage: mix sse.create_tenant \"<name>\" <external_source> [rate_limit_per_minute]")
+      [name, external_source] ->
+        create(name, external_source, 60)
+
+      [name, external_source, rate_limit] ->
+        create(name, external_source, String.to_integer(rate_limit))
+
+      _ ->
+        Mix.raise(
+          "usage: mix sse.create_tenant \"<name>\" <external_source> [rate_limit_per_minute]"
+        )
     end
   end
 

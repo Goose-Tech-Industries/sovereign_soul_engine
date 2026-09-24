@@ -9,19 +9,25 @@ What it takes to run Sovereign Soul Engine in production.
 - Host: `fly.toml` is a ready template (Fly.io handles TLS + Postgres). Set the
   secrets it lists before `fly deploy`.
 
-## 2. Required secrets
+## 2. Required secrets and configuration
 
 | Var | Purpose | Notes |
 |---|---|---|
-| `SECRET_KEY_BASE` | signs/encrypts cookies and seals soul keys | `mix phx.gen.secret` |
-| `DATABASE_URL` | Postgres connection | managed DB |
+| `SECRET_KEY_BASE` | signs/encrypts cookies and seals soul keys | `mix phx.gen.secret` (minimum 64 bytes enforced at boot) |
+| `DATABASE_URL` | Postgres connection | managed DB URL (`ecto://USER:PASS@HOST/DATABASE`) |
+| `STRIPE_SECRET_KEY` | Stripe billing integration | optional in dev/prod |
+| `STRIPE_WEBHOOK_SECRET` | Stripe signature verification | required in prod if `STRIPE_SECRET_KEY` is set |
+| `SSE_ADMIN_USER_IDS` | Allowlist of user UUIDs for ACP access | comma-separated UUIDs |
 | `RELAY_SECRET` | authenticates relay peers | required if `RELAY_PEERS` set |
 | `RELAY_PEERS` | comma-separated peer base URLs | optional |
 | `MODERATION_BLOCKED_TERMS` | comma-separated terms to scrub | optional |
-| `SENTRY_DSN` | error tracking | optional |
+| `SENTRY_DSN` | error tracking | optional (uses `Sentry.ReqClient`) |
+| `PORT` | HTTP port | default `8561` |
 
-Prod startup **raises** if `SECRET_KEY_BASE` is missing or `RELAY_PEERS` is set
-without `RELAY_SECRET`.
+Prod startup **raises** if:
+- `SECRET_KEY_BASE` is missing or shorter than 64 bytes.
+- `STRIPE_SECRET_KEY` is set without `STRIPE_WEBHOOK_SECRET`.
+- `RELAY_PEERS` is set without `RELAY_SECRET`.
 
 ## 3. Bootstrap (first deploy)
 

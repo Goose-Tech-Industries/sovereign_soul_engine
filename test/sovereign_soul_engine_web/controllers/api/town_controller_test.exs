@@ -37,7 +37,10 @@ defmodule SovereignSoulEngineWeb.Api.TownControllerTest do
     conn =
       conn
       |> put_req_header("content-type", "application/json")
-      |> post("/sse/api/town/districts/old_ironworks/expand", Jason.encode!(%{"prompt" => "ancient anvil"}))
+      |> post(
+        "/sse/api/town/districts/old_ironworks/expand",
+        Jason.encode!(%{"prompt" => "ancient anvil"})
+      )
 
     assert json = json_response(conn, 200)
     assert json["status"] == "ok"

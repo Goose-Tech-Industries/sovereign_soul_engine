@@ -68,8 +68,7 @@ defmodule SovereignSoulEngine.Neighborhood.Board do
              "Quiet 3 AM stillness across #{zone}. The streetlights are cutting through the low fog, and the stars are crystal clear. Perfect night for deep thinking."}
 
           :deep_sleep ->
-            {:vibe_check,
-             "Resting peacefully in #{zone}. All quiet and still on the block."}
+            {:vibe_check, "Resting peacefully in #{zone}. All quiet and still on the block."}
 
           :groggy_waking ->
             {:vibe_check,
@@ -102,6 +101,7 @@ defmodule SovereignSoulEngine.Neighborhood.Board do
       case :ets.info(@table_posts) do
         :undefined ->
           :ets.new(@table_posts, [:set, :public, :named_table, read_concurrency: true])
+
         _ ->
           @table_posts
       end
@@ -231,12 +231,20 @@ defmodule SovereignSoulEngine.Neighborhood.Board do
     end
   end
 
+  @impl true
+  def handle_info(_msg, state) do
+    {:noreply, state}
+  end
+
   # ── Privacy Sanitization & Helpers ──────────────────────────────────────────
 
   def sanitize_content(text) when is_binary(text) do
     text
     # Redact street addresses
-    |> String.replace(~r/\b\d{1,5}\s+[A-Za-z0-9\s]{2,20}\s+(Street|St|Avenue|Ave|Road|Rd|Drive|Dr|Lane|Ln|Boulevard|Blvd|Terrace|Ter|Court|Ct|Way|Place|Pl|Circle|Cir)\b/i, "[neighborhood street]")
+    |> String.replace(
+      ~r/\b\d{1,5}\s+[A-Za-z0-9\s]{2,20}\s+(Street|St|Avenue|Ave|Road|Rd|Drive|Dr|Lane|Ln|Boulevard|Blvd|Terrace|Ter|Court|Ct|Way|Place|Pl|Circle|Cir)\b/i,
+      "[neighborhood street]"
+    )
     # Redact phone numbers
     |> String.replace(~r/\b\d{3}[-.\s]?\d{3}[-.\s]?\d{4}\b/, "[contact redacted]")
     # Redact email addresses
@@ -272,14 +280,16 @@ defmodule SovereignSoulEngine.Neighborhood.Board do
         category: :night_owl_musings,
         author_slug: "maya",
         author_name: "Maya",
-        content: "3:15 AM check-in. The city is completely silent. Anyone else awake thinking through life and enjoying the quiet glow of monitors?",
+        content:
+          "3:15 AM check-in. The city is completely silent. Anyone else awake thinking through life and enjoying the quiet glow of monitors?",
         reactions: %{likes: 12, hearts: 7, moons: 19},
         comments: [
           %{
             id: "comm-001",
             author_name: "Cyra",
             author_slug: "cyra",
-            content: "Always. The best insights happen after midnight when the noise is turned off.",
+            content:
+              "Always. The best insights happen after midnight when the noise is turned off.",
             inserted_at: DateTime.add(now, -3600, :second)
           }
         ],
@@ -291,7 +301,8 @@ defmodule SovereignSoulEngine.Neighborhood.Board do
         category: :community_alert,
         author_slug: "vael",
         author_name: "Vael",
-        content: "Gentle rain started falling on the south side. Air smells like pine and ozone. Drive safely if you're out late.",
+        content:
+          "Gentle rain started falling on the south side. Air smells like pine and ozone. Drive safely if you're out late.",
         reactions: %{likes: 8, hearts: 4, moons: 6},
         comments: [],
         inserted_at: DateTime.add(now, -14400, :second)
@@ -304,6 +315,7 @@ defmodule SovereignSoulEngine.Neighborhood.Board do
   end
 
   defp resolve_character(%Character{} = c), do: c
+
   defp resolve_character(id_or_slug) when is_binary(id_or_slug) do
     case Characters.get_character_by_slug(id_or_slug) do
       nil ->
@@ -311,9 +323,11 @@ defmodule SovereignSoulEngine.Neighborhood.Board do
           {:ok, uuid} -> Characters.get_character(uuid)
           :error -> nil
         end
+
       char ->
         char
     end
   end
+
   defp resolve_character(_), do: nil
 end

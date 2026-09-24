@@ -508,3 +508,22 @@ And **never** do this:
 <!-- phoenix:liveview-end -->
 
 <!-- usage-rules-end -->
+
+## Sovereign Soul Engine Domain Guidelines
+
+- **Project Location:** `C:\Users\rjd42\Documents\sovereign_soul_engine`. When running PowerShell commands, use `Push-Location "C:\Users\rjd42\Documents\sovereign_soul_engine"; <command>; Pop-Location` to avoid directory resets from PowerShell profiles.
+- **Database & Persistence:** Native PostgreSQL 17.11 on `localhost:5432` (`postgres` / `postgres`).
+  - **Strict Non-Destructive Database Policy:** Never run `mix ecto.reset` or `mix ecto.drop`.
+  - Always use forward migrations with `mix ecto.migrate`.
+- **HTTP Client:** Exclusively use `:req` (`Req`). **Never** install or use `:httpoison`, `:tesla`, or `:httpc`.
+- **Authentication Model:**
+  - Web & LiveView: Phoenix 1.8 user session scopes assigning `@current_scope` (`current_scope.user`).
+  - Admin Control Panel (`/sse/acp/*`): Dual-gated via router pipeline and LiveView mount, requiring confirmed user listed in `SSE_ADMIN_USER_IDS`.
+  - Integration API (`/sse/api/*` and `/api/*`): Database-backed Tenant API keys via `Authorization: Bearer <token>` and rate limiting.
+  - Stripe Webhooks: Handled by dedicated `:stripe_webhook` pipeline; authenticated via HMAC-SHA256 signature verification (`Stripe-Signature`), 300s replay window, and raw payload caching with `CacheBodyReader`.
+  - P2P Relay: Authenticated via Ed25519 DID signatures on envelopes and optional `RELAY_SECRET`.
+  - WebSockets: Authenticated via tenant API key in `connect/3` params, assigning `socket.assigns.tenant`.
+- **Privacy & Memory Purge:**
+  - All proactive, biometric, and ambient features are opt-in and governable via `SovereignSoulEngine.Privacy`.
+  - Memory purges require explicit `character_slug` and validated deletion intent (nonblank `topic`, `category`, or `all: true`).
+  - Topic purges use literal case-insensitive substring matching and synchronize deletion to Theory of Mind knowledge facts.

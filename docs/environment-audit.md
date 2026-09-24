@@ -1,11 +1,21 @@
 # Environment Audit — Sovereign Soul Engine
 
-**Date**: 2026-07-14
-**Conducted by**: Automated build agent
+> [!NOTE]
+> **Historical Archive Notice (2026-07-14)**:
+> The section below records the initial scaffolding environment on an Ubuntu 24.04 Linux container.
+>
+> **Current Active Host Environment (Updated 2026-09-23)**:
+> - **Host Operating System:** Windows 11 Home / Pro (x86_64, AMD Ryzen 7 5700G, GTX 1660 SUPER, 48 GB RAM)
+> - **Active Project Path:** `C:\Users\rjd42\Documents\sovereign_soul_engine` (Branch: `feature/sovereign-soul-core`)
+> - **Language & Runtime:** Elixir 1.20.4 compiled with Erlang/OTP 29
+> - **PostgreSQL:** Native Windows service (`postgresql-x64-17`) PostgreSQL 17.11 on `localhost:5432` (`postgres` / `postgres`)
+> - **Databases:** `sovereign_soul_engine_dev` and `sovereign_soul_engine_test`
+> - **Playwright:** v1.61.1 (Chromium, Firefox, WebKit installed)
+> - **Current Source of Truth:** See [`README.md`](../README.md) and [`docs/ACCESS_CONTROL_SETUP.md`](ACCESS_CONTROL_SETUP.md).
 
 ---
 
-## 1. Operating System
+## 1. Operating System (Historical - 2026-07-14)
 
 | Property       | Value                                                                 |
 |----------------|-----------------------------------------------------------------------|

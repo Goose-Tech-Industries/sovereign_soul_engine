@@ -11,6 +11,7 @@ defmodule SovereignSoulEngine.Souls.ForgivenessArc do
     field :direction, :string, default: "neutral"
 
     belongs_to :character, SovereignSoulEngine.Characters.Character
+
     belongs_to :offender_character, SovereignSoulEngine.Characters.Character,
       foreign_key: :offender_character_id
 
@@ -22,7 +23,14 @@ defmodule SovereignSoulEngine.Souls.ForgivenessArc do
 
   def changeset(arc, attrs) do
     arc
-    |> cast(attrs, [:character_id, :offender_character_id, :wound_description, :stage, :intensity, :direction])
+    |> cast(attrs, [
+      :character_id,
+      :offender_character_id,
+      :wound_description,
+      :stage,
+      :intensity,
+      :direction
+    ])
     |> validate_required([:character_id, :wound_description])
     |> validate_inclusion(:stage, @valid_stages)
     |> validate_inclusion(:direction, @valid_directions)

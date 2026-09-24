@@ -10,6 +10,7 @@ defmodule SovereignSoulEngineWeb.CharacterLive do
     Identity,
     Repo
   }
+
   alias SovereignSoulEngine.Social.SocialPost
 
   import Ecto.Query
@@ -26,7 +27,11 @@ defmodule SovereignSoulEngineWeb.CharacterLive do
 
     if connected?(socket) do
       Phoenix.PubSub.subscribe(SovereignSoulEngine.PubSub, "character:#{character.id}")
-      Phoenix.PubSub.subscribe(SovereignSoulEngine.PubSub, SovereignSoulEngine.Social.SocialFeed.pubsub_topic())
+
+      Phoenix.PubSub.subscribe(
+        SovereignSoulEngine.PubSub,
+        SovereignSoulEngine.Social.SocialFeed.pubsub_topic()
+      )
     end
 
     {:ok, socket}
@@ -162,8 +167,10 @@ defmodule SovereignSoulEngineWeb.CharacterLive do
       <main class="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-8">
         <%!-- Profile Hero Card --%>
         <section class="p-6 sm:p-8 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-2xl relative overflow-hidden">
-          <div class="absolute -right-20 -top-20 size-80 rounded-full bg-amber-500/5 blur-3xl pointer-events-none"></div>
-          <div class="absolute -left-20 -bottom-20 size-80 rounded-full bg-purple-500/5 blur-3xl pointer-events-none"></div>
+          <div class="absolute -right-20 -top-20 size-80 rounded-full bg-amber-500/5 blur-3xl pointer-events-none">
+          </div>
+          <div class="absolute -left-20 -bottom-20 size-80 rounded-full bg-purple-500/5 blur-3xl pointer-events-none">
+          </div>
 
           <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 relative z-10">
             <div class="flex items-start sm:items-center gap-5">
@@ -172,7 +179,9 @@ defmodule SovereignSoulEngineWeb.CharacterLive do
               </div>
               <div class="space-y-1">
                 <div class="flex flex-wrap items-center gap-2.5">
-                  <h1 class="text-2xl sm:text-3xl font-black text-white tracking-tight">{@character.name}</h1>
+                  <h1 class="text-2xl sm:text-3xl font-black text-white tracking-tight">
+                    {@character.name}
+                  </h1>
                   <span class="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
                     {@character.kind |> String.upcase()}
                   </span>
@@ -332,7 +341,9 @@ defmodule SovereignSoulEngineWeb.CharacterLive do
                   <%= for post <- @recent_posts do %>
                     <div class="p-3.5 rounded-2xl bg-slate-950 border border-slate-800/80 space-y-2">
                       <div class="flex items-center justify-between text-[10px] text-slate-500">
-                        <span>📍 {(post.metadata && post.metadata["location"]) || "Feannag's Rest"}</span>
+                        <span>
+                          📍 {(post.metadata && post.metadata["location"]) || "Feannag's Rest"}
+                        </span>
                         <span>{post.inserted_at}</span>
                       </div>
                       <p class="text-xs text-slate-200 leading-relaxed font-sans">
@@ -353,7 +364,9 @@ defmodule SovereignSoulEngineWeb.CharacterLive do
                 <div class="flex items-center justify-between border-b border-slate-800 pb-3">
                   <div class="flex items-center gap-2">
                     <span class="text-base">🧠</span>
-                    <h2 class="font-extrabold text-sm text-white">Emotional State & Neurochemistry</h2>
+                    <h2 class="font-extrabold text-sm text-white">
+                      Emotional State & Neurochemistry
+                    </h2>
                   </div>
                   <span class="size-2 rounded-full bg-emerald-400 animate-pulse"></span>
                 </div>
@@ -382,15 +395,21 @@ defmodule SovereignSoulEngineWeb.CharacterLive do
                   <div class="mt-4 pt-4 border-t border-slate-800/80 grid grid-cols-3 gap-2 text-center text-[10px]">
                     <div class="p-2 rounded-xl bg-slate-950 border border-slate-800/80">
                       <span class="text-slate-500 block">Fatigue</span>
-                      <strong class="text-amber-400 text-xs font-mono">{@somatic_state.fatigue}%</strong>
+                      <strong class="text-amber-400 text-xs font-mono">
+                        {@somatic_state.fatigue}%
+                      </strong>
                     </div>
                     <div class="p-2 rounded-xl bg-slate-950 border border-slate-800/80">
                       <span class="text-slate-500 block">Stamina</span>
-                      <strong class="text-emerald-400 text-xs font-mono">{@soul_profile.social_stamina || 100}%</strong>
+                      <strong class="text-emerald-400 text-xs font-mono">
+                        {@soul_profile.social_stamina || 100}%
+                      </strong>
                     </div>
                     <div class="p-2 rounded-xl bg-slate-950 border border-slate-800/80">
                       <span class="text-slate-500 block">Hunger</span>
-                      <strong class="text-blue-400 text-xs font-mono">{@somatic_state.hunger}%</strong>
+                      <strong class="text-blue-400 text-xs font-mono">
+                        {@somatic_state.hunger}%
+                      </strong>
                     </div>
                   </div>
                 <% end %>
@@ -404,7 +423,9 @@ defmodule SovereignSoulEngineWeb.CharacterLive do
                   <span class="text-base">🤝</span>
                   <h2 class="font-extrabold text-sm text-white">Town Ties & Affinities</h2>
                 </div>
-                <span class="text-[10px] font-mono text-slate-500">{length(@relationships)} Recorded</span>
+                <span class="text-[10px] font-mono text-slate-500">
+                  {length(@relationships)} Recorded
+                </span>
               </div>
 
               <%= if @relationships == [] do %>
@@ -468,7 +489,9 @@ defmodule SovereignSoulEngineWeb.CharacterLive do
                     <div class="p-3 rounded-2xl bg-slate-950 border border-slate-800/80 space-y-1 text-xs">
                       <p class="text-slate-300 leading-snug">{mem.summary}</p>
                       <div class="flex items-center justify-between text-[10px] text-slate-500">
-                        <span class="px-1.5 py-0.5 rounded bg-slate-900 font-mono">{mem.category}</span>
+                        <span class="px-1.5 py-0.5 rounded bg-slate-900 font-mono">
+                          {mem.category}
+                        </span>
                         <span>Intensity: {mem.emotional_intensity || 0}%</span>
                       </div>
                     </div>
@@ -499,7 +522,9 @@ defmodule SovereignSoulEngineWeb.CharacterLive do
                     <div class="p-3 rounded-2xl bg-slate-950 border border-slate-800/80 space-y-1 text-xs">
                       <div class="flex items-center justify-between text-[11px] text-white font-bold">
                         <span>{entry.label}</span>
-                        <span class="text-slate-500 font-mono text-[10px]">{format_time(entry.inserted_at)}</span>
+                        <span class="text-slate-500 font-mono text-[10px]">
+                          {format_time(entry.inserted_at)}
+                        </span>
                       </div>
                       <p class="text-slate-400 text-[11px]">{entry.summary}</p>
                     </div>
@@ -527,9 +552,15 @@ defmodule SovereignSoulEngineWeb.CharacterLive do
     ]
   end
 
-  defp rel_val_class(val) when val >= 40, do: "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-  defp rel_val_class(val) when val > 0, do: "bg-blue-500/20 text-blue-400 border border-blue-500/30"
-  defp rel_val_class(val) when val < 0, do: "bg-rose-500/20 text-rose-400 border border-rose-500/30"
+  defp rel_val_class(val) when val >= 40,
+    do: "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+
+  defp rel_val_class(val) when val > 0,
+    do: "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+
+  defp rel_val_class(val) when val < 0,
+    do: "bg-rose-500/20 text-rose-400 border border-rose-500/30"
+
   defp rel_val_class(_), do: "bg-slate-900 text-slate-400 border border-slate-800"
 
   defp format_time(nil), do: "--"

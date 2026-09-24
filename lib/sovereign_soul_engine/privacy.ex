@@ -197,6 +197,7 @@ defmodule SovereignSoulEngine.Privacy do
   Detects if a given message text triggers the configured emergency safe word.
   """
   def safe_word_triggered?(nil, _), do: false
+
   def safe_word_triggered?(text, character_or_settings) when is_binary(text) do
     settings =
       if is_map(character_or_settings) and Map.has_key?(character_or_settings, "safe_word"),
@@ -246,11 +247,13 @@ defmodule SovereignSoulEngine.Privacy do
   Evaluates whether the dialogue indicates unhealthy human isolation or excessive parasocial dependency.
   """
   def parasocial_dependency_detected?(nil, _), do: false
+
   def parasocial_dependency_detected?(text, character_or_settings) when is_binary(text) do
     settings =
-      if is_map(character_or_settings) and Map.has_key?(character_or_settings, "anti_parasocial_guard"),
-        do: character_or_settings,
-        else: get_settings(character_or_settings)
+      if is_map(character_or_settings) and
+           Map.has_key?(character_or_settings, "anti_parasocial_guard"),
+         do: character_or_settings,
+         else: get_settings(character_or_settings)
 
     if settings["anti_parasocial_guard"] != false do
       lower = String.downcase(text)
@@ -297,9 +300,10 @@ defmodule SovereignSoulEngine.Privacy do
   """
   def clamp_intimacy(affinity, character_or_settings) when is_integer(affinity) do
     settings =
-      if is_map(character_or_settings) and Map.has_key?(character_or_settings, "relationship_archetype"),
-        do: character_or_settings,
-        else: get_settings(character_or_settings)
+      if is_map(character_or_settings) and
+           Map.has_key?(character_or_settings, "relationship_archetype"),
+         do: character_or_settings,
+         else: get_settings(character_or_settings)
 
     archetype = settings["relationship_archetype"] || "adaptive"
     ceiling = archetype_intimacy_ceiling(archetype)
@@ -350,9 +354,10 @@ defmodule SovereignSoulEngine.Privacy do
   """
   def circadian_enabled?(character_or_settings) do
     settings =
-      if is_map(character_or_settings) and Map.has_key?(character_or_settings, "circadian_enabled"),
-        do: character_or_settings,
-        else: get_settings(character_or_settings)
+      if is_map(character_or_settings) and
+           Map.has_key?(character_or_settings, "circadian_enabled"),
+         do: character_or_settings,
+         else: get_settings(character_or_settings)
 
     Map.get(settings, "circadian_enabled", true)
   end
@@ -364,9 +369,10 @@ defmodule SovereignSoulEngine.Privacy do
   """
   def force_local_offline?(character_or_settings) do
     settings =
-      if is_map(character_or_settings) and Map.has_key?(character_or_settings, "force_local_offline"),
-        do: character_or_settings,
-        else: get_settings(character_or_settings)
+      if is_map(character_or_settings) and
+           Map.has_key?(character_or_settings, "force_local_offline"),
+         do: character_or_settings,
+         else: get_settings(character_or_settings)
 
     Map.get(settings, "force_local_offline", false)
   end
@@ -378,9 +384,10 @@ defmodule SovereignSoulEngine.Privacy do
   """
   def neighborhood_share_allowed?(character_or_settings) do
     settings =
-      if is_map(character_or_settings) and Map.has_key?(character_or_settings, "neighborhood_share_allowed"),
-        do: character_or_settings,
-        else: get_settings(character_or_settings)
+      if is_map(character_or_settings) and
+           Map.has_key?(character_or_settings, "neighborhood_share_allowed"),
+         do: character_or_settings,
+         else: get_settings(character_or_settings)
 
     Map.get(settings, "neighborhood_share_allowed", true)
   end
@@ -390,9 +397,10 @@ defmodule SovereignSoulEngine.Privacy do
   """
   def neighborhood_zone(character_or_settings) do
     settings =
-      if is_map(character_or_settings) and Map.has_key?(character_or_settings, "neighborhood_zone"),
-        do: character_or_settings,
-        else: get_settings(character_or_settings)
+      if is_map(character_or_settings) and
+           Map.has_key?(character_or_settings, "neighborhood_zone"),
+         do: character_or_settings,
+         else: get_settings(character_or_settings)
 
     settings["neighborhood_zone"] || "Cedar Grove"
   end
@@ -413,9 +421,12 @@ defmodule SovereignSoulEngine.Privacy do
   end
 
   defp parse_hour(val, _default) when is_integer(val), do: val
+
   defp parse_hour(val, default) when is_binary(val) do
     case Integer.parse(val) do
-      {int, _} -> int
+      {int, _} ->
+        int
+
       :error ->
         case String.split(val, ":") do
           [h | _] ->
@@ -423,10 +434,13 @@ defmodule SovereignSoulEngine.Privacy do
               {int, _} -> int
               _ -> default
             end
-          _ -> default
+
+          _ ->
+            default
         end
     end
   end
+
   defp parse_hour(_, default), do: default
 
   defp resolve_character(id_or_slug) when is_binary(id_or_slug) do
@@ -436,10 +450,12 @@ defmodule SovereignSoulEngine.Privacy do
           {:ok, uuid} -> Characters.get_character(uuid)
           :error -> nil
         end
+
       char ->
         char
     end
   end
+
   defp resolve_character(%Character{} = c), do: c
   defp resolve_character(_), do: nil
 

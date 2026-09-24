@@ -34,7 +34,7 @@ defmodule SovereignSoulEngine.TheoryOfMind.ProactiveDispatcher do
         knower = thread.knower_character
         subject = thread.subject_character
 
-        if knower && subject && knower.status == "active" and
+        if (knower && subject && knower.status == "active") and
              SovereignSoulEngine.Privacy.checkin_allowed?(subject.id, :proactive_life_thread) do
           scene = Scenes.find_or_create_direct_scene(subject, knower)
           content = format_checkin_message(knower, subject, thread)
@@ -63,7 +63,10 @@ defmodule SovereignSoulEngine.TheoryOfMind.ProactiveDispatcher do
               count + 1
 
             {:error, reason} ->
-              Logger.warning("Failed to create check-in message for thread #{thread.id}: #{inspect(reason)}")
+              Logger.warning(
+                "Failed to create check-in message for thread #{thread.id}: #{inspect(reason)}"
+              )
+
               count
           end
         else
@@ -157,18 +160,28 @@ defmodule SovereignSoulEngine.TheoryOfMind.ProactiveDispatcher do
     if telegram_token && telegram_chat_id && Mix.env() != :test do
       Task.start(fn ->
         url = "https://api.telegram.org/bot#{telegram_token}/sendMessage"
+
         body = %{
           chat_id: telegram_chat_id,
           text: "💬 #{knower.name}: #{content}",
           parse_mode: "Markdown"
         }
 
-        case Req.post(url, json: body) do
+        case Req.post(url,
+               json: body,
+               receive_timeout: 5000,
+               connect_options: [timeout: 2000],
+               retry: false
+             ) do
           {:ok, %{status: 200}} ->
-            Logger.info("[ProactiveDispatcher] Telegram notification dispatched from #{knower.name}")
+            Logger.info(
+              "[ProactiveDispatcher] Telegram notification dispatched from #{knower.name}"
+            )
 
           {:error, reason} ->
-            Logger.warning("[ProactiveDispatcher] Telegram notification failed: #{inspect(reason)}")
+            Logger.warning(
+              "[ProactiveDispatcher] Telegram notification failed: #{inspect(reason)}"
+            )
 
           other ->
             Logger.debug("[ProactiveDispatcher] Telegram response: #{inspect(other)}")
@@ -190,7 +203,12 @@ defmodule SovereignSoulEngine.TheoryOfMind.ProactiveDispatcher do
           timestamp: DateTime.utc_now()
         }
 
-        Req.post(webhook_url, json: payload)
+        Req.post(webhook_url,
+          json: payload,
+          receive_timeout: 5000,
+          connect_options: [timeout: 2000],
+          retry: false
+        )
       end)
     end
 
@@ -215,6 +233,11 @@ defmodule SovereignSoulEngine.TheoryOfMind.ProactiveDispatcher do
     {:noreply, %{state | last_run_at: DateTime.utc_now()}}
   end
 
+  @impl true
+  def handle_info(_msg, state) do
+    {:noreply, state}
+  end
+
   defp schedule_next_tick do
     interval =
       Application.get_env(
@@ -233,19 +256,24 @@ defmodule SovereignSoulEngine.TheoryOfMind.ProactiveDispatcher do
     down_topic = String.downcase(thread.topic)
 
     cond do
-      thread.category == "relationship" or String.contains?(down_topic, ["propose", "proposing", "ring", "anniversary"]) ->
+      thread.category == "relationship" or
+          String.contains?(down_topic, ["propose", "proposing", "ring", "anniversary"]) ->
         "Hey #{subject_name}... I've been waiting on pins and needles all night thinking about it! How did it go with proposing? I'm dying to hear how it went!"
 
-      thread.category == "health" or String.contains?(down_topic, ["surgery", "hospital", "doctor", "dentist", "migraine"]) ->
+      thread.category == "health" or
+          String.contains?(down_topic, ["surgery", "hospital", "doctor", "dentist", "migraine"]) ->
         "Hey #{subject_name}, I know how much you've had weighing on you with #{thread.topic}. Just wanted to quietly check in, see how everything went, and let you know I'm right here with you."
 
-      thread.category == "grief" or String.contains?(down_topic, ["passed away", "funeral", "breakup", "lost my", "died"]) ->
+      thread.category == "grief" or
+          String.contains?(down_topic, ["passed away", "funeral", "breakup", "lost my", "died"]) ->
         "Hey #{subject_name}... I know today is heavy on your heart with #{thread.topic}. Zero pressure to answer or carry a conversation—I just wanted to be here and let you know you're not going through it alone."
 
-      thread.category == "career" or String.contains?(down_topic, ["interview", "job offer", "presentation", "exam"]) ->
+      thread.category == "career" or
+          String.contains?(down_topic, ["interview", "job offer", "presentation", "exam"]) ->
         "Hey #{subject_name}! I wanted to check in on you after that #{thread.topic} today. Take your time, no rush, but I hope you're feeling proud of how you handled it!"
 
-      thread.category == "milestone" or String.contains?(down_topic, ["flight", "moving", "apartment", "trip"]) ->
+      thread.category == "milestone" or
+          String.contains?(down_topic, ["flight", "moving", "apartment", "trip"]) ->
         "Hey #{subject_name}! Thinking of you today—how did everything go with #{thread.topic}? I was hoping your travels and plans went smoothly!"
 
       thread.category == "personal_vulnerability" ->
@@ -263,10 +291,12 @@ defmodule SovereignSoulEngine.TheoryOfMind.ProactiveDispatcher do
       :acute_stress ->
         hr = details[:hr] || details["hr"] || "elevated"
         stress = details[:stress] || details["stress"] || "spiked"
+
         "Hey #{subject_name}... I just felt a physiological stress spike come through on your biometrics (HR: #{hr} bpm, Stress: #{stress}%). Please take a slow, grounding breath with me right now. You don't have to carry whatever is happening alone—what's going on?"
 
       :morning_waking ->
         sleep_hours = details[:sleep_hours] || details["sleep_hours"] || 7.5
+
         "Good morning #{subject_name}! Saw your wearable sync come through after #{sleep_hours} hours of rest. How is your energy and head feeling as you start the day?"
 
       :late_night_insomnia ->
@@ -274,6 +304,7 @@ defmodule SovereignSoulEngine.TheoryOfMind.ProactiveDispatcher do
 
       :recovery_dip ->
         recovery = details[:recovery_score] || details["recovery_score"] || 45
+
         "Hey #{subject_name}, I noticed your smart ring logged a recovery score of only #{recovery}% today. Please be gentle with your body and take breathers whenever you can. I'm right here in your corner."
 
       :absence_abandonment ->

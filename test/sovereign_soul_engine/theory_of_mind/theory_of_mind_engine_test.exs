@@ -105,7 +105,8 @@ defmodule SovereignSoulEngine.TheoryOfMind.TheoryOfMindEngineTest do
       subject_facts = ["The weather is nice"]
       knower_secrets = ["I saw John take the money"]
 
-      asymmetry = Engine.analyze_information_asymmetry(knower_facts, subject_facts, knower_secrets)
+      asymmetry =
+        Engine.analyze_information_asymmetry(knower_facts, subject_facts, knower_secrets)
 
       assert "I saw John take the money" in asymmetry.hidden_from_subject
       assert asymmetry.leverage_count >= 1
@@ -117,10 +118,12 @@ defmodule SovereignSoulEngine.TheoryOfMind.TheoryOfMindEngineTest do
         "Subject is terrified of public speaking",
         "Subject likes coffee"
       ]
+
       subject_facts = []
       knower_secrets = []
 
-      asymmetry = Engine.analyze_information_asymmetry(knower_facts, subject_facts, knower_secrets)
+      asymmetry =
+        Engine.analyze_information_asymmetry(knower_facts, subject_facts, knower_secrets)
 
       assert length(asymmetry.known_vulnerabilities) == 2
     end
@@ -132,6 +135,7 @@ defmodule SovereignSoulEngine.TheoryOfMind.TheoryOfMindEngineTest do
         "User has a high stakes job interview tomorrow morning",
         "User's sister was in the hospital yesterday"
       ]
+
       relationship = %{@default_relationship | trust: 65, affinity: 70}
       hours_silent = 14
 
@@ -139,7 +143,10 @@ defmodule SovereignSoulEngine.TheoryOfMind.TheoryOfMindEngineTest do
                Engine.detect_proactive_opportunity(known_facts, relationship, hours_silent)
 
       assert opportunity.intent in [:empathy_checkin, :thoughtful_inquiry]
-      assert String.contains?(opportunity.focus_topic, "interview") or String.contains?(opportunity.focus_topic, "hospital")
+
+      assert String.contains?(opportunity.focus_topic, "interview") or
+               String.contains?(opportunity.focus_topic, "hospital")
+
       assert is_binary(opportunity.prompt_guidance)
     end
 
@@ -201,7 +208,9 @@ defmodule SovereignSoulEngine.TheoryOfMind.TheoryOfMindEngineTest do
 
       assert thread.category == :health
       assert thread.salience >= 85
-      assert String.contains?(thread.guidance, "surgery") or String.contains?(thread.guidance, "Medical")
+
+      assert String.contains?(thread.guidance, "surgery") or
+               String.contains?(thread.guidance, "Medical")
     end
 
     test "detects job interview or pitch event" do

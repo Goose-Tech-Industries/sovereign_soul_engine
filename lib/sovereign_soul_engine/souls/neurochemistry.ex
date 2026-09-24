@@ -94,7 +94,7 @@ defmodule SovereignSoulEngine.Souls.Neurochemistry do
   end
 
   def modulate_delta(:stress, delta, %__MODULE__{cortisol: cort, oxytocin: oxy}) when delta > 0 do
-    multiplier = 1.0 + (cort / 200.0) - (oxy / 250.0)
+    multiplier = 1.0 + cort / 200.0 - oxy / 250.0
     max(1, round(delta * multiplier))
   end
 
@@ -102,11 +102,20 @@ defmodule SovereignSoulEngine.Souls.Neurochemistry do
 
   defp describe_tone(cort, oxy, dop, ser) do
     cond do
-      cort >= 75 -> "Acute hyper-cortisolemia: elevated pulse, vigilance, and survival threat sensitivity."
-      oxy >= 70 -> "High oxytocinergic bonding: profound empathy, vulnerability, and instinctive devotion."
-      dop >= 75 -> "Hyper-dopaminergic drive: intense curiosity, excitement, and pursuit of novelty."
-      ser <= 30 -> "Severe serotonin depletion: volatile emotional regulation, irritability, and depressive vulnerability."
-      true -> "Neurochemical equilibrium: stable autonomic regulation."
+      cort >= 75 ->
+        "Acute hyper-cortisolemia: elevated pulse, vigilance, and survival threat sensitivity."
+
+      oxy >= 70 ->
+        "High oxytocinergic bonding: profound empathy, vulnerability, and instinctive devotion."
+
+      dop >= 75 ->
+        "Hyper-dopaminergic drive: intense curiosity, excitement, and pursuit of novelty."
+
+      ser <= 30 ->
+        "Severe serotonin depletion: volatile emotional regulation, irritability, and depressive vulnerability."
+
+      true ->
+        "Neurochemical equilibrium: stable autonomic regulation."
     end
   end
 

@@ -27,7 +27,9 @@ defmodule SovereignSoulEngine.Wearables.HapticEngineTest do
     end
 
     test "returns alert_ping on dopamine discovery spike" do
-      signal = HapticEngine.compute(%{stress: 25}, %{}, %{dopamine: 85, cortisol: 20, oxytocin: 30})
+      signal =
+        HapticEngine.compute(%{stress: 25}, %{}, %{dopamine: 85, cortisol: 20, oxytocin: 30})
+
       assert signal.pattern == :alert_ping
       assert signal.label == "Dopamine Spark"
     end

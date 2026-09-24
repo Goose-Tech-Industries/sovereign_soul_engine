@@ -4,8 +4,13 @@ defmodule SovereignSoulEngine.Repo.Migrations.CreateCharacterKnowledge do
   def change do
     create table(:character_knowledge, primary_key: false) do
       add :id, :uuid, primary_key: true, default: fragment("uuid_generate_v4()")
-      add :knower_character_id, references(:characters, type: :uuid, on_delete: :delete_all), null: false
-      add :subject_character_id, references(:characters, type: :uuid, on_delete: :delete_all), null: false
+
+      add :knower_character_id, references(:characters, type: :uuid, on_delete: :delete_all),
+        null: false
+
+      add :subject_character_id, references(:characters, type: :uuid, on_delete: :delete_all),
+        null: false
+
       add :known_fact, :text, null: false
       add :certainty, :integer, default: 70
       add :is_assumption, :boolean, default: true

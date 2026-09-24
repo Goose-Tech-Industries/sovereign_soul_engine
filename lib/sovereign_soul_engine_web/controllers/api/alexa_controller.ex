@@ -32,31 +32,33 @@ defmodule SovereignSoulEngineWeb.Api.AlexaController do
     neurochem = get_neurochemistry(companion)
 
     if not SovereignSoulEngine.Privacy.alexa_allowed?(companion.id) do
-      speech = "Sovereign Soul voice integration is currently paused in your privacy settings. You can re-enable it at any time."
+      speech =
+        "Sovereign Soul voice integration is currently paused in your privacy settings. You can re-enable it at any time."
+
       json(conn, build_response(companion, speech, [], true))
     else
       case request_type do
         "LaunchRequest" ->
           handle_launch(conn, companion, neurochem, show_supported?)
 
-      "IntentRequest" ->
-        intent_name =
-          get_in(params, ["request", "intent", "name"]) || params["intent"] || "DialogueIntent"
+        "IntentRequest" ->
+          intent_name =
+            get_in(params, ["request", "intent", "name"]) || params["intent"] || "DialogueIntent"
 
-        handle_intent(conn, intent_name, params, companion, neurochem, show_supported?)
+          handle_intent(conn, intent_name, params, companion, neurochem, show_supported?)
 
-      "SessionEndedRequest" ->
-        json(conn, %{version: "1.0", response: %{}})
+        "SessionEndedRequest" ->
+          json(conn, %{version: "1.0", response: %{}})
 
-      # Support direct conversational testing payloads
-      "dialogue" ->
-        handle_intent(conn, "DialogueIntent", params, companion, neurochem, show_supported?)
+        # Support direct conversational testing payloads
+        "dialogue" ->
+          handle_intent(conn, "DialogueIntent", params, companion, neurochem, show_supported?)
 
-      "status" ->
-        handle_intent(conn, "StatusIntent", params, companion, neurochem, show_supported?)
+        "status" ->
+          handle_intent(conn, "StatusIntent", params, companion, neurochem, show_supported?)
 
-      _ ->
-        handle_launch(conn, companion, neurochem, show_supported?)
+        _ ->
+          handle_launch(conn, companion, neurochem, show_supported?)
       end
     end
   end
@@ -125,7 +127,11 @@ defmodule SovereignSoulEngineWeb.Api.AlexaController do
               "alexa_echo_user"
 
           player =
-            Characters.get_or_create_external_player("alexa", alexa_user_id, "Echo Companion User")
+            Characters.get_or_create_external_player(
+              "alexa",
+              alexa_user_id,
+              "Echo Companion User"
+            )
 
           scene = Scenes.find_or_create_direct_scene(player, companion)
 
@@ -430,7 +436,16 @@ defmodule SovereignSoulEngineWeb.Api.AlexaController do
 
   defp device_supports_show?(params) do
     viewport = get_in(params, ["context", "Viewport"])
-    apl = get_in(params, ["context", "System", "device", "supportedInterfaces", "Alexa.Presentation.APL"])
+
+    apl =
+      get_in(params, [
+        "context",
+        "System",
+        "device",
+        "supportedInterfaces",
+        "Alexa.Presentation.APL"
+      ])
+
     show_flag = params["show"] in ["true", true]
 
     viewport != nil || apl != nil || show_flag

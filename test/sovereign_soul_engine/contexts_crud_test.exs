@@ -105,7 +105,10 @@ defmodule SovereignSoulEngine.ContextsCrudTest do
       assert Scenes.get_scene(scene.id) == nil
     end
 
-    test "find_or_create_direct_scene/2 establishes participant links and is idempotent", %{char_a: c1, char_b: c2} do
+    test "find_or_create_direct_scene/2 establishes participant links and is idempotent", %{
+      char_a: c1,
+      char_b: c2
+    } do
       # Initially nil
       assert Scenes.find_direct_scene(c1, c2) == nil
 
@@ -161,8 +164,19 @@ defmodule SovereignSoulEngine.ContextsCrudTest do
 
   describe "Relationships context" do
     test "create, update, and lookup bidirectional metrics" do
-      {:ok, c1} = Characters.create_character(%{name: "Alice", slug: "alice_#{System.unique_integer([:positive])}", kind: "npc"})
-      {:ok, c2} = Characters.create_character(%{name: "Bob", slug: "bob_#{System.unique_integer([:positive])}", kind: "player"})
+      {:ok, c1} =
+        Characters.create_character(%{
+          name: "Alice",
+          slug: "alice_#{System.unique_integer([:positive])}",
+          kind: "npc"
+        })
+
+      {:ok, c2} =
+        Characters.create_character(%{
+          name: "Bob",
+          slug: "bob_#{System.unique_integer([:positive])}",
+          kind: "player"
+        })
 
       # Initially nil
       assert Relationships.get_relationship(c1.id, c2.id) == nil
@@ -192,7 +206,12 @@ defmodule SovereignSoulEngine.ContextsCrudTest do
 
   describe "Memories context" do
     test "create, list, and purge memories" do
-      {:ok, char} = Characters.create_character(%{name: "Sage", slug: "sage_#{System.unique_integer([:positive])}", kind: "npc"})
+      {:ok, char} =
+        Characters.create_character(%{
+          name: "Sage",
+          slug: "sage_#{System.unique_integer([:positive])}",
+          kind: "npc"
+        })
 
       {:ok, %Memory{} = m1} =
         Memories.create_memory(%{

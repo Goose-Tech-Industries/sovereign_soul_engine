@@ -47,79 +47,84 @@ defmodule SovereignSoulEngineWeb.Api.TelemetryController do
           notified_count = sync_companion_theory_of_mind(character, telemetry)
           broadcast_telemetry(character, telemetry, somatic, emotional)
 
-        # Trigger biofeedback calming haptic cadence on acute stress
-        if (telemetry.stress_level && telemetry.stress_level >= 75) ||
-             (telemetry.heart_rate && telemetry.heart_rate >= 105 && telemetry.motion_state != "running") do
-          calming_signal = SovereignSoulEngine.Wearables.HapticEngine.signal_for_event(:calming_guidance)
-          SovereignSoulEngine.Wearables.HapticEngine.dispatch(character.id, calming_signal)
+          # Trigger biofeedback calming haptic cadence on acute stress
+          if (telemetry.stress_level && telemetry.stress_level >= 75) ||
+               (telemetry.heart_rate && telemetry.heart_rate >= 105 &&
+                  telemetry.motion_state != "running") do
+            calming_signal =
+              SovereignSoulEngine.Wearables.HapticEngine.signal_for_event(:calming_guidance)
 
-          # Autonomous somatic check-in for acute stress
-          SovereignSoulEngine.TheoryOfMind.ProactiveDispatcher.checkin_for_somatic_event(
-            character.id,
-            :acute_stress,
-            %{stress: telemetry.stress_level, hr: telemetry.heart_rate}
-          )
-        end
+            SovereignSoulEngine.Wearables.HapticEngine.dispatch(character.id, calming_signal)
 
-        # Autonomous somatic check-in for morning waking
-        if telemetry.sleep_hours && telemetry.sleep_hours > 0.0 do
-          SovereignSoulEngine.TheoryOfMind.ProactiveDispatcher.checkin_for_somatic_event(
-            character.id,
-            :morning_waking,
-            %{sleep_hours: telemetry.sleep_hours}
-          )
-        end
+            # Autonomous somatic check-in for acute stress
+            SovereignSoulEngine.TheoryOfMind.ProactiveDispatcher.checkin_for_somatic_event(
+              character.id,
+              :acute_stress,
+              %{stress: telemetry.stress_level, hr: telemetry.heart_rate}
+            )
+          end
 
-        # Autonomous somatic check-in for late night insomnia
-        if telemetry.is_insomnia or (DateTime.utc_now().hour in [1, 2, 3, 4] and telemetry.heart_rate && telemetry.heart_rate > 70) do
-          SovereignSoulEngine.TheoryOfMind.ProactiveDispatcher.checkin_for_somatic_event(
-            character.id,
-            :late_night_insomnia,
-            %{hour: DateTime.utc_now().hour}
-          )
-        end
+          # Autonomous somatic check-in for morning waking
+          if telemetry.sleep_hours && telemetry.sleep_hours > 0.0 do
+            SovereignSoulEngine.TheoryOfMind.ProactiveDispatcher.checkin_for_somatic_event(
+              character.id,
+              :morning_waking,
+              %{sleep_hours: telemetry.sleep_hours}
+            )
+          end
 
-        # Autonomous somatic check-in for smart ring recovery dip
-        if telemetry.recovery_score && telemetry.recovery_score < 60 do
-          SovereignSoulEngine.TheoryOfMind.ProactiveDispatcher.checkin_for_somatic_event(
-            character.id,
-            :recovery_dip,
-            %{recovery_score: telemetry.recovery_score}
-          )
-        end
+          # Autonomous somatic check-in for late night insomnia
+          if telemetry.is_insomnia or
+               ((DateTime.utc_now().hour in [1, 2, 3, 4] and telemetry.heart_rate) &&
+                  telemetry.heart_rate > 70) do
+            SovereignSoulEngine.TheoryOfMind.ProactiveDispatcher.checkin_for_somatic_event(
+              character.id,
+              :late_night_insomnia,
+              %{hour: DateTime.utc_now().hour}
+            )
+          end
 
-        conn
-        |> put_status(:ok)
-        |> json(%{
-          status: "ok",
-          character_slug: character.slug,
-          device: telemetry.device_type,
-          biometrics: %{
-            heart_rate: telemetry.heart_rate,
-            hrv: telemetry.hrv,
-            stress_level: telemetry.stress_level,
-            motion_state: telemetry.motion_state,
-            sleep_hours: telemetry.sleep_hours,
-            steps: telemetry.steps,
-            ambient_noise_db: telemetry.ambient_noise_db,
-            recovery_score: telemetry.recovery_score,
-            readiness_score: telemetry.readiness_score,
-            sleep_score: telemetry.sleep_score
-          },
-          somatic_state: %{
-            fatigue: somatic.fatigue,
-            pain: somatic.pain,
-            hunger: somatic.hunger,
-            last_rested_at: somatic.last_rested_at
-          },
-          emotional_state: %{
-            stress: emotional.stress,
-            confidence: emotional.confidence,
-            attachment: emotional.attachment
-          },
-          companions_notified: notified_count,
-          timestamp: DateTime.utc_now()
-        })
+          # Autonomous somatic check-in for smart ring recovery dip
+          if telemetry.recovery_score && telemetry.recovery_score < 60 do
+            SovereignSoulEngine.TheoryOfMind.ProactiveDispatcher.checkin_for_somatic_event(
+              character.id,
+              :recovery_dip,
+              %{recovery_score: telemetry.recovery_score}
+            )
+          end
+
+          conn
+          |> put_status(:ok)
+          |> json(%{
+            status: "ok",
+            character_slug: character.slug,
+            device: telemetry.device_type,
+            biometrics: %{
+              heart_rate: telemetry.heart_rate,
+              hrv: telemetry.hrv,
+              stress_level: telemetry.stress_level,
+              motion_state: telemetry.motion_state,
+              sleep_hours: telemetry.sleep_hours,
+              steps: telemetry.steps,
+              ambient_noise_db: telemetry.ambient_noise_db,
+              recovery_score: telemetry.recovery_score,
+              readiness_score: telemetry.readiness_score,
+              sleep_score: telemetry.sleep_score
+            },
+            somatic_state: %{
+              fatigue: somatic.fatigue,
+              pain: somatic.pain,
+              hunger: somatic.hunger,
+              last_rested_at: somatic.last_rested_at
+            },
+            emotional_state: %{
+              stress: emotional.stress,
+              confidence: emotional.confidence,
+              attachment: emotional.attachment
+            },
+            companions_notified: notified_count,
+            timestamp: DateTime.utc_now()
+          })
         end
     end
   end
@@ -194,6 +199,7 @@ defmodule SovereignSoulEngineWeb.Api.TelemetryController do
 
   defp parse_int(nil), do: nil
   defp parse_int(val) when is_integer(val), do: val
+
   defp parse_int(val) when is_binary(val) do
     case Integer.parse(val) do
       {int, _} -> int
@@ -204,6 +210,7 @@ defmodule SovereignSoulEngineWeb.Api.TelemetryController do
   defp parse_float(nil), do: nil
   defp parse_float(val) when is_float(val), do: val
   defp parse_float(val) when is_integer(val), do: val * 1.0
+
   defp parse_float(val) when is_binary(val) do
     case Float.parse(val) do
       {fl, _} -> fl
@@ -267,7 +274,8 @@ defmodule SovereignSoulEngineWeb.Api.TelemetryController do
               smoothed = round(0.4 * emotional.stress + 0.6 * target)
               Map.put(attrs, :stress, clamp(smoothed, 0, 100))
 
-            telemetry.heart_rate != nil && telemetry.heart_rate > 105 && telemetry.motion_state != "running" ->
+            telemetry.heart_rate != nil && telemetry.heart_rate > 105 &&
+                telemetry.motion_state != "running" ->
               Map.put(attrs, :stress, min(100, emotional.stress + 15))
 
             telemetry.heart_rate != nil && telemetry.heart_rate < 70 ->

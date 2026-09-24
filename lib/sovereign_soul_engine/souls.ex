@@ -6,7 +6,17 @@ defmodule SovereignSoulEngine.Souls do
 
   import Ecto.Query
 
-  alias SovereignSoulEngine.Souls.{SoulProfile, EmotionalState, SoulShadow, SoulFear, MoralLine, SomaticState, GriefArc, ForgivenessArc}
+  alias SovereignSoulEngine.Souls.{
+    SoulProfile,
+    EmotionalState,
+    SoulShadow,
+    SoulFear,
+    MoralLine,
+    SomaticState,
+    GriefArc,
+    ForgivenessArc
+  }
+
   alias SovereignSoulEngine.Goals.CharacterGoal
   alias SovereignSoulEngine.Beliefs.CharacterBelief
   alias SovereignSoulEngine.Triggers.CharacterTrigger
@@ -58,7 +68,8 @@ defmodule SovereignSoulEngine.Souls do
                Map.merge(
                  %{
                    character_id: character.id,
-                   identity_summary: character.description || "A living sovereign soul of Feannag's Rest.",
+                   identity_summary:
+                     character.description || "A living sovereign soul of Feannag's Rest.",
                    speech_style: "Direct, expressive",
                    personality_traits: %{
                      "openness" => 0.75,
@@ -356,7 +367,9 @@ defmodule SovereignSoulEngine.Souls do
       nil ->
         {:ok, state} = create_somatic_state(%{character_id: character_id})
         state
-      state -> state
+
+      state ->
+        state
     end
   end
 
@@ -470,7 +483,7 @@ defmodule SovereignSoulEngine.Souls do
       griever = Characters.get_character!(rel.source_character_id)
 
       if griever.kind == "npc" and griever.status == "active" do
-        intensity = min(div((rel.trust || 0) + max((rel.affinity || 0), 0), 2), 90)
+        intensity = min(div((rel.trust || 0) + max(rel.affinity || 0, 0), 2), 90)
 
         if intensity > 20 do
           create_grief_arc(%{

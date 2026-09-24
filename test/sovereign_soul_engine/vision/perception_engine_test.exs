@@ -46,10 +46,11 @@ defmodule SovereignSoulEngine.Vision.PerceptionEngineTest do
   end
 
   describe "perceive/4" do
-    test "processes visual frame, stores episodic memory, updates Theory of Mind, and generates reaction", %{
-      npc: npc,
-      player: player
-    } do
+    test "processes visual frame, stores episodic memory, updates Theory of Mind, and generates reaction",
+         %{
+           npc: npc,
+           player: player
+         } do
       image_b64 = Base.encode64("sample_smart_glasses_visual_frame_binary")
 
       assert {:ok, result} =

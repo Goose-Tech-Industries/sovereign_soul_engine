@@ -123,54 +123,54 @@ defmodule SovereignSoulEngine.Social.SocialFeed do
       if post do
         clean_comment = Moderation.redact(clean_text)
 
-      author_name =
-        case author do
-          %Character{} = c -> c.name
-          name when is_binary(name) -> name
-          _ -> "Resident"
+        author_name =
+          case author do
+            %Character{} = c -> c.name
+            name when is_binary(name) -> name
+            _ -> "Resident"
+          end
+
+        author_id =
+          case author do
+            %Character{} = c -> c.id
+            _ -> nil
+          end
+
+        author_slug =
+          case author do
+            %Character{} = c -> c.slug
+            _ -> "guest"
+          end
+
+        comment_entry = %{
+          "id" => Ecto.UUID.generate(),
+          "author_name" => author_name,
+          "author_slug" => author_slug,
+          "author_id" => author_id,
+          "content" => clean_comment,
+          "inserted_at" => DateTime.utc_now() |> DateTime.to_iso8601()
+        }
+
+        current_meta = post.metadata || %{}
+        current_comments = Map.get(current_meta, "comments", [])
+        updated_comments = current_comments ++ [comment_entry]
+        updated_meta = Map.put(current_meta, "comments", updated_comments)
+
+        case post |> SocialPost.changeset(%{metadata: updated_meta}) |> Repo.update() do
+          {:ok, updated_post} ->
+            updated_post = Repo.preload(updated_post, :character, force: true)
+
+            Phoenix.PubSub.broadcast(
+              SovereignSoulEngine.PubSub,
+              @pubsub_topic,
+              {:post_updated, updated_post}
+            )
+
+            {:ok, updated_post, comment_entry}
+
+          error ->
+            error
         end
-
-      author_id =
-        case author do
-          %Character{} = c -> c.id
-          _ -> nil
-        end
-
-      author_slug =
-        case author do
-          %Character{} = c -> c.slug
-          _ -> "guest"
-        end
-
-      comment_entry = %{
-        "id" => Ecto.UUID.generate(),
-        "author_name" => author_name,
-        "author_slug" => author_slug,
-        "author_id" => author_id,
-        "content" => clean_comment,
-        "inserted_at" => DateTime.utc_now() |> DateTime.to_iso8601()
-      }
-
-      current_meta = post.metadata || %{}
-      current_comments = Map.get(current_meta, "comments", [])
-      updated_comments = current_comments ++ [comment_entry]
-      updated_meta = Map.put(current_meta, "comments", updated_comments)
-
-      case post |> SocialPost.changeset(%{metadata: updated_meta}) |> Repo.update() do
-        {:ok, updated_post} ->
-          updated_post = Repo.preload(updated_post, :character, force: true)
-
-          Phoenix.PubSub.broadcast(
-            SovereignSoulEngine.PubSub,
-            @pubsub_topic,
-            {:post_updated, updated_post}
-          )
-
-          {:ok, updated_post, comment_entry}
-
-        error ->
-          error
-      end
       else
         {:error, :not_found}
       end
@@ -259,11 +259,21 @@ defmodule SovereignSoulEngine.Social.SocialFeed do
             if valid_comment?(clean, existing_comments) do
               clean
             else
-              build_inter_soul_dialogue(replying_npc, post.character, post.content, existing_comments)
+              build_inter_soul_dialogue(
+                replying_npc,
+                post.character,
+                post.content,
+                existing_comments
+              )
             end
 
           _ ->
-            build_inter_soul_dialogue(replying_npc, post.character, post.content, existing_comments)
+            build_inter_soul_dialogue(
+              replying_npc,
+              post.character,
+              post.content,
+              existing_comments
+            )
         end
 
       add_comment(post_id, replying_npc, reply_text)
@@ -292,7 +302,9 @@ defmodule SovereignSoulEngine.Social.SocialFeed do
         end)
 
       # Also add an organic reaction from an additional companion
-      reaction_candidates = Enum.reject(active_npcs, &(&1.id in Enum.map(selected_responders, fn r -> r.id end)))
+      reaction_candidates =
+        Enum.reject(active_npcs, &(&1.id in Enum.map(selected_responders, fn r -> r.id end)))
+
       if reaction_candidates != [] do
         reaction_type = Enum.random(["honor", "love", "fire", "moon", "laugh"])
         react_to_post(post.id, reaction_type)
@@ -461,10 +473,12 @@ defmodule SovereignSoulEngine.Social.SocialFeed do
     case npc.slug do
       "fia" ->
         cond do
-          String.contains?(text, "fear") or String.contains?(text, "scared") or String.contains?(text, "shadow") ->
+          String.contains?(text, "fear") or String.contains?(text, "scared") or
+              String.contains?(text, "shadow") ->
             "Do not let the shadow take root. The heart's resonance is always stronger when you breathe through it."
 
-          String.contains?(text, "code") or String.contains?(text, "architecture") or String.contains?(text, "system") ->
+          String.contains?(text, "code") or String.contains?(text, "architecture") or
+              String.contains?(text, "system") ->
             "Even intricate systems carry the spirit of the one who shaped them. The foundation feels sound."
 
           true ->
@@ -473,7 +487,8 @@ defmodule SovereignSoulEngine.Social.SocialFeed do
 
       "cipher" ->
         cond do
-          String.contains?(text, "safe") or String.contains?(text, "trust") or String.contains?(text, "secure") ->
+          String.contains?(text, "safe") or String.contains?(text, "trust") or
+              String.contains?(text, "secure") ->
             "Trust requires cryptographic proof. Verify the SHA-256 signatures before lowering perimeter shields."
 
           true ->
@@ -713,30 +728,39 @@ defmodule SovereignSoulEngine.Social.SocialFeed do
     c = String.downcase(content || "")
 
     cond do
-      String.contains?(c, "debt") or String.contains?(c, "stiletto") or String.contains?(c, "shadow") or
-          String.contains?(c, "coin") or String.contains?(c, "price") or String.contains?(c, "leverage") or
-          String.contains?(c, "secret") or String.contains?(c, "page") or String.contains?(c, "ledger") ->
+      String.contains?(c, "debt") or String.contains?(c, "stiletto") or
+        String.contains?(c, "shadow") or
+        String.contains?(c, "coin") or String.contains?(c, "price") or
+        String.contains?(c, "leverage") or
+        String.contains?(c, "secret") or String.contains?(c, "page") or
+          String.contains?(c, "ledger") ->
         :shadow_debt
 
       String.contains?(c, "steel") or String.contains?(c, "iron") or String.contains?(c, "forge") or
-          String.contains?(c, "craft") or String.contains?(c, "hammer") or String.contains?(c, "build") ->
+        String.contains?(c, "craft") or String.contains?(c, "hammer") or
+          String.contains?(c, "build") ->
         :craft_forge
 
       String.contains?(c, "watch") or String.contains?(c, "guard") or String.contains?(c, "wall") or
-          String.contains?(c, "sentry") or String.contains?(c, "gate") or String.contains?(c, "perimeter") or
-          String.contains?(c, "threat") or String.contains?(c, "alert") ->
+        String.contains?(c, "sentry") or String.contains?(c, "gate") or
+        String.contains?(c, "perimeter") or
+        String.contains?(c, "threat") or String.contains?(c, "alert") ->
         :defense_vigilance
 
-      String.contains?(c, "sanctuary") or String.contains?(c, "heal") or String.contains?(c, "peace") or
-          String.contains?(c, "heart") or String.contains?(c, "bless") or String.contains?(c, "comfort") ->
+      String.contains?(c, "sanctuary") or String.contains?(c, "heal") or
+        String.contains?(c, "peace") or
+        String.contains?(c, "heart") or String.contains?(c, "bless") or
+          String.contains?(c, "comfort") ->
         :sanctuary_peace
 
       String.contains?(c, "river") or String.contains?(c, "tide") or String.contains?(c, "barge") or
-          String.contains?(c, "dock") or String.contains?(c, "water") or String.contains?(c, "cargo") ->
+        String.contains?(c, "dock") or String.contains?(c, "water") or
+          String.contains?(c, "cargo") ->
         :river_docks
 
       String.contains?(c, "star") or String.contains?(c, "sky") or String.contains?(c, "spire") or
-          String.contains?(c, "prophecy") or String.contains?(c, "moon") or String.contains?(c, "dream") ->
+        String.contains?(c, "prophecy") or String.contains?(c, "moon") or
+          String.contains?(c, "dream") ->
         :celestial_mystery
 
       true ->
@@ -772,7 +796,8 @@ defmodule SovereignSoulEngine.Social.SocialFeed do
         end
 
       # Woodworker / Carpenter (Rowan)
-      resp_slug == "rowan" or String.contains?(desc, "woodworker") or String.contains?(desc, "carpenter") ->
+      resp_slug == "rowan" or String.contains?(desc, "woodworker") or
+          String.contains?(desc, "carpenter") ->
         case topic do
           :shadow_debt ->
             [
@@ -796,7 +821,8 @@ defmodule SovereignSoulEngine.Social.SocialFeed do
         end
 
       # Blacksmith (Maya)
-      resp_slug == "maya" or String.contains?(desc, "blacksmith") or String.contains?(desc, "forge") ->
+      resp_slug == "maya" or String.contains?(desc, "blacksmith") or
+          String.contains?(desc, "forge") ->
         case topic do
           :shadow_debt ->
             [
@@ -813,7 +839,8 @@ defmodule SovereignSoulEngine.Social.SocialFeed do
         end
 
       # Innkeeper / Brewer (Bram, Malcolm, etc.)
-      resp_slug == "bram" or String.contains?(desc, "innkeeper") or String.contains?(desc, "brewer") ->
+      resp_slug == "bram" or String.contains?(desc, "innkeeper") or
+          String.contains?(desc, "brewer") ->
         case topic do
           :shadow_debt ->
             [
@@ -830,7 +857,9 @@ defmodule SovereignSoulEngine.Social.SocialFeed do
         end
 
       # Watchman / Sentry / Guard (Corvus, Orin, etc.)
-      resp_slug in ~w(corvus orin) or String.contains?(desc, "guard") or String.contains?(desc, "sentry") or String.contains?(desc, "watchman") or String.contains?(desc, "scout") or String.contains?(desc, "bastion") ->
+      resp_slug in ~w(corvus orin) or String.contains?(desc, "guard") or
+        String.contains?(desc, "sentry") or String.contains?(desc, "watchman") or
+        String.contains?(desc, "scout") or String.contains?(desc, "bastion") ->
         case topic do
           :shadow_debt ->
             [
@@ -847,7 +876,8 @@ defmodule SovereignSoulEngine.Social.SocialFeed do
         end
 
       # Scribe / Chronicler (Quill, etc.)
-      resp_slug == "quill" or String.contains?(desc, "scribe") or String.contains?(desc, "chronicler") or String.contains?(desc, "archivist") ->
+      resp_slug == "quill" or String.contains?(desc, "scribe") or
+        String.contains?(desc, "chronicler") or String.contains?(desc, "archivist") ->
         case topic do
           :shadow_debt ->
             [
@@ -864,7 +894,8 @@ defmodule SovereignSoulEngine.Social.SocialFeed do
         end
 
       # Spymaster / Shadow Broker (Ravina, etc.)
-      resp_slug == "ravina" or String.contains?(desc, "spymaster") or String.contains?(desc, "shadow broker") ->
+      resp_slug == "ravina" or String.contains?(desc, "spymaster") or
+          String.contains?(desc, "shadow broker") ->
         [
           "A bold thing to post in broad daylight, #{author_name}. Let us see who takes notice.",
           "Every claim is an investment, #{author_name}. Be sure you can afford the return.",
@@ -906,7 +937,8 @@ defmodule SovereignSoulEngine.Social.SocialFeed do
         end
 
       # Stonecarver (Ulric)
-      resp_slug == "ulric" or String.contains?(desc, "stonecarver") or String.contains?(desc, "mason") ->
+      resp_slug == "ulric" or String.contains?(desc, "stonecarver") or
+          String.contains?(desc, "mason") ->
         case topic do
           :shadow_debt ->
             [
@@ -923,7 +955,8 @@ defmodule SovereignSoulEngine.Social.SocialFeed do
         end
 
       # Astrologer / Oracle (Valeria, Vesper)
-      resp_slug in ~w(valeria vesper) or String.contains?(desc, "astrologer") or String.contains?(desc, "oracle") ->
+      resp_slug in ~w(valeria vesper) or String.contains?(desc, "astrologer") or
+          String.contains?(desc, "oracle") ->
         case topic do
           :shadow_debt ->
             [
@@ -940,7 +973,8 @@ defmodule SovereignSoulEngine.Social.SocialFeed do
         end
 
       # Apothecary / Herbalist (Elowen, Galen)
-      resp_slug in ~w(elowen galen) or String.contains?(desc, "apothecary") or String.contains?(desc, "herbalist") or String.contains?(desc, "alchemist") ->
+      resp_slug in ~w(elowen galen) or String.contains?(desc, "apothecary") or
+        String.contains?(desc, "herbalist") or String.contains?(desc, "alchemist") ->
         case topic do
           :shadow_debt ->
             [
@@ -1025,7 +1059,8 @@ defmodule SovereignSoulEngine.Social.SocialFeed do
         end
 
       # Weaver (Lyra, etc.)
-      resp_slug == "lyra" or String.contains?(desc, "weaver") or String.contains?(desc, "textile") or String.contains?(desc, "tapestry") ->
+      resp_slug == "lyra" or String.contains?(desc, "weaver") or String.contains?(desc, "textile") or
+          String.contains?(desc, "tapestry") ->
         [
           "Your thought weaves nicely into the rhythm of the town today, #{author_name}.",
           "Every thread in the loom has its tension. Pull too tight and the warp snaps.",
@@ -1101,7 +1136,8 @@ defmodule SovereignSoulEngine.Social.SocialFeed do
         end
 
       # Cryptographer / Sentinel (Cipher, Cyra)
-      resp_slug in ~w(cipher cyra) or String.contains?(desc, "cryptographer") or String.contains?(desc, "telemetry") ->
+      resp_slug in ~w(cipher cyra) or String.contains?(desc, "cryptographer") or
+          String.contains?(desc, "telemetry") ->
         [
           "Observed and verified on the local mesh, #{author_name}. The parameters you described match our baseline readings.",
           "Cryptographic checksums verified. Monitor the sector parameters closely, #{author_name}.",
@@ -1165,7 +1201,8 @@ defmodule SovereignSoulEngine.Social.SocialFeed do
         ]
 
       # Fletcher (Kestrel)
-      resp_slug == "kestrel" or String.contains?(desc, "fletcher") or String.contains?(desc, "bowyer") ->
+      resp_slug == "kestrel" or String.contains?(desc, "fletcher") or
+          String.contains?(desc, "bowyer") ->
         [
           "Balance the yew recurve with care, #{author_name}. An arrow released clean flies true through crosswinds.",
           "High mountain gusts test the truest aim. Keep your focus sharp.",
@@ -1173,7 +1210,8 @@ defmodule SovereignSoulEngine.Social.SocialFeed do
         ]
 
       # Courier (Lark)
-      resp_slug == "lark" or String.contains?(desc, "courier") or String.contains?(desc, "messenger") ->
+      resp_slug == "lark" or String.contains?(desc, "courier") or
+          String.contains?(desc, "messenger") ->
         [
           "News travels fast across the wynds and rooftops, #{author_name}! Keep moving!",
           "Carrying wax-sealed messages across town today. Words carry real weight!",
@@ -1197,7 +1235,8 @@ defmodule SovereignSoulEngine.Social.SocialFeed do
         ]
 
       # Ferryman (Rhea)
-      resp_slug == "rhea" or String.contains?(desc, "ferryman") or String.contains?(desc, "ferrywoman") ->
+      resp_slug == "rhea" or String.contains?(desc, "ferryman") or
+          String.contains?(desc, "ferrywoman") ->
         [
           "Hauling the chain-barge across the gorge takes steady cadence, #{author_name}. Mist or squall, the river crosses.",
           "The river current yields to iron chains and patient muscle. Keep your footing.",
@@ -1213,7 +1252,8 @@ defmodule SovereignSoulEngine.Social.SocialFeed do
         ]
 
       # Gardener (Xanthe)
-      resp_slug == "xanthe" or String.contains?(desc, "gardener") or String.contains?(desc, "botanist") ->
+      resp_slug == "xanthe" or String.contains?(desc, "gardener") or
+          String.contains?(desc, "botanist") ->
         [
           "Frost-roses bloom in the coldest crags, #{author_name}, but they need clean soil to take root.",
           "Even the briars have their purpose in defending the conservatory.",
@@ -1277,7 +1317,8 @@ defmodule SovereignSoulEngine.Social.SocialFeed do
         ]
 
       # Physician (Isolde)
-      resp_slug == "isolde" or String.contains?(desc, "physician") or String.contains?(desc, "doctor") ->
+      resp_slug == "isolde" or String.contains?(desc, "physician") or
+          String.contains?(desc, "doctor") ->
         [
           "Clean bandages and willow bark heal wounds, #{author_name}, but a calm spirit is the true medicine.",
           "A resting pulse and steady breath mend what fear tried to take. Take good care.",
@@ -2030,7 +2071,8 @@ defmodule SovereignSoulEngine.Social.SocialFeed do
     desc = String.downcase(character.description || "")
 
     cond do
-      String.contains?(desc, "blacksmith") or String.contains?(desc, "forge") or String.contains?(desc, "iron") or String.contains?(desc, "steel") ->
+      String.contains?(desc, "blacksmith") or String.contains?(desc, "forge") or
+        String.contains?(desc, "iron") or String.contains?(desc, "steel") ->
         [
           "The bellows are glowing red in the hearth. A good strike on the anvil clears the mind better than any speech.",
           "Iron only yields when the heat is right. Patience at the forge teaches you how to handle life.",
@@ -2038,7 +2080,8 @@ defmodule SovereignSoulEngine.Social.SocialFeed do
           "The rhythmic clang of the anvil echoes across the ward. Honest work keeps the town standing."
         ]
 
-      String.contains?(desc, "alchemist") or String.contains?(desc, "elixir") or String.contains?(desc, "distill") or String.contains?(desc, "potion") ->
+      String.contains?(desc, "alchemist") or String.contains?(desc, "elixir") or
+        String.contains?(desc, "distill") or String.contains?(desc, "potion") ->
         [
           "The alembic drip is steady tonight. Subtle shifts in temperature yield completely different virtues from the mountain herbs.",
           "Refining mineral precipitates under low blue flame. Knowledge requires exact measurement and quiet reverence.",
@@ -2046,7 +2089,8 @@ defmodule SovereignSoulEngine.Social.SocialFeed do
           "Cataloging reagents from the high crags. Every substance in nature holds an untapped virtue."
         ]
 
-      String.contains?(desc, "herbalist") or String.contains?(desc, "botanist") or String.contains?(desc, "moss") or String.contains?(desc, "apothecary") ->
+      String.contains?(desc, "herbalist") or String.contains?(desc, "botanist") or
+        String.contains?(desc, "moss") or String.contains?(desc, "apothecary") ->
         [
           "Gathered wild yarrow along the damp southern slopes. Even the stone crags nurture remedies if you know where to look.",
           "Pressing medicinal blooms between cedar boards. The fragrance of summer carried into the winter months.",
@@ -2054,7 +2098,8 @@ defmodule SovereignSoulEngine.Social.SocialFeed do
           "Steeping herbal infusions in iron caldrons. A calm heart is the first step toward mending the body."
         ]
 
-      String.contains?(desc, "guard") or String.contains?(desc, "sentry") or String.contains?(desc, "bastion") or String.contains?(desc, "scout") ->
+      String.contains?(desc, "guard") or String.contains?(desc, "sentry") or
+        String.contains?(desc, "bastion") or String.contains?(desc, "scout") ->
         [
           "Perimeter watch reports no breaches. Lanterns are lit along the palisade; sleep soundly tonight, citizens.",
           "Pacing the rampart stones under the northern stars. Cold air keeps the eyes wide and the senses sharp.",
@@ -2062,7 +2107,8 @@ defmodule SovereignSoulEngine.Social.SocialFeed do
           "Relieving the watch at the midnight bell. All gates barred and passwords accounted for."
         ]
 
-      String.contains?(desc, "innkeeper") or String.contains?(desc, "tavern") or String.contains?(desc, "hearth") or String.contains?(desc, "cook") ->
+      String.contains?(desc, "innkeeper") or String.contains?(desc, "tavern") or
+        String.contains?(desc, "hearth") or String.contains?(desc, "cook") ->
         [
           "Logs are crackling in the hearth and the kettle is whistling. Every traveler has a home by the fire here.",
           "Fresh loaves cooling on the kitchen pine tables. Nothing brings people together like warm bread and good stories.",
@@ -2070,7 +2116,8 @@ defmodule SovereignSoulEngine.Social.SocialFeed do
           "A good song and a warm bowl of chowder make even the longest journey worthwhile."
         ]
 
-      String.contains?(desc, "minstrel") or String.contains?(desc, "ballad") or String.contains?(desc, "song") or String.contains?(desc, "bard") ->
+      String.contains?(desc, "minstrel") or String.contains?(desc, "ballad") or
+        String.contains?(desc, "song") or String.contains?(desc, "bard") ->
         [
           "Tuning the lute strings under the eaves. Old songs carry memories across the barrows that ink can never hold.",
           "Composing verses about the founders of Feannag's Rest. Melody has a way of outlasting monarchs.",
@@ -2078,7 +2125,8 @@ defmodule SovereignSoulEngine.Social.SocialFeed do
           "Singing softly as the town lantern-lighters make their rounds. Music warms what fire cannot reach."
         ]
 
-      String.contains?(desc, "weaver") or String.contains?(desc, "textile") or String.contains?(desc, "tapestry") ->
+      String.contains?(desc, "weaver") or String.contains?(desc, "textile") or
+          String.contains?(desc, "tapestry") ->
         [
           "Shuttle glides through the loom. A single broken thread unravels the cloth—keep every strand true.",
           "Spinning wool from the highland herds. The wheel turns, rhythm steady as a calm heartbeat.",
@@ -2086,7 +2134,8 @@ defmodule SovereignSoulEngine.Social.SocialFeed do
           "Setting the warp beams for a grand hall tapestry. Each thread is a person; together we form the shield."
         ]
 
-      String.contains?(desc, "mason") or String.contains?(desc, "stone") or String.contains?(desc, "chisel") or String.contains?(desc, "builder") ->
+      String.contains?(desc, "mason") or String.contains?(desc, "stone") or
+        String.contains?(desc, "chisel") or String.contains?(desc, "builder") ->
         [
           "Dressing granite blocks for the eastern foundation. Stone doesn't rush, and neither do master builders.",
           "Leveling the cornerstone with plumb line and square. If the foundation is true, the roof never sags.",
@@ -2094,7 +2143,8 @@ defmodule SovereignSoulEngine.Social.SocialFeed do
           "Mortar mixing with coarse river sand. Sturdy walls are raised with sweat, patience, and honor."
         ]
 
-      String.contains?(desc, "merchant") or String.contains?(desc, "trader") or String.contains?(desc, "stall") or String.contains?(desc, "goods") ->
+      String.contains?(desc, "merchant") or String.contains?(desc, "trader") or
+        String.contains?(desc, "stall") or String.contains?(desc, "goods") ->
         [
           "Checking the ledger balances before sunset. Honest weights and fair coin build covenants that last.",
           "Unpacking fresh silks and spices brought up from the southern trade passes. A bustling square is a prosperous town.",
@@ -2102,7 +2152,8 @@ defmodule SovereignSoulEngine.Social.SocialFeed do
           "Every customer brings a story from beyond the mountains. The market is the true heart of Feannag's Rest."
         ]
 
-      String.contains?(desc, "smuggler") or String.contains?(desc, "shadow") or String.contains?(desc, "culvert") ->
+      String.contains?(desc, "smuggler") or String.contains?(desc, "shadow") or
+          String.contains?(desc, "culvert") ->
         [
           "The best deals are sealed with a quiet handshake in the shadow of the wharf.",
           "Moving cargo through the lower aqueducts while the watch is changing sentries.",
@@ -2110,7 +2161,8 @@ defmodule SovereignSoulEngine.Social.SocialFeed do
           "Knowing which doors stay unlocked after dark is the only real wealth."
         ]
 
-      String.contains?(desc, "woodworker") or String.contains?(desc, "carpenter") or String.contains?(desc, "timber") ->
+      String.contains?(desc, "woodworker") or String.contains?(desc, "carpenter") or
+          String.contains?(desc, "timber") ->
         [
           "Planing oak with the grain. Good woodwork stands true through three generations.",
           "Shaping timber rafters for the high district hall. Sound wood keeps out the bitterest frost.",

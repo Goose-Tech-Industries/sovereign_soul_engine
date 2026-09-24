@@ -78,14 +78,19 @@ defmodule SovereignSoulEngine.Memories.MemoryRetrieval do
         :recency_halflife_days
       ])
 
+    include_superseded = Keyword.get(opts, :include_superseded, false)
+
     # Map.get/2 (not m[:key]) throughout — memories arrive as real
     # %Memory{} Ecto structs here (see Memories.list_relevant_memories_for_character),
     # and structs don't implement the Access behaviour bracket syntax
     # requires. This crashed the very first time this path got exercised
     # outside the dev-harness "Goose" flow with non-empty context tags.
     memories
+    |> Enum.filter(fn m -> include_superseded or Map.get(m, :status) != "superseded" end)
     |> Enum.filter(fn m -> not unresolved_only or not Map.get(m, :is_resolved, false) end)
-    |> Enum.filter(fn m -> is_nil(subject_id) or Map.get(m, :subject_character_id) == subject_id end)
+    |> Enum.filter(fn m ->
+      is_nil(subject_id) or Map.get(m, :subject_character_id) == subject_id
+    end)
     |> Enum.filter(fn m ->
       is_nil(categories) or normalize_category(Map.get(m, :category)) in categories
     end)
@@ -94,6 +99,32 @@ defmodule SovereignSoulEngine.Memories.MemoryRetrieval do
     end)
     |> Enum.filter(fn m -> Map.get(m, :importance, 0) >= min_importance end)
     |> MemoryScoring.rank(scoring_opts)
+  end
+
+  @doc """
+  Formats a memory into a prompt-ready bullet string, including historical contrast
+  if the memory is superseded or supersedes a past fact.
+  """
+  def format_memory_line(%SovereignSoulEngine.Memories.Memory{} = m) do
+    if SovereignSoulEngine.Memories.Memory.superseded?(m) do
+      valid_until = SovereignSoulEngine.Memories.Memory.valid_until(m) || "past"
+
+      "- [HISTORICAL CONTEXT - formerly believed until #{valid_until}]: #{m.summary} (Valence: #{m.valence})"
+    else
+      case SovereignSoulEngine.Memories.Memory.supersedes_id(m) do
+        nil ->
+          "- #{m.summary} (Valence: #{m.valence})"
+
+        _superseded_id ->
+          "- #{m.summary} (Valence: #{m.valence}, updated fact)"
+      end
+    end
+  end
+
+  def format_memory_line(m) when is_map(m) do
+    summary = Map.get(m, :summary) || Map.get(m, "summary", "")
+    valence = Map.get(m, :valence) || Map.get(m, "valence", 0.0)
+    "- #{summary} (Valence: #{valence})"
   end
 
   defp has_any_tag?(nil, _), do: false

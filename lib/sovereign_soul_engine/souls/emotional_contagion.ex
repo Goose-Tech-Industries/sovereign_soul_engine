@@ -72,12 +72,14 @@ defmodule SovereignSoulEngine.Souls.EmotionalContagion do
   def describe_contagion(_, deltas) when map_size(deltas) == 0, do: nil
 
   def describe_contagion(tone, _deltas) do
-    tone_word = case tone do
-      :positive -> "warm"
-      :negative -> "hostile"
-      :distressed -> "distressed"
-      _ -> "neutral"
-    end
+    tone_word =
+      case tone do
+        :positive -> "warm"
+        :negative -> "hostile"
+        :distressed -> "distressed"
+        _ -> "neutral"
+      end
+
     "The player's #{tone_word} tone has subtly affected your emotional state."
   end
 end

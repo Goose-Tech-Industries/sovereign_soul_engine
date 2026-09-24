@@ -10,8 +10,9 @@ defmodule SovereignSoulEngine.LLM.LocalProviderTest do
 
     test "health check returns status map or connection error cleanly without crashing" do
       result = LocalProvider.health()
+
       assert match?({:ok, %{status: "available"}}, result) or
-             match?({:error, _reason}, result)
+               match?({:error, _reason}, result)
     end
   end
 
@@ -25,7 +26,9 @@ defmodule SovereignSoulEngine.LLM.LocalProviderTest do
       case LocalProvider.health() do
         {:ok, _} ->
           input = %{
-            messages: [%{role: "user", content: "Reply with a JSON object: {\"greeting\": \"hello\"}"}],
+            messages: [
+              %{role: "user", content: "Reply with a JSON object: {\"greeting\": \"hello\"}"}
+            ],
             max_tokens: 30
           }
 

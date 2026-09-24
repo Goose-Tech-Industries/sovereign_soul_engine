@@ -10,7 +10,6 @@ defmodule SovereignSoulEngine.Vision.PerceptionEngine do
   3. Grounded dialogue remarks reacting to what the soul sees.
   """
 
-
   alias SovereignSoulEngine.Memories
   alias SovereignSoulEngine.TheoryOfMind
   alias SovereignSoulEngine.Scenes
@@ -128,7 +127,8 @@ defmodule SovereignSoulEngine.Vision.PerceptionEngine do
     case try_live_multimodal_analysis(clean_payload) do
       {:ok, analysis} ->
         %{
-          scene_description: analysis["scene_description"] || "a clear view of the surrounding environment",
+          scene_description:
+            analysis["scene_description"] || "a clear view of the surrounding environment",
           salient_objects: analysis["salient_objects"] || ["environment", "room"],
           user_affect: analysis["user_affect"] || "calm and engaged",
           lighting: analysis["lighting"] || "natural ambient light",
@@ -145,9 +145,15 @@ defmodule SovereignSoulEngine.Vision.PerceptionEngine do
   end
 
   defp analyze_visual_input(input, source, _player_name) when is_map(input) do
-    description = input["description"] || input[:description] || "a desk workspace with open notebooks and soft ambient glow"
+    description =
+      input["description"] || input[:description] ||
+        "a desk workspace with open notebooks and soft ambient glow"
+
     affect = input["user_affect"] || input[:user_affect] || "focused and thoughtful"
-    objects = input["objects"] || input[:objects] || ["desk", "keyboard", "notebook", "coffee cup"]
+
+    objects =
+      input["objects"] || input[:objects] || ["desk", "keyboard", "notebook", "coffee cup"]
+
     lighting = input["lighting"] || input[:lighting] || "warm ambient interior"
 
     %{
@@ -165,10 +171,13 @@ defmodule SovereignSoulEngine.Vision.PerceptionEngine do
   defp try_live_multimodal_analysis(b64_payload) do
     gemini_key = System.get_env("GEMINI_API_KEY")
 
-    if is_binary(gemini_key) and byte_size(gemini_key) > 10 and is_binary(b64_payload) and byte_size(b64_payload) > 100 do
-      url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=#{gemini_key}"
+    if is_binary(gemini_key) and byte_size(gemini_key) > 10 and is_binary(b64_payload) and
+         byte_size(b64_payload) > 100 do
+      url =
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=#{gemini_key}"
 
-      prompt = "Analyze this image frame from user smart glasses or webcam. Output a single JSON object with exact keys: \"scene_description\" (concise narrative sentence), \"salient_objects\" (list of up to 4 strings), \"user_affect\" (emotional mood of person or scene), \"lighting\" (lighting style)."
+      prompt =
+        "Analyze this image frame from user smart glasses or webcam. Output a single JSON object with exact keys: \"scene_description\" (concise narrative sentence), \"salient_objects\" (list of up to 4 strings), \"user_affect\" (emotional mood of person or scene), \"lighting\" (lighting style)."
 
       body = %{
         contents: [
@@ -185,7 +194,13 @@ defmodule SovereignSoulEngine.Vision.PerceptionEngine do
       }
 
       case Req.post(url, json: body, receive_timeout: 4000, retry: false) do
-        {:ok, %{status: 200, body: %{"candidates" => [%{"content" => %{"parts" => [%{"text" => json_str} | _]}} | _]}}} ->
+        {:ok,
+         %{
+           status: 200,
+           body: %{
+             "candidates" => [%{"content" => %{"parts" => [%{"text" => json_str} | _]}} | _]
+           }
+         }} ->
           case Jason.decode(json_str) do
             {:ok, parsed} when is_map(parsed) -> {:ok, parsed}
             _ -> :fallback
@@ -209,23 +224,23 @@ defmodule SovereignSoulEngine.Vision.PerceptionEngine do
       case hash_val do
         0 ->
           {"#{player_name}'s workspace illuminated by monitor glow, papers and a warm beverage nearby",
-           "intense concentration with calm posture",
-           ["monitor", "desk lamp", "keyboard", "mug"], "cool monitor glow"}
+           "intense concentration with calm posture", ["monitor", "desk lamp", "keyboard", "mug"],
+           "cool monitor glow"}
 
         1 ->
           {"An open sunlit outdoor setting with trees and distant urban skyline",
-           "relaxed and energized",
-           ["open sky", "trees", "walking path", "sunglasses"], "natural midday daylight"}
+           "relaxed and energized", ["open sky", "trees", "walking path", "sunglasses"],
+           "natural midday daylight"}
 
         2 ->
           {"A cozy dim evening room with books, soft incandescent lamplight, and quiet atmosphere",
-           "reflective and unwinded",
-           ["bookshelf", "reading chair", "warm lamp", "phone"], "dim amber incandescent"}
+           "reflective and unwinded", ["bookshelf", "reading chair", "warm lamp", "phone"],
+           "dim amber incandescent"}
 
         3 ->
           {"A bustling lively setting with motion, ambient activity, and vibrant background",
-           "alert and engaged",
-           ["crowd", "street view", "backpack", "smart watch"], "diffuse daylight"}
+           "alert and engaged", ["crowd", "street view", "backpack", "smart watch"],
+           "diffuse daylight"}
       end
 
     %{

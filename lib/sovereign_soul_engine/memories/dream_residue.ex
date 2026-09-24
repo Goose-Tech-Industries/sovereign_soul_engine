@@ -64,12 +64,14 @@ defmodule SovereignSoulEngine.Memories.DreamResidue do
     case profile do
       %SoulProfile{} ->
         current_traits = profile.personality_traits || %{}
-        updated_traits = Map.put(current_traits, "last_dream_residue", %{
-          "narrative" => narrative,
-          "archetype" => archetype,
-          "residual_thought" => residual,
-          "synthesized_at" => DateTime.to_iso8601(DateTime.utc_now())
-        })
+
+        updated_traits =
+          Map.put(current_traits, "last_dream_residue", %{
+            "narrative" => narrative,
+            "archetype" => archetype,
+            "residual_thought" => residual,
+            "synthesized_at" => DateTime.to_iso8601(DateTime.utc_now())
+          })
 
         Souls.update_soul_profile(profile, %{personality_traits: updated_traits})
 

@@ -632,6 +632,20 @@ defmodule SovereignSoulEngine.Souls.Generator do
           ""
       end
 
+    # Dynamic Lorebook (World Info) Activation (SillyTavern pattern)
+    scene_location = scene.context && (scene.context["location"] || scene.context[:location])
+    scene_district = scene.context && (scene.context["district"] || scene.context[:district])
+
+    matched_lore =
+      SovereignSoulEngine.World.Lorebook.scan_and_activate(
+        history_messages,
+        current_district: scene_district,
+        extra_text: "#{scene_location} #{scene.location} #{Map.get(scene, :description, "")}",
+        max_entries: 3
+      )
+
+    lorebook_prompt = SovereignSoulEngine.World.Lorebook.prompt_directive(matched_lore)
+
     system_prompt = """
     You are #{npc.name}, #{npc.description}.
 
@@ -732,12 +746,13 @@ defmodule SovereignSoulEngine.Souls.Generator do
     - Atmosphere / Mood: #{mood}
     - Environment / Weather: #{weather}
     #{if narrative != "", do: "- Narrative Event / Transition context: " <> narrative, else: ""}
+    #{if lorebook_prompt != "", do: lorebook_prompt, else: ""}
 
     Your Relationships with other characters:
     #{relationships_prompt}
 
     Recent Memories:
-    #{Enum.map(memories, &"- #{&1.summary} (Valence: #{&1.valence})") |> Enum.join("\n")}
+    #{Enum.map(memories, &SovereignSoulEngine.Memories.MemoryRetrieval.format_memory_line/1) |> Enum.join("\n")}
 
     IMPORTANT: You are roleplaying as #{npc.name}. In "public_speech", write #{npc.name}'s actual spoken words to #{player.name}. Do NOT output template instructions or placeholder text.
     Respond in JSON format matching this schema. Keep all thoughts, motivations, tells, and reason fields concise and punchy (1-2 sentences). Do NOT produce verbose filler:
@@ -1255,8 +1270,18 @@ defmodule SovereignSoulEngine.Souls.Generator do
       # closes off the known cause, but this clause is the backstop for
       # anything else that can fail inside that transaction.
       {:error, failed_step, failed_value, _changes_so_far} ->
+        error_summary =
+          case failed_value do
+            %Ecto.Changeset{} = cs ->
+              # Avoid dumping raw changeset params which contain personal memory text or user dialogue
+              "changeset errors: #{inspect(Ecto.Changeset.traverse_errors(cs, fn {msg, _} -> msg end))}"
+
+            other ->
+              inspect(other)
+          end
+
         Logger.error(
-          "Consequence resolution failed at step #{inspect(failed_step)}: #{inspect(failed_value)}"
+          "Consequence resolution failed at step #{inspect(failed_step)}: #{error_summary}"
         )
 
         {:error, {failed_step, failed_value}}

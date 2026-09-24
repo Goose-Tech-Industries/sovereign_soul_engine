@@ -140,8 +140,23 @@ defmodule SovereignSoulEngine.Social.ResonanceSpectrumTest do
       emo_a = Souls.get_emotional_state_by_character(a.id)
       emo_c = Souls.get_emotional_state_by_character(c.id)
 
-      {:ok, _} = Souls.update_emotional_state(emo_a, %{attachment: 85, curiosity: 90, confidence: 80, gratitude: 80, stress: 0})
-      {:ok, _} = Souls.update_emotional_state(emo_c, %{attachment: 85, curiosity: 90, confidence: 80, gratitude: 80, stress: 0})
+      {:ok, _} =
+        Souls.update_emotional_state(emo_a, %{
+          attachment: 85,
+          curiosity: 90,
+          confidence: 80,
+          gratitude: 80,
+          stress: 0
+        })
+
+      {:ok, _} =
+        Souls.update_emotional_state(emo_c, %{
+          attachment: 85,
+          curiosity: 90,
+          confidence: 80,
+          gratitude: 80,
+          stress: 0
+        })
 
       score = MeshProtocol.compute_resonance(a, c)
       assert score > 55
@@ -154,8 +169,11 @@ defmodule SovereignSoulEngine.Social.ResonanceSpectrumTest do
       emo_a = Souls.get_emotional_state_by_character(a.id)
       emo_b = Souls.get_emotional_state_by_character(b.id)
 
-      {:ok, _} = Souls.update_emotional_state(emo_a, %{stress: 95, anger: 85, fear: 80, confidence: 10})
-      {:ok, _} = Souls.update_emotional_state(emo_b, %{stress: 95, anger: 85, fear: 80, confidence: 10})
+      {:ok, _} =
+        Souls.update_emotional_state(emo_a, %{stress: 95, anger: 85, fear: 80, confidence: 10})
+
+      {:ok, _} =
+        Souls.update_emotional_state(emo_b, %{stress: 95, anger: 85, fear: 80, confidence: 10})
 
       score = MeshProtocol.compute_resonance(a, b)
       assert score <= 50
@@ -172,6 +190,7 @@ defmodule SovereignSoulEngine.Social.ResonanceSpectrumTest do
 
       for encounter <- summary.encounters do
         assert encounter.resonance >= 15 and encounter.resonance <= 98
+
         if encounter.resonance >= 65 do
           assert encounter.delta.affinity >= 4
         end

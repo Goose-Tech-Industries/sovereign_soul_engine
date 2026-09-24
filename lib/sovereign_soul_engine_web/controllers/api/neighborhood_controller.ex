@@ -11,10 +11,12 @@ defmodule SovereignSoulEngineWeb.Api.NeighborhoodController do
   def posts(conn, params) do
     zone = params["zone"]
     category = params["category"]
-    limit = case Integer.parse(params["limit"] || "25") do
-      {int, _} -> int
-      _ -> 25
-    end
+
+    limit =
+      case Integer.parse(params["limit"] || "25") do
+        {int, _} -> int
+        _ -> 25
+      end
 
     posts = Board.list_posts(zone: zone, category: category, limit: limit)
 
@@ -50,7 +52,10 @@ defmodule SovereignSoulEngineWeb.Api.NeighborhoodController do
       {:error, :neighborhood_sharing_disabled} ->
         conn
         |> put_status(:forbidden)
-        |> json(%{status: "error", message: "Neighborhood sharing is disabled in privacy settings."})
+        |> json(%{
+          status: "error",
+          message: "Neighborhood sharing is disabled in privacy settings."
+        })
 
       {:error, reason} ->
         conn

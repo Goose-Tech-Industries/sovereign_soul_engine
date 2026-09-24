@@ -88,6 +88,11 @@ defmodule SovereignSoulEngine.World.Simulation do
     {:noreply, %{state | steps: state.steps + 1}}
   end
 
+  @impl true
+  def handle_info(_msg, state) do
+    {:noreply, state}
+  end
+
   # --- Step logic -------------------------------------------------------------
 
   defp do_step(opts) do

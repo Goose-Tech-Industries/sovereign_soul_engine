@@ -79,6 +79,11 @@ defmodule SovereignSoulEngine.Memories.MemoryMerger do
     end
   end
 
+  @impl true
+  def handle_info(_msg, state) do
+    {:noreply, state}
+  end
+
   # --- Consolidation logic ---
 
   defp run_consolidation(character_id) do
@@ -87,7 +92,9 @@ defmodule SovereignSoulEngine.Memories.MemoryMerger do
     merged_count =
       Enum.reduce(clusters, 0, fn cluster, acc ->
         case merge_cluster(cluster, character_id) do
-          {:ok, _} -> acc + 1
+          {:ok, _} ->
+            acc + 1
+
           {:error, reason} ->
             Logger.warning("MemoryMerger failed for cluster: #{inspect(reason)}")
             acc
@@ -104,8 +111,13 @@ defmodule SovereignSoulEngine.Memories.MemoryMerger do
   defp merge_cluster(memories, character_id) do
     summaries = Enum.map_join(memories, "\n", &("- " <> &1.summary))
     avg_importance = memories |> Enum.map(& &1.importance) |> Enum.sum() |> div(length(memories))
-    avg_intensity = memories |> Enum.map(& &1.emotional_intensity) |> Enum.sum() |> div(length(memories))
-    avg_valence = memories |> Enum.map(& &1.valence) |> Enum.sum() |> (fn s -> s / length(memories) end).()
+
+    avg_intensity =
+      memories |> Enum.map(& &1.emotional_intensity) |> Enum.sum() |> div(length(memories))
+
+    avg_valence =
+      memories |> Enum.map(& &1.valence) |> Enum.sum() |> (fn s -> s / length(memories) end).()
+
     all_tags = memories |> Enum.flat_map(& &1.tags) |> Enum.uniq()
     earliest_scene_id = List.first(memories) |> Map.get(:scene_id)
 
@@ -119,9 +131,10 @@ defmodule SovereignSoulEngine.Memories.MemoryMerger do
     """
 
     case ProviderCascade.respond(%{
-      system: "You are a concise archival system. Return only the summary sentence, nothing else.",
-      messages: [%{role: "user", content: prompt}]
-    }) do
+           system:
+             "You are a concise archival system. Return only the summary sentence, nothing else.",
+           messages: [%{role: "user", content: prompt}]
+         }) do
       {:ok, response} ->
         merged_text =
           cond do
@@ -133,18 +146,21 @@ defmodule SovereignSoulEngine.Memories.MemoryMerger do
         now = DateTime.utc_now()
 
         case Memories.create_memory(%{
-          owner_character_id: character_id,
-          category: "episodic",
-          summary: merged_text,
-          details: %{"merged_from_count" => length(memories), "original_summaries" => Enum.map(memories, & &1.summary)},
-          importance: avg_importance,
-          emotional_intensity: avg_intensity,
-          valence: avg_valence,
-          tags: all_tags,
-          status: "active",
-          scene_id: earliest_scene_id,
-          occurred_at: now
-        }) do
+               owner_character_id: character_id,
+               category: "episodic",
+               summary: merged_text,
+               details: %{
+                 "merged_from_count" => length(memories),
+                 "original_summaries" => Enum.map(memories, & &1.summary)
+               },
+               importance: avg_importance,
+               emotional_intensity: avg_intensity,
+               valence: avg_valence,
+               tags: all_tags,
+               status: "active",
+               scene_id: earliest_scene_id,
+               occurred_at: now
+             }) do
           {:ok, consolidated_memory} ->
             source_ids = Enum.map(memories, & &1.id)
             Memories.mark_consolidated(source_ids, consolidated_memory.id)

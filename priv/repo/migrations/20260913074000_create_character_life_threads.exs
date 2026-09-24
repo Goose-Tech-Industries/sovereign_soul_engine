@@ -13,8 +13,11 @@ defmodule SovereignSoulEngine.Repo.Migrations.CreateCharacterLifeThreads do
       add :check_in_guidance, :text
       add :resolution_notes, :text
 
-      add :knower_character_id, references(:characters, type: :binary_id, on_delete: :delete_all), null: false
-      add :subject_character_id, references(:characters, type: :binary_id, on_delete: :delete_all), null: false
+      add :knower_character_id, references(:characters, type: :binary_id, on_delete: :delete_all),
+        null: false
+
+      add :subject_character_id,
+          references(:characters, type: :binary_id, on_delete: :delete_all), null: false
 
       timestamps(type: :utc_datetime_usec)
     end

@@ -186,28 +186,47 @@ defmodule SovereignSoulEngineWeb.Api.TelegramWebhookController do
   defp send_telegram_reply(chat_id, text) do
     token = System.get_env("TELEGRAM_BOT_TOKEN")
 
-    if is_binary(token) and token != "" and Mix.env() != :test do
+    test? =
+      Application.get_env(:sovereign_soul_engine, :env) == :test or
+        (Code.ensure_loaded?(Mix) and Mix.env() == :test)
+
+    if is_binary(token) and token != "" and not test? do
       Task.start(fn ->
         url = "https://api.telegram.org/bot#{token}/sendMessage"
+
         body = %{
           chat_id: chat_id,
           text: text,
           parse_mode: "Markdown"
         }
 
-        case Req.post(url, json: body, receive_timeout: 8000) do
+        case Req.post(url,
+               json: body,
+               connect_options: [timeout: 3000],
+               receive_timeout: 8000,
+               retry: false
+             ) do
           {:ok, %{status: 200}} ->
             Logger.info("[Telegram] Sent reply to chat #{chat_id}")
 
-          {:error, err} ->
-            Logger.warning("[Telegram] Failed sending reply: #{inspect(err)}")
+          {:ok, %{status: status}} ->
+            Logger.warning(
+              "[Telegram] Telegram API returned non-200 status #{status} for chat #{chat_id}"
+            )
 
-          other ->
-            Logger.debug("[Telegram] Telegram API response: #{inspect(other)}")
+          {:error, %{reason: reason}} ->
+            Logger.warning(
+              "[Telegram] Failed sending reply to chat #{chat_id}: #{inspect(reason)}"
+            )
+
+          {:error, reason} ->
+            Logger.warning(
+              "[Telegram] Failed sending reply to chat #{chat_id}: #{inspect(reason)}"
+            )
         end
       end)
     else
-      Logger.info("[Telegram (Simulated)] -> chat_id #{chat_id}: #{text}")
+      Logger.info("[Telegram (Simulated)] -> chat_id #{chat_id} (chars: #{String.length(text)})")
     end
 
     :ok

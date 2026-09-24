@@ -98,13 +98,19 @@ defmodule SovereignSoulEngine.Social.NPCConversation do
                 end
 
               {:error, reason} ->
-                Logger.warning("NPCConversation: #{npc_b.name} failed on turn #{turn}: #{inspect(reason)}")
+                Logger.warning(
+                  "NPCConversation: #{npc_b.name} failed on turn #{turn}: #{inspect(reason)}"
+                )
+
                 {:halt, {:ok, scene.id, :error}}
             end
           end
 
         {:error, reason} ->
-          Logger.warning("NPCConversation: #{npc_a.name} failed on turn #{turn}: #{inspect(reason)}")
+          Logger.warning(
+            "NPCConversation: #{npc_a.name} failed on turn #{turn}: #{inspect(reason)}"
+          )
+
           {:halt, {:ok, scene.id, :error}}
       end
     end)
@@ -171,6 +177,8 @@ defmodule SovereignSoulEngine.Social.NPCConversation do
 
   defp stamp_social_action(character_id) do
     profile = Souls.get_soul_profile_by_character(character_id)
-    if profile, do: Souls.update_soul_profile(profile, %{last_social_action_at: DateTime.utc_now()})
+
+    if profile,
+      do: Souls.update_soul_profile(profile, %{last_social_action_at: DateTime.utc_now()})
   end
 end

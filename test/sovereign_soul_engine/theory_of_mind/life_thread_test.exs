@@ -31,7 +31,9 @@ defmodule SovereignSoulEngine.TheoryOfMind.LifeThreadTest do
 
       # 1. Record life thread with hours: -1 so it's immediately due
       assert {:ok, thread} =
-               TheoryOfMind.record_life_thread_if_detected(knower.id, subject.id, statement, hours: -1)
+               TheoryOfMind.record_life_thread_if_detected(knower.id, subject.id, statement,
+                 hours: -1
+               )
 
       assert thread.category == "relationship"
       assert thread.status == "pending"

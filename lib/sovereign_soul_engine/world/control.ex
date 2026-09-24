@@ -26,4 +26,9 @@ defmodule SovereignSoulEngine.World.Control do
 
   @impl true
   def handle_call(:paused?, _from, state), do: {:reply, state.paused, state}
+
+  @impl true
+  def handle_info(_msg, state) do
+    {:noreply, state}
+  end
 end

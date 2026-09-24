@@ -12,7 +12,7 @@ defmodule SovereignSoulEngine.Souls.CognitiveLoad do
 
     # Rumination
     {stressors, score} =
-      if (emotional_state && emotional_state.rumination_intensity || 0) > 50 do
+      if ((emotional_state && emotional_state.rumination_intensity) || 0) > 50 do
         subject = (emotional_state && emotional_state.rumination_subject) || "something"
         {["ruminating on: #{subject}" | stressors], score + 15}
       else
@@ -21,7 +21,7 @@ defmodule SovereignSoulEngine.Souls.CognitiveLoad do
 
     # High stress emotion
     {stressors, score} =
-      if (emotional_state && emotional_state.stress || 0) > 65 do
+      if ((emotional_state && emotional_state.stress) || 0) > 65 do
         {["high stress" | stressors], score + 10}
       else
         {stressors, score}
@@ -73,6 +73,7 @@ defmodule SovereignSoulEngine.Souls.CognitiveLoad do
 
   def prompt_instruction(score, stressors) when score >= 45 do
     stressor_text = Enum.join(stressors, ", ")
+
     "COGNITIVE LOAD: MODERATE (#{score}/100) — You have a lot on your mind (#{stressor_text}). You are present but not fully focused."
   end
 

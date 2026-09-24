@@ -14,21 +14,37 @@ defmodule SovereignSoulEngineWeb.Api.NpcChatController do
   use SovereignSoulEngineWeb, :controller
 
   alias SovereignSoulEngine.{Characters, Relationships, Scenes, Tenants}
+  alias SovereignSoulEngine.Cognition.VerticalSlice
   alias SovereignSoulEngine.Souls.{ConsequenceEngine, Generator}
 
   @speak_intensity 30
 
-  def send_message(conn, %{
-        "external_source" => source,
-        "external_player_id" => player_id,
-        "external_player_name" => player_name,
-        "npc_id" => npc_id,
-        "message" => message
-      }) do
+  def send_message(
+        conn,
+        %{
+          "external_source" => source,
+          "external_player_id" => player_id,
+          "external_player_name" => player_name,
+          "npc_id" => npc_id,
+          "message" => message
+        } = params
+      ) do
     with {:ok, npc} <- fetch_active_npc(npc_id),
          true <- String.trim(message) != "" || {:error, :empty_message} do
       player = Characters.get_or_create_external_player(source, player_id, player_name)
       scene = Scenes.find_or_create_direct_scene(player, npc)
+
+      context = Map.get(params, "context") || %{}
+
+      scene =
+        if is_map(context) and map_size(context) > 0 do
+          case Scenes.update_scene(scene, %{context: Map.merge(scene.context || %{}, context)}) do
+            {:ok, updated_scene} -> updated_scene
+            _ -> scene
+          end
+        else
+          scene
+        end
 
       clean_message = SovereignSoulEngine.Moderation.redact(message)
 
@@ -50,6 +66,8 @@ defmodule SovereignSoulEngineWeb.Api.NpcChatController do
         correlation_id: Ecto.UUID.generate()
       })
 
+      cognition_trace = maybe_cognition_trace(params, npc.id, scene.id, clean_message)
+
       case Generator.generate(npc.id, scene.id, player.id, conn.assigns.tenant) do
         {:ok, reply} ->
           Tenants.record_llm_call(conn.assigns.tenant)
@@ -60,7 +78,8 @@ defmodule SovereignSoulEngineWeb.Api.NpcChatController do
             tell: reply.metadata["physical_tell"],
             audio_url: reply.metadata["audio_url"],
             joined_player: reply.metadata["proposed_action"] == "join_player",
-            left_player: reply.metadata["proposed_action"] == "leave_player"
+            left_player: reply.metadata["proposed_action"] == "leave_player",
+            cognition_trace: cognition_trace
           })
 
         {:error, reason} ->
@@ -152,4 +171,36 @@ defmodule SovereignSoulEngineWeb.Api.NpcChatController do
       _ -> {:error, :not_found}
     end
   end
+
+  defp maybe_cognition_trace(%{"cognition_trace" => true} = params, npc_id, scene_id, message) do
+    district = get_in(params, ["context", "district"])
+
+    case VerticalSlice.run(npc_id, scene_id,
+           message: message,
+           district: district,
+           thread_id: "npc-chat:" <> scene_id <> ":" <> Ecto.UUID.generate()
+         ) do
+      {:ok, result} ->
+        %{
+          thread_id: result.thread_id,
+          lore_slugs: Enum.map(result.lore, & &1.slug),
+          checkpoint: %{
+            id: result.checkpoint.id,
+            status: result.checkpoint.status,
+            version: result.checkpoint.version
+          },
+          action_intent_id: result.action.intent.id,
+          approval: %{
+            id: result.action.approval.id,
+            status: result.action.approval.status,
+            operation: result.action.approval.operation
+          }
+        }
+
+      {:error, reason} ->
+        %{error: "cognition trace failed", reason: inspect(reason)}
+    end
+  end
+
+  defp maybe_cognition_trace(_params, _npc_id, _scene_id, _message), do: nil
 end

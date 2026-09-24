@@ -39,11 +39,33 @@ defmodule SovereignSoulEngine.Memories.MemoryMergerTest do
   end
 
   describe "consolidate_now/1 synchronous consolidation" do
-    test "merges 3+ low-importance memories with shared tags into single consolidated row", %{character: char} do
+    test "merges 3+ low-importance memories with shared tags into single consolidated row", %{
+      character: char
+    } do
       # Insert 3 minor memories sharing the "patrol" tag
-      m1 = insert_minor_memory(char.id, "Walked the east battlement at dawn.", ["patrol", "dawn"], 20)
-      m2 = insert_minor_memory(char.id, "Inspected northern sentry post.", ["patrol", "inspection"], 25)
-      m3 = insert_minor_memory(char.id, "Noted shifting wind along the southern wall.", ["patrol", "weather"], 15)
+      m1 =
+        insert_minor_memory(
+          char.id,
+          "Walked the east battlement at dawn.",
+          ["patrol", "dawn"],
+          20
+        )
+
+      m2 =
+        insert_minor_memory(
+          char.id,
+          "Inspected northern sentry post.",
+          ["patrol", "inspection"],
+          25
+        )
+
+      m3 =
+        insert_minor_memory(
+          char.id,
+          "Noted shifting wind along the southern wall.",
+          ["patrol", "weather"],
+          15
+        )
 
       # Ensure they start active
       assert Repo.get(Memory, m1.id).status == "active"
@@ -109,7 +131,9 @@ defmodule SovereignSoulEngine.Memories.MemoryMergerTest do
       assert Repo.get(Memory, m3.id).status == "active"
     end
 
-    test "gracefully handles LLM provider failure without corrupting active memories", %{character: char} do
+    test "gracefully handles LLM provider failure without corrupting active memories", %{
+      character: char
+    } do
       # Insert 3 candidate memories
       m1 = insert_minor_memory(char.id, "Read ancient scroll page 1.", ["scholarship"], 15)
       m2 = insert_minor_memory(char.id, "Read ancient scroll page 2.", ["scholarship"], 15)
@@ -133,4 +157,3 @@ defmodule SovereignSoulEngine.Memories.MemoryMergerTest do
     end
   end
 end
-

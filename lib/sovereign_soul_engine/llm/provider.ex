@@ -76,7 +76,8 @@ defmodule SovereignSoulEngine.LLM.Provider do
           conversation_state: String.t() | nil,
           rumination_update: %{subject: String.t() | nil, intensity: integer()} | nil,
           belief_challenge:
-            %{belief: String.t() | nil, direction: String.t() | nil, conviction_delta: integer()} | nil,
+            %{belief: String.t() | nil, direction: String.t() | nil, conviction_delta: integer()}
+            | nil,
           desire_update: %{desire: String.t() | nil, urgency_delta: integer()} | nil,
           psychological_updates: %{acquired_fears: [String.t()]},
           knowledge_update:
@@ -96,9 +97,18 @@ defmodule SovereignSoulEngine.LLM.Provider do
             }
             | nil,
           grief_response:
-            %{subject: String.t() | nil, stage_shift: String.t() | nil, intensity_delta: integer()} | nil,
+            %{
+              subject: String.t() | nil,
+              stage_shift: String.t() | nil,
+              intensity_delta: integer()
+            }
+            | nil,
           forgiveness_signal:
-            %{wound: String.t() | nil, direction_shift: String.t() | nil, stage_shift: String.t() | nil}
+            %{
+              wound: String.t() | nil,
+              direction_shift: String.t() | nil,
+              stage_shift: String.t() | nil
+            }
             | nil
         }
 

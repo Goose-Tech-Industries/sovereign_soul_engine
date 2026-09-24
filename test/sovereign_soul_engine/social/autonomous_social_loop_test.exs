@@ -65,7 +65,10 @@ defmodule SovereignSoulEngine.Social.AutonomousSocialLoopTest do
   end
 
   describe "NPCConversation stamina gating and turn loop" do
-    test "can_converse?/2 gates initiation on both NPCs having >= 30 stamina", %{npc_a: a, npc_b: b} do
+    test "can_converse?/2 gates initiation on both NPCs having >= 30 stamina", %{
+      npc_a: a,
+      npc_b: b
+    } do
       # Both start with high stamina (80 and 60)
       assert NPCConversation.can_converse?(a.id, b.id) == true
 
@@ -77,7 +80,10 @@ defmodule SovereignSoulEngine.Social.AutonomousSocialLoopTest do
       assert NPCConversation.can_converse?(b.id, a.id) == false
     end
 
-    test "run/3 drains stamina, generates dialogue turns in autonomous scene, and broadcasts", %{npc_a: a, npc_b: b} do
+    test "run/3 drains stamina, generates dialogue turns in autonomous scene, and broadcasts", %{
+      npc_a: a,
+      npc_b: b
+    } do
       Phoenix.PubSub.subscribe(SovereignSoulEngine.PubSub, "social:conversations")
 
       profile_a = Souls.get_soul_profile_by_character(a.id)
@@ -113,7 +119,10 @@ defmodule SovereignSoulEngine.Social.AutonomousSocialLoopTest do
       assert b.id in p_ids
     end
 
-    test "run/3 returns {:error, :insufficient_stamina} when stamina is too low", %{npc_a: a, npc_b: b} do
+    test "run/3 returns {:error, :insufficient_stamina} when stamina is too low", %{
+      npc_a: a,
+      npc_b: b
+    } do
       profile_a = Souls.get_soul_profile_by_character(a.id)
       Souls.update_soul_profile(profile_a, %{social_stamina: 10})
 

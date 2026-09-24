@@ -16,7 +16,13 @@ defmodule SovereignSoulEngine.Souls.CircadianEngine do
   alias SovereignSoulEngine.Privacy
 
   @type chronotype :: :night_owl | :early_bird | :balanced | :adaptive_sync
-  @type circadian_state :: :wide_awake | :night_focus | :winding_down | :deep_sleep | :rem_dreaming | :groggy_waking
+  @type circadian_state ::
+          :wide_awake
+          | :night_focus
+          | :winding_down
+          | :deep_sleep
+          | :rem_dreaming
+          | :groggy_waking
 
   @doc """
   Computes the current circadian profile for a character or privacy settings map at the specified UTC time.
@@ -45,7 +51,8 @@ defmodule SovereignSoulEngine.Souls.CircadianEngine do
       fractional_hour = local_time.hour + local_time.minute / 60.0 + local_time.second / 3600.0
       hour = local_time.hour
 
-      {state, melatonin, alertness, speed} = evaluate_state(chronotype, fractional_hour, settings, local_time)
+      {state, melatonin, alertness, speed} =
+        evaluate_state(chronotype, fractional_hour, settings, local_time)
 
       %{
         state: state,
@@ -73,37 +80,37 @@ defmodule SovereignSoulEngine.Souls.CircadianEngine do
     case state do
       :night_focus ->
         %{
-          neurochem_state |
-          arousal: min(max(current_arousal, 45.0), 85.0),
-          dopamine: min(current_dopamine + 5.0, 95.0),
-          serotonin: min(current_serotonin + 8.0, 95.0)
+          neurochem_state
+          | arousal: min(max(current_arousal, 45.0), 85.0),
+            dopamine: min(current_dopamine + 5.0, 95.0),
+            serotonin: min(current_serotonin + 8.0, 95.0)
         }
 
       :deep_sleep ->
         %{
-          neurochem_state |
-          arousal: min(current_arousal * 0.35, 20.0),
-          valence: max(current_valence, 40.0)
+          neurochem_state
+          | arousal: min(current_arousal * 0.35, 20.0),
+            valence: max(current_valence, 40.0)
         }
 
       :rem_dreaming ->
         %{
-          neurochem_state |
-          arousal: min(current_arousal * 0.5, 35.0),
-          dopamine: min(current_dopamine + 10.0, 90.0)
+          neurochem_state
+          | arousal: min(current_arousal * 0.5, 35.0),
+            dopamine: min(current_dopamine + 10.0, 90.0)
         }
 
       :groggy_waking ->
         %{
-          neurochem_state |
-          arousal: min(max(current_arousal * 0.6, 25.0), 55.0)
+          neurochem_state
+          | arousal: min(max(current_arousal * 0.6, 25.0), 55.0)
         }
 
       :winding_down ->
         %{
-          neurochem_state |
-          arousal: min(current_arousal * 0.75, 50.0),
-          serotonin: min(current_serotonin + 5.0, 90.0)
+          neurochem_state
+          | arousal: min(current_arousal * 0.75, 50.0),
+            serotonin: min(current_serotonin + 5.0, 90.0)
         }
 
       _ ->
@@ -266,7 +273,9 @@ defmodule SovereignSoulEngine.Souls.CircadianEngine do
   end
 
   defp evaluate_state(:adaptive_sync, f_hour, settings, now) do
-    is_wearable_sleeping = Map.get(settings, "wearable_sleeping", Map.get(settings, :wearable_sleeping, false))
+    is_wearable_sleeping =
+      Map.get(settings, "wearable_sleeping", Map.get(settings, :wearable_sleeping, false))
+
     user_active = Map.get(settings, "user_active", Map.get(settings, :user_active, false))
 
     cond do
@@ -286,20 +295,27 @@ defmodule SovereignSoulEngine.Souls.CircadianEngine do
 
   # ── Helpers ────────────────────────────────────────────────────────────────
 
-  defp get_settings_map(%SovereignSoulEngine.Characters.Character{} = c), do: Privacy.get_settings(c)
+  defp get_settings_map(%SovereignSoulEngine.Characters.Character{} = c),
+    do: Privacy.get_settings(c)
+
   defp get_settings_map(m) when is_map(m), do: Privacy.get_settings(m)
   defp get_settings_map(_), do: %{}
 
   defp get_utc_offset(settings) do
     val = Map.get(settings, "utc_offset", Map.get(settings, :utc_offset, 0))
+
     cond do
-      is_number(val) -> val * 1.0
+      is_number(val) ->
+        val * 1.0
+
       is_binary(val) ->
         case Float.parse(val) do
           {f, _} -> f
           :error -> 0.0
         end
-      true -> 0.0
+
+      true ->
+        0.0
     end
   end
 

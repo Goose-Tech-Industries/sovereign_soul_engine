@@ -92,7 +92,9 @@ defmodule SovereignSoulEngine.PrivacyTest do
     end
 
     test "safe word detection and persona freeze triggers", %{player: player} do
-      assert Privacy.safe_word_triggered?("This is getting too intense, code red!", player.id) == true
+      assert Privacy.safe_word_triggered?("This is getting too intense, code red!", player.id) ==
+               true
+
       assert Privacy.safe_word_triggered?("Hey pause persona right now please", player.id) == true
       assert Privacy.safe_word_triggered?("Can we red light this scene?", player.id) == true
       assert Privacy.safe_word_triggered?("Just talking about normal things", player.id) == false
@@ -108,10 +110,23 @@ defmodule SovereignSoulEngine.PrivacyTest do
     end
 
     test "anti-parasocial dependency detection", %{player: player} do
-      assert Privacy.parasocial_dependency_detected?("You are my only friend in the world", player.id) == true
-      assert Privacy.parasocial_dependency_detected?("I haven't eaten all day talking to you", player.id) == true
-      assert Privacy.parasocial_dependency_detected?("I'm never leaving this room", player.id) == true
-      assert Privacy.parasocial_dependency_detected?("Good morning, how is the weather today?", player.id) == false
+      assert Privacy.parasocial_dependency_detected?(
+               "You are my only friend in the world",
+               player.id
+             ) == true
+
+      assert Privacy.parasocial_dependency_detected?(
+               "I haven't eaten all day talking to you",
+               player.id
+             ) == true
+
+      assert Privacy.parasocial_dependency_detected?("I'm never leaving this room", player.id) ==
+               true
+
+      assert Privacy.parasocial_dependency_detected?(
+               "Good morning, how is the weather today?",
+               player.id
+             ) == false
     end
 
     test "relationship archetype intimacy ceiling clamping", %{player: player} do
@@ -119,11 +134,15 @@ defmodule SovereignSoulEngine.PrivacyTest do
       assert Privacy.archetype_intimacy_ceiling("witty_companion") == 55
       assert Privacy.archetype_intimacy_ceiling("romantic_partner") == 100
 
-      {:ok, _} = Privacy.update_settings(player.id, %{"relationship_archetype" => "platonic_mentor"})
+      {:ok, _} =
+        Privacy.update_settings(player.id, %{"relationship_archetype" => "platonic_mentor"})
+
       assert Privacy.clamp_intimacy(85, player.id) == 40
       assert Privacy.clamp_intimacy(30, player.id) == 30
 
-      {:ok, _} = Privacy.update_settings(player.id, %{"relationship_archetype" => "romantic_partner"})
+      {:ok, _} =
+        Privacy.update_settings(player.id, %{"relationship_archetype" => "romantic_partner"})
+
       assert Privacy.clamp_intimacy(85, player.id) == 85
     end
 

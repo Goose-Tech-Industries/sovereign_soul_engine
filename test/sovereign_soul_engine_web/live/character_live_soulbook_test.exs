@@ -34,14 +34,20 @@ defmodule SovereignSoulEngineWeb.CharacterLiveSoulbookTest do
       assert html =~ "Soul Profile"
     end
 
-    test "mounts successfully by character slug via /sse/souls/:id", %{conn: conn, character: char} do
+    test "mounts successfully by character slug via /sse/souls/:id", %{
+      conn: conn,
+      character: char
+    } do
       {:ok, _view, html} = live(conn, ~p"/sse/souls/#{char.slug}")
 
       assert html =~ "Seraphina Vale"
       assert html =~ "Soul Profile"
     end
 
-    test "displays character name in top navigation header and title", %{conn: conn, character: char} do
+    test "displays character name in top navigation header and title", %{
+      conn: conn,
+      character: char
+    } do
       {:ok, _view, html} = live(conn, ~p"/sse/souls/#{char.slug}")
 
       assert html =~ "Seraphina Vale"
@@ -118,7 +124,9 @@ defmodule SovereignSoulEngineWeb.CharacterLiveSoulbookTest do
     test "renders emotional state meters", %{conn: conn, character: char} do
       {:ok, _view, html} = live(conn, ~p"/sse/souls/#{char.slug}")
 
-      assert html =~ "Emotional State &amp; Neurochemistry" or html =~ "Emotional State & Neurochemistry"
+      assert html =~ "Emotional State &amp; Neurochemistry" or
+               html =~ "Emotional State & Neurochemistry"
+
       assert html =~ "Curiosity"
       assert html =~ "Confidence"
       assert html =~ "Attachment"
@@ -138,7 +146,9 @@ defmodule SovereignSoulEngineWeb.CharacterLiveSoulbookTest do
       {:ok, _view, html} = live(conn, ~p"/sse/souls/#{char.slug}")
 
       assert html =~ "SoulBook Wall Activity"
-      assert html =~ "hasn&#39;t published to the wall recently" or html =~ "hasn't published to the wall recently"
+
+      assert html =~ "hasn&#39;t published to the wall recently" or
+               html =~ "hasn't published to the wall recently"
     end
 
     test "renders published posts on the character's wall", %{conn: conn, character: char} do
@@ -156,7 +166,10 @@ defmodule SovereignSoulEngineWeb.CharacterLiveSoulbookTest do
       assert html =~ "SoulBook Wall Activity"
     end
 
-    test "does not display wall posts belonging to other characters", %{conn: conn, character: char} do
+    test "does not display wall posts belonging to other characters", %{
+      conn: conn,
+      character: char
+    } do
       {:ok, other_char} =
         Characters.create_living_soul(%{
           name: "Other Traveler",

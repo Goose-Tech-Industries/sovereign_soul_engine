@@ -8,7 +8,9 @@ defmodule SovereignSoulEngine.TenantsTest do
   describe "tenant provisioning and key management" do
     test "create_tenant/3 returns tenant and single-use plaintext key" do
       source = "tenant_src_#{System.unique_integer([:positive])}"
-      assert {:ok, %Tenant{} = tenant, plaintext_key} = Tenants.create_tenant("Acme Corp", source, 120)
+
+      assert {:ok, %Tenant{} = tenant, plaintext_key} =
+               Tenants.create_tenant("Acme Corp", source, 120)
 
       assert tenant.name == "Acme Corp"
       assert tenant.external_source == source
@@ -151,11 +153,16 @@ defmodule SovereignSoulEngine.TenantsTest do
       {:ok, tenant, _key} = Tenants.create_tenant("Precedence Corp", source)
 
       # Unconfigured tenant falls back to operator cascade (FakeProvider in test)
-      assert {:ok, res} = ProviderCascade.respond(%{messages: [%{role: "user", content: "hi"}]}, tenant: tenant)
+      assert {:ok, res} =
+               ProviderCascade.respond(%{messages: [%{role: "user", content: "hi"}]},
+                 tenant: tenant
+               )
+
       assert is_map(res)
 
       # Configured tenant routes specifically to BYOK provider (even if it rejects dummy key)
       encrypted_bad_key = Tenants.encrypt_byok("invalid_key_for_test")
+
       {:ok, byok_tenant} =
         tenant
         |> Tenant.byok_changeset(%{
@@ -165,7 +172,11 @@ defmodule SovereignSoulEngine.TenantsTest do
         |> SovereignSoulEngine.Repo.update()
 
       # BYOK route fails on provider check rather than silently falling back to operator cascade
-      result = ProviderCascade.respond(%{messages: [%{role: "user", content: "hi"}]}, tenant: byok_tenant)
+      result =
+        ProviderCascade.respond(%{messages: [%{role: "user", content: "hi"}]},
+          tenant: byok_tenant
+        )
+
       assert {:error, _reason} = result
     end
   end

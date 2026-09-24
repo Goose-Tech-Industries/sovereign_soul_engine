@@ -9,7 +9,18 @@ defmodule SovereignSoulEngineWeb.Api.StripeWebhookController do
   alias SovereignSoulEngine.Billing.StripeService
 
   def webhook(conn, _params) do
-    {:ok, raw_body, conn} = Plug.Conn.read_body(conn)
+    raw_body =
+      case conn.assigns[:raw_body] do
+        body when is_binary(body) ->
+          body
+
+        _ ->
+          case Plug.Conn.read_body(conn) do
+            {:ok, body, _conn} -> body
+            _ -> ""
+          end
+      end
+
     sig_header = Plug.Conn.get_req_header(conn, "stripe-signature") |> List.first()
 
     case StripeService.parse_webhook(raw_body, sig_header) do

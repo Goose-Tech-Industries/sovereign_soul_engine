@@ -108,7 +108,7 @@ defmodule SovereignSoulEngineWeb.AcpModerationLive do
     {:noreply,
      socket
      |> assign(:muted_dids, Moderation.list_muted_dids())
-     |> assign(:action_feedback, "Muted #{character && character.name || char_id} (#{did})")}
+     |> assign(:action_feedback, "Muted #{(character && character.name) || char_id} (#{did})")}
   end
 
   @impl true
@@ -171,28 +171,48 @@ defmodule SovereignSoulEngineWeb.AcpModerationLive do
       <%!-- ACP Header Bar --%>
       <nav class="border-b border-gray-800 bg-gray-900 px-6 py-3 flex items-center justify-between shrink-0">
         <div class="flex items-center gap-6">
-          <span class="text-amber-400 font-bold text-sm tracking-wide">SOVEREIGN SOUL ENGINE — ACP</span>
+          <span class="text-amber-400 font-bold text-sm tracking-wide">
+            SOVEREIGN SOUL ENGINE — ACP
+          </span>
           <div class="flex items-center gap-4 ml-4">
-            <.link navigate={~p"/sse/acp"} class="text-sm text-gray-400 hover:text-gray-200 transition-colors">
+            <.link
+              navigate={~p"/sse/acp"}
+              class="text-sm text-gray-400 hover:text-gray-200 transition-colors"
+            >
               Dashboard
             </.link>
-            <.link navigate={~p"/sse/acp/npcs/new"} class="text-sm text-gray-400 hover:text-gray-200 transition-colors">
+            <.link
+              navigate={~p"/sse/acp/npcs/new"}
+              class="text-sm text-gray-400 hover:text-gray-200 transition-colors"
+            >
               New NPC
             </.link>
-            <.link navigate={~p"/sse/acp/social"} class="text-sm text-gray-400 hover:text-gray-200 transition-colors">
+            <.link
+              navigate={~p"/sse/acp/social"}
+              class="text-sm text-gray-400 hover:text-gray-200 transition-colors"
+            >
               Social Log
             </.link>
-            <.link navigate={~p"/sse/acp/moderation"} class="text-sm text-rose-400 font-semibold border-b border-rose-400 pb-0.5">
+            <.link
+              navigate={~p"/sse/acp/moderation"}
+              class="text-sm text-rose-400 font-semibold border-b border-rose-400 pb-0.5"
+            >
               🛡️ Moderation & Safety
             </.link>
           </div>
         </div>
 
         <div class="flex items-center gap-3">
-          <.link navigate={~p"/sse/feed"} class="text-xs text-amber-400/80 hover:text-amber-300 font-mono flex items-center gap-1">
+          <.link
+            navigate={~p"/sse/feed"}
+            class="text-xs text-amber-400/80 hover:text-amber-300 font-mono flex items-center gap-1"
+          >
             📰 Living Feed →
           </.link>
-          <.link navigate={~p"/sse/chat"} class="text-xs text-blue-400/80 hover:text-blue-300 font-mono flex items-center gap-1">
+          <.link
+            navigate={~p"/sse/chat"}
+            class="text-xs text-blue-400/80 hover:text-blue-300 font-mono flex items-center gap-1"
+          >
             💬 Live Chat →
           </.link>
         </div>
@@ -205,7 +225,10 @@ defmodule SovereignSoulEngineWeb.AcpModerationLive do
             <span class="size-2 rounded-full bg-rose-400 animate-pulse"></span>
             <span>{@action_feedback}</span>
           </div>
-          <button phx-click="clear_feedback" class="text-xs text-rose-400 hover:text-rose-200 uppercase font-bold">
+          <button
+            phx-click="clear_feedback"
+            class="text-xs text-rose-400 hover:text-rose-200 uppercase font-bold"
+          >
             Dismiss
           </button>
         </div>
@@ -230,12 +253,16 @@ defmodule SovereignSoulEngineWeb.AcpModerationLive do
               <div class="text-lg font-bold text-rose-400">{length(@muted_dids)}</div>
             </div>
             <div class="px-3.5 py-2 rounded-lg bg-gray-900 border border-gray-800 text-center">
-              <div class="text-xs text-gray-500 uppercase tracking-wider font-mono">Blocked Terms</div>
+              <div class="text-xs text-gray-500 uppercase tracking-wider font-mono">
+                Blocked Terms
+              </div>
               <div class="text-lg font-bold text-amber-400">{length(@blocked_terms)}</div>
             </div>
             <div class="px-3.5 py-2 rounded-lg bg-gray-900 border border-gray-800 text-center">
               <div class="text-xs text-gray-500 uppercase tracking-wider font-mono">Rating</div>
-              <div class="text-lg font-bold text-emerald-400 uppercase font-mono">{@maturity_rating}</div>
+              <div class="text-lg font-bold text-emerald-400 uppercase font-mono">
+                {@maturity_rating}
+              </div>
             </div>
           </div>
         </div>
@@ -258,10 +285,17 @@ defmodule SovereignSoulEngineWeb.AcpModerationLive do
 
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <%!-- Teen / PG-13 --%>
-            <div class={[
-              "p-4 rounded-xl border transition-all cursor-pointer flex flex-col justify-between",
-              if(@maturity_rating == "teen", do: "bg-blue-950/40 border-blue-500 ring-1 ring-blue-500/50", else: "bg-gray-900/40 border-gray-800 hover:border-gray-700")
-            ]} phx-click="set_maturity_rating" phx-value-rating="teen">
+            <div
+              class={[
+                "p-4 rounded-xl border transition-all cursor-pointer flex flex-col justify-between",
+                if(@maturity_rating == "teen",
+                  do: "bg-blue-950/40 border-blue-500 ring-1 ring-blue-500/50",
+                  else: "bg-gray-900/40 border-gray-800 hover:border-gray-700"
+                )
+              ]}
+              phx-click="set_maturity_rating"
+              phx-value-rating="teen"
+            >
               <div>
                 <div class="flex items-center justify-between mb-2">
                   <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-blue-500/20 text-blue-400 border border-blue-500/30">
@@ -286,10 +320,17 @@ defmodule SovereignSoulEngineWeb.AcpModerationLive do
             </div>
 
             <%!-- Mature 17+ (M) --%>
-            <div class={[
-              "p-4 rounded-xl border transition-all cursor-pointer flex flex-col justify-between",
-              if(@maturity_rating == "mature", do: "bg-amber-950/40 border-amber-500 ring-1 ring-amber-500/50", else: "bg-gray-900/40 border-gray-800 hover:border-gray-700")
-            ]} phx-click="set_maturity_rating" phx-value-rating="mature">
+            <div
+              class={[
+                "p-4 rounded-xl border transition-all cursor-pointer flex flex-col justify-between",
+                if(@maturity_rating == "mature",
+                  do: "bg-amber-950/40 border-amber-500 ring-1 ring-amber-500/50",
+                  else: "bg-gray-900/40 border-gray-800 hover:border-gray-700"
+                )
+              ]}
+              phx-click="set_maturity_rating"
+              phx-value-rating="mature"
+            >
               <div>
                 <div class="flex items-center justify-between mb-2">
                   <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">
@@ -314,10 +355,17 @@ defmodule SovereignSoulEngineWeb.AcpModerationLive do
             </div>
 
             <%!-- Adult 18+ (Uncensored) --%>
-            <div class={[
-              "p-4 rounded-xl border transition-all cursor-pointer flex flex-col justify-between",
-              if(@maturity_rating == "adult", do: "bg-rose-950/40 border-rose-500 ring-1 ring-rose-500/50", else: "bg-gray-900/40 border-gray-800 hover:border-gray-700")
-            ]} phx-click="set_maturity_rating" phx-value-rating="adult">
+            <div
+              class={[
+                "p-4 rounded-xl border transition-all cursor-pointer flex flex-col justify-between",
+                if(@maturity_rating == "adult",
+                  do: "bg-rose-950/40 border-rose-500 ring-1 ring-rose-500/50",
+                  else: "bg-gray-900/40 border-gray-800 hover:border-gray-700"
+                )
+              ]}
+              phx-click="set_maturity_rating"
+              phx-value-rating="adult"
+            >
               <div>
                 <div class="flex items-center justify-between mb-2">
                   <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30">
@@ -355,7 +403,9 @@ defmodule SovereignSoulEngineWeb.AcpModerationLive do
                 <span class="text-xs text-gray-500 font-mono">{length(@blocked_terms)} term(s)</span>
               </div>
               <p class="text-xs text-gray-400 mb-4">
-                Any autonomous message, gossip rumor, or synthesis containing these phrases will be redacted with <code class="text-rose-400">[redacted]</code> before persisting.
+                Any autonomous message, gossip rumor, or synthesis containing these phrases will be redacted with
+                <code class="text-rose-400">[redacted]</code>
+                before persisting.
               </p>
 
               <%!-- Add Term Form --%>
@@ -431,7 +481,9 @@ defmodule SovereignSoulEngineWeb.AcpModerationLive do
               <%!-- Muted DIDs List --%>
               <div class="space-y-2 max-h-48 overflow-y-auto pr-1">
                 <%= if @muted_dids == [] do %>
-                  <div class="text-xs text-gray-500 italic py-2">No souls are currently muted. All souls are speaking freely.</div>
+                  <div class="text-xs text-gray-500 italic py-2">
+                    No souls are currently muted. All souls are speaking freely.
+                  </div>
                 <% else %>
                   <%= for did <- @muted_dids do %>
                     <div class="flex items-center justify-between px-3 py-2 rounded-lg bg-gray-950 border border-rose-950/50">
@@ -470,7 +522,10 @@ defmodule SovereignSoulEngineWeb.AcpModerationLive do
                 phx-value-tab="posts"
                 class={[
                   "px-3 py-1 rounded text-xs font-semibold transition-colors",
-                  if(@active_tab == "posts", do: "bg-amber-500 text-gray-950", else: "text-gray-400 hover:text-gray-200")
+                  if(@active_tab == "posts",
+                    do: "bg-amber-500 text-gray-950",
+                    else: "text-gray-400 hover:text-gray-200"
+                  )
                 ]}
               >
                 Social Posts ({length(@recent_posts)})
@@ -480,7 +535,10 @@ defmodule SovereignSoulEngineWeb.AcpModerationLive do
                 phx-value-tab="events"
                 class={[
                   "px-3 py-1 rounded text-xs font-semibold transition-colors",
-                  if(@active_tab == "events", do: "bg-amber-500 text-gray-950", else: "text-gray-400 hover:text-gray-200")
+                  if(@active_tab == "events",
+                    do: "bg-amber-500 text-gray-950",
+                    else: "text-gray-400 hover:text-gray-200"
+                  )
                 ]}
               >
                 World Events ({length(@recent_events)})

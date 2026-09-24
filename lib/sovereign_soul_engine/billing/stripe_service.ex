@@ -91,7 +91,10 @@ defmodule SovereignSoulEngine.Billing.StripeService do
 
       tier ->
         base_url = Keyword.get(opts, :base_url, "http://localhost:8561")
-        success_url = "#{base_url}/sse/billing/success?session_id={CHECKOUT_SESSION_ID}&tier=#{tier.id}"
+
+        success_url =
+          "#{base_url}/sse/billing/success?session_id={CHECKOUT_SESSION_ID}&tier=#{tier.id}"
+
         cancel_url = "#{base_url}/sse/billing/cancel"
 
         secret_key = System.get_env("STRIPE_SECRET_KEY")
@@ -101,7 +104,9 @@ defmodule SovereignSoulEngine.Billing.StripeService do
         else
           # Instant development mock session
           mock_session_id = "cs_mock_#{tier.id}_#{System.unique_integer([:positive])}"
-          resolved_success_url = String.replace(success_url, "{CHECKOUT_SESSION_ID}", mock_session_id)
+
+          resolved_success_url =
+            String.replace(success_url, "{CHECKOUT_SESSION_ID}", mock_session_id)
 
           {:ok,
            %{
@@ -161,41 +166,67 @@ defmodule SovereignSoulEngine.Billing.StripeService do
     webhook_secret = System.get_env("STRIPE_WEBHOOK_SECRET")
 
     cond do
-      is_binary(webhook_secret) and is_binary(signature_header) ->
+      is_binary(webhook_secret) and byte_size(webhook_secret) > 0 and is_binary(signature_header) and
+          byte_size(signature_header) > 0 ->
         verify_stripe_signature(payload, signature_header, webhook_secret)
 
+      is_binary(webhook_secret) and byte_size(webhook_secret) > 0 ->
+        {:error, :missing_webhook_signature}
+
+      prod_environment?() ->
+        {:error, :unconfigured_webhook_secret}
+
+      is_binary(signature_header) and byte_size(signature_header) > 0 ->
+        # Signature supplied but webhook secret missing
+        {:error, :unconfigured_webhook_secret}
+
       true ->
-        # Decode JSON payload directly in development
+        # Decode JSON payload directly in development mock mode only
         case Jason.decode(payload) do
           {:ok, event} -> {:ok, event}
-          {:error, err} -> {:error, :json_decode_error, err}
+          {:error, err} -> {:error, {:json_decode_error, err}}
         end
     end
   end
 
   defp verify_stripe_signature(payload, signature_header, secret) do
-    # Simple HMAC verification matching Stripe's t=timestamp,v1=signature scheme
     try do
       parts =
         signature_header
         |> String.split(",")
         |> Enum.map(&String.split(&1, "=", parts: 2))
-        |> Enum.map(fn [k, v] -> {String.trim(k), String.trim(v)} end)
+        |> Enum.map(fn
+          [k, v] -> {String.trim(k), String.trim(v)}
+          _ -> {"", ""}
+        end)
         |> Map.new()
 
       timestamp = Map.get(parts, "t")
       signature = Map.get(parts, "v1")
 
-      signed_payload = "#{timestamp}.#{payload}"
-      expected_sig = :crypto.mac(:hmac, :sha256, secret, signed_payload) |> Base.encode16(case: :lower)
+      with {t_int, ""} <- Integer.parse(to_string(timestamp)),
+           true <- abs(System.system_time(:second) - t_int) <= 300 do
+        signed_payload = "#{timestamp}.#{payload}"
 
-      if Plug.Crypto.secure_compare(expected_sig, signature) do
-        Jason.decode(payload)
+        expected_sig =
+          :crypto.mac(:hmac, :sha256, secret, signed_payload)
+          |> Base.encode16(case: :lower)
+
+        if is_binary(signature) and Plug.Crypto.secure_compare(expected_sig, signature) do
+          Jason.decode(payload)
+        else
+          {:error, :invalid_signature}
+        end
       else
-        {:error, :invalid_signature}
+        _ -> {:error, :timestamp_out_of_tolerance}
       end
     rescue
       _ -> {:error, :signature_verification_failed}
     end
+  end
+
+  defp prod_environment? do
+    Application.get_env(:sovereign_soul_engine, :env) == :prod or
+      System.get_env("MIX_ENV") == "prod"
   end
 end

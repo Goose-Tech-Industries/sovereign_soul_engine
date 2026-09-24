@@ -73,18 +73,28 @@ defmodule SovereignSoulEngineWeb.UserLive.Settings do
           <div>
             <h3 class="text-base font-bold text-white flex items-center gap-2">
               <span>🔒 Living World Privacy</span>
-              <span class={if @opt_out_living_world, do: "badge badge-error badge-sm font-mono", else: "badge badge-success badge-sm font-mono"}>
+              <span class={
+                if @opt_out_living_world,
+                  do: "badge badge-error badge-sm font-mono",
+                  else: "badge badge-success badge-sm font-mono"
+              }>
                 {if @opt_out_living_world, do: "PRIVATE SANCTUARY", else: "LIVING WORLD ACTIVE"}
               </span>
             </h3>
             <p class="text-xs text-slate-400 mt-1 max-w-xl leading-relaxed">
-              Opt out of having your companion(s) participate in the public living world. When opted out, your companion will <strong>never</strong> post to the public SoulBook social feed, never gossip with town NPCs, and will exist exclusively in your private 1-on-1 sanctuary.
+              Opt out of having your companion(s) participate in the public living world. When opted out, your companion will
+              <strong>never</strong>
+              post to the public SoulBook social feed, never gossip with town NPCs, and will exist exclusively in your private 1-on-1 sanctuary.
             </p>
           </div>
           <div>
             <button
               phx-click="toggle_living_world_opt_out"
-              class={if @opt_out_living_world, do: "btn btn-sm btn-error font-bold whitespace-nowrap", else: "btn btn-sm btn-outline font-bold whitespace-nowrap"}
+              class={
+                if @opt_out_living_world,
+                  do: "btn btn-sm btn-error font-bold whitespace-nowrap",
+                  else: "btn btn-sm btn-outline font-bold whitespace-nowrap"
+              }
             >
               {if @opt_out_living_world, do: "✓ Opted Out (Private)", else: "Opt Out of Living World"}
             </button>

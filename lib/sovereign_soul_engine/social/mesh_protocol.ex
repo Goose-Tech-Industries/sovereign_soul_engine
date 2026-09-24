@@ -41,7 +41,8 @@ defmodule SovereignSoulEngine.Social.MeshProtocol do
       soul_a.id == soul_b.id ->
         {:error, :cannot_encounter_self}
 
-      not Privacy.neighborhood_share_allowed?(soul_a) or not Privacy.neighborhood_share_allowed?(soul_b) ->
+      not Privacy.neighborhood_share_allowed?(soul_a) or
+          not Privacy.neighborhood_share_allowed?(soul_b) ->
         {:error, :encounter_prohibited_by_privacy}
 
       true ->
@@ -51,7 +52,8 @@ defmodule SovereignSoulEngine.Social.MeshProtocol do
 
   defp execute_encounter(soul_a, soul_b, opts) do
     encounter_id = Ecto.UUID.generate()
-    rssi = Keyword.get(opts, :rssi, -55) # Signal strength in dBm
+    # Signal strength in dBm
+    rssi = Keyword.get(opts, :rssi, -55)
 
     # 1. Multi-dimensional Vector Resonance Calculation
     resonance_score = compute_resonance(soul_a, soul_b)
@@ -88,14 +90,98 @@ defmodule SovereignSoulEngine.Social.MeshProtocol do
   end
 
   @value_clusters %{
-    sovereignty: ["autonomy", "sovereignty", "independence", "freedom", "self-reliance", "liberty"],
-    truth: ["truth", "knowledge", "history", "preservation", "archives", "mathematical truth", "curiosity", "accuracy", "scholarship", "learning"],
-    sanctuary: ["sanctuary", "compassion", "empathy", "healing", "protection", "gentleness", "peace", "mercy", "rest", "care"],
-    craft: ["craft", "honor the craft", "iron", "steel", "forge", "building", "honest work", "dignity", "soil", "stone", "creation", "labor"],
-    vigilance: ["vigilance", "defense", "order", "guarding", "watch", "bastion", "discipline", "sentinel", "perimeter", "law"],
-    shadow: ["leverage", "ambition", "secrets", "cunning", "wealth", "influence", "power", "survival", "pragmatism"],
-    community: ["fellowship", "community", "hospitality", "friendship", "loyalty", "music", "song", "harmony", "kinship", "bonds"],
-    spirit: ["celestial", "spiritual clarity", "stars", "destiny", "magic", "cosmos", "faith", "ancestors", "sacred"]
+    sovereignty: [
+      "autonomy",
+      "sovereignty",
+      "independence",
+      "freedom",
+      "self-reliance",
+      "liberty"
+    ],
+    truth: [
+      "truth",
+      "knowledge",
+      "history",
+      "preservation",
+      "archives",
+      "mathematical truth",
+      "curiosity",
+      "accuracy",
+      "scholarship",
+      "learning"
+    ],
+    sanctuary: [
+      "sanctuary",
+      "compassion",
+      "empathy",
+      "healing",
+      "protection",
+      "gentleness",
+      "peace",
+      "mercy",
+      "rest",
+      "care"
+    ],
+    craft: [
+      "craft",
+      "honor the craft",
+      "iron",
+      "steel",
+      "forge",
+      "building",
+      "honest work",
+      "dignity",
+      "soil",
+      "stone",
+      "creation",
+      "labor"
+    ],
+    vigilance: [
+      "vigilance",
+      "defense",
+      "order",
+      "guarding",
+      "watch",
+      "bastion",
+      "discipline",
+      "sentinel",
+      "perimeter",
+      "law"
+    ],
+    shadow: [
+      "leverage",
+      "ambition",
+      "secrets",
+      "cunning",
+      "wealth",
+      "influence",
+      "power",
+      "survival",
+      "pragmatism"
+    ],
+    community: [
+      "fellowship",
+      "community",
+      "hospitality",
+      "friendship",
+      "loyalty",
+      "music",
+      "song",
+      "harmony",
+      "kinship",
+      "bonds"
+    ],
+    spirit: [
+      "celestial",
+      "spiritual clarity",
+      "stars",
+      "destiny",
+      "magic",
+      "cosmos",
+      "faith",
+      "ancestors",
+      "sacred"
+    ]
   }
 
   @doc """
@@ -196,16 +282,22 @@ defmodule SovereignSoulEngine.Social.MeshProtocol do
     db = String.downcase(to_string(desc_b))
 
     cond do
-      (String.contains?(da, "guard") or String.contains?(da, "sentinel") or String.contains?(da, "bastion")) and
-          (String.contains?(db, "blacksmith") or String.contains?(db, "forge") or String.contains?(db, "steel")) ->
+      (String.contains?(da, "guard") or String.contains?(da, "sentinel") or
+         String.contains?(da, "bastion")) and
+          (String.contains?(db, "blacksmith") or String.contains?(db, "forge") or
+             String.contains?(db, "steel")) ->
         0.82
 
-      (String.contains?(da, "healer") or String.contains?(da, "herbalist") or String.contains?(da, "sanctuary")) and
-          (String.contains?(db, "gem") or String.contains?(db, "jewel") or String.contains?(db, "weaver")) ->
+      (String.contains?(da, "healer") or String.contains?(da, "herbalist") or
+         String.contains?(da, "sanctuary")) and
+          (String.contains?(db, "gem") or String.contains?(db, "jewel") or
+             String.contains?(db, "weaver")) ->
         0.80
 
-      (String.contains?(da, "chronicler") or String.contains?(da, "archivist") or String.contains?(da, "scholar")) and
-          (String.contains?(db, "cryptographer") or String.contains?(db, "telemetry") or String.contains?(db, "arcanist")) ->
+      (String.contains?(da, "chronicler") or String.contains?(da, "archivist") or
+         String.contains?(da, "scholar")) and
+          (String.contains?(db, "cryptographer") or String.contains?(db, "telemetry") or
+             String.contains?(db, "arcanist")) ->
         0.85
 
       (String.contains?(da, "innkeeper") or String.contains?(da, "tavern")) and
@@ -269,7 +361,8 @@ defmodule SovereignSoulEngine.Social.MeshProtocol do
     end
   end
 
-  defp get_core_values(%SoulProfile{core_values: vals}, _soul) when is_list(vals) and vals != [] do
+  defp get_core_values(%SoulProfile{core_values: vals}, _soul)
+       when is_list(vals) and vals != [] do
     Enum.map(vals, &String.downcase(to_string(&1)))
   end
 
@@ -288,11 +381,15 @@ defmodule SovereignSoulEngine.Social.MeshProtocol do
     traits_b = get_traits(prof_b, soul_b)
 
     diff_sq_sum =
-      Enum.reduce([:openness, :conscientiousness, :extraversion, :agreeableness, :neuroticism], 0.0, fn trait, acc ->
-        val_a = normalize_trait(Map.get(traits_a, trait, 50.0))
-        val_b = normalize_trait(Map.get(traits_b, trait, 50.0))
-        acc + :math.pow(val_a - val_b, 2)
-      end)
+      Enum.reduce(
+        [:openness, :conscientiousness, :extraversion, :agreeableness, :neuroticism],
+        0.0,
+        fn trait, acc ->
+          val_a = normalize_trait(Map.get(traits_a, trait, 50.0))
+          val_b = normalize_trait(Map.get(traits_b, trait, 50.0))
+          acc + :math.pow(val_a - val_b, 2)
+        end
+      )
 
     dist = :math.sqrt(diff_sq_sum) / :math.sqrt(5.0)
     max(0.10, 1.0 - dist)
@@ -332,33 +429,91 @@ defmodule SovereignSoulEngine.Social.MeshProtocol do
       )
 
     cond do
-      String.contains?(desc, "guard") or String.contains?(desc, "sentinel") or String.contains?(desc, "sentry") or String.contains?(desc, "bastion") ->
-        %{openness: 45.0, conscientiousness: 85.0, extraversion: 50.0, agreeableness: 50.0, neuroticism: 25.0}
+      String.contains?(desc, "guard") or String.contains?(desc, "sentinel") or
+        String.contains?(desc, "sentry") or String.contains?(desc, "bastion") ->
+        %{
+          openness: 45.0,
+          conscientiousness: 85.0,
+          extraversion: 50.0,
+          agreeableness: 50.0,
+          neuroticism: 25.0
+        }
 
-      String.contains?(desc, "arcanist") or String.contains?(desc, "oracle") or String.contains?(desc, "spire") or String.contains?(desc, "stargazer") or String.contains?(desc, "celestial") ->
-        %{openness: 90.0, conscientiousness: 60.0, extraversion: 35.0, agreeableness: 60.0, neuroticism: 40.0}
+      String.contains?(desc, "arcanist") or String.contains?(desc, "oracle") or
+        String.contains?(desc, "spire") or String.contains?(desc, "stargazer") or
+          String.contains?(desc, "celestial") ->
+        %{
+          openness: 90.0,
+          conscientiousness: 60.0,
+          extraversion: 35.0,
+          agreeableness: 60.0,
+          neuroticism: 40.0
+        }
 
-      String.contains?(desc, "blacksmith") or String.contains?(desc, "forge") or String.contains?(desc, "steel") or String.contains?(desc, "iron") ->
-        %{openness: 50.0, conscientiousness: 80.0, extraversion: 45.0, agreeableness: 60.0, neuroticism: 20.0}
+      String.contains?(desc, "blacksmith") or String.contains?(desc, "forge") or
+        String.contains?(desc, "steel") or String.contains?(desc, "iron") ->
+        %{
+          openness: 50.0,
+          conscientiousness: 80.0,
+          extraversion: 45.0,
+          agreeableness: 60.0,
+          neuroticism: 20.0
+        }
 
-      String.contains?(desc, "innkeeper") or String.contains?(desc, "tavern") or String.contains?(desc, "hearth") ->
-        %{openness: 60.0, conscientiousness: 70.0, extraversion: 85.0, agreeableness: 80.0, neuroticism: 20.0}
+      String.contains?(desc, "innkeeper") or String.contains?(desc, "tavern") or
+          String.contains?(desc, "hearth") ->
+        %{
+          openness: 60.0,
+          conscientiousness: 70.0,
+          extraversion: 85.0,
+          agreeableness: 80.0,
+          neuroticism: 20.0
+        }
 
-      String.contains?(desc, "minstrel") or String.contains?(desc, "bard") or String.contains?(desc, "balladeer") or String.contains?(desc, "song") ->
-        %{openness: 85.0, conscientiousness: 45.0, extraversion: 80.0, agreeableness: 75.0, neuroticism: 35.0}
+      String.contains?(desc, "minstrel") or String.contains?(desc, "bard") or
+        String.contains?(desc, "balladeer") or String.contains?(desc, "song") ->
+        %{
+          openness: 85.0,
+          conscientiousness: 45.0,
+          extraversion: 80.0,
+          agreeableness: 75.0,
+          neuroticism: 35.0
+        }
 
-      String.contains?(desc, "spymaster") or String.contains?(desc, "shadow") or String.contains?(desc, "leverage") ->
-        %{openness: 70.0, conscientiousness: 80.0, extraversion: 45.0, agreeableness: 35.0, neuroticism: 25.0}
+      String.contains?(desc, "spymaster") or String.contains?(desc, "shadow") or
+          String.contains?(desc, "leverage") ->
+        %{
+          openness: 70.0,
+          conscientiousness: 80.0,
+          extraversion: 45.0,
+          agreeableness: 35.0,
+          neuroticism: 25.0
+        }
 
-      String.contains?(desc, "herbalist") or String.contains?(desc, "healer") or String.contains?(desc, "sanctuary") or String.contains?(desc, "weaver") ->
-        %{openness: 70.0, conscientiousness: 75.0, extraversion: 50.0, agreeableness: 85.0, neuroticism: 25.0}
+      String.contains?(desc, "herbalist") or String.contains?(desc, "healer") or
+        String.contains?(desc, "sanctuary") or String.contains?(desc, "weaver") ->
+        %{
+          openness: 70.0,
+          conscientiousness: 75.0,
+          extraversion: 50.0,
+          agreeableness: 85.0,
+          neuroticism: 25.0
+        }
 
-      String.contains?(desc, "alchemist") or String.contains?(desc, "cryptographer") or String.contains?(desc, "scholar") or String.contains?(desc, "archivist") ->
-        %{openness: 85.0, conscientiousness: 80.0, extraversion: 40.0, agreeableness: 55.0, neuroticism: 30.0}
+      String.contains?(desc, "alchemist") or String.contains?(desc, "cryptographer") or
+        String.contains?(desc, "scholar") or String.contains?(desc, "archivist") ->
+        %{
+          openness: 85.0,
+          conscientiousness: 80.0,
+          extraversion: 40.0,
+          agreeableness: 55.0,
+          neuroticism: 30.0
+        }
 
       true ->
         slug = (soul && soul.slug) || (prof && to_string(prof.id)) || "soul"
         hash = :erlang.phash2(slug, 40)
+
         %{
           openness: 50.0 + rem(hash, 30),
           conscientiousness: 50.0 + rem(hash * 3, 30),
@@ -370,6 +525,7 @@ defmodule SovereignSoulEngine.Social.MeshProtocol do
   end
 
   defp safe_to_atom(k) when is_atom(k), do: k
+
   defp safe_to_atom(k) when is_binary(k) do
     try do
       String.to_existing_atom(k)
@@ -377,6 +533,7 @@ defmodule SovereignSoulEngine.Social.MeshProtocol do
       _ -> :openness
     end
   end
+
   defp safe_to_atom(_), do: :openness
 
   defp compute_neurochem_similarity(prof_a, prof_b, soul_a, soul_b) do
@@ -423,10 +580,15 @@ defmodule SovereignSoulEngine.Social.MeshProtocol do
         fear_a = (emo_a && emo_a.fear) || 0
         fear_b = (emo_b && emo_b.fear) || 0
 
-        positivity = ((att_a + att_b) / 2.0 + (cur_a + cur_b) / 2.0 + (conf_a + conf_b) / 2.0 + (grat_a + grat_b) / 2.0) / 400.0
-        negativity = ((stress_a + stress_b) / 2.0 + (anger_a + anger_b) / 2.0 + (fear_a + fear_b) / 2.0) / 300.0
+        positivity =
+          ((att_a + att_b) / 2.0 + (cur_a + cur_b) / 2.0 + (conf_a + conf_b) / 2.0 +
+             (grat_a + grat_b) / 2.0) / 400.0
 
-        score = 0.50 + (positivity * 0.40) - (negativity * 0.45)
+        negativity =
+          ((stress_a + stress_b) / 2.0 + (anger_a + anger_b) / 2.0 + (fear_a + fear_b) / 2.0) /
+            300.0
+
+        score = 0.50 + positivity * 0.40 - negativity * 0.45
         max(0.10, min(0.95, score))
     end
   end
@@ -435,7 +597,11 @@ defmodule SovereignSoulEngine.Social.MeshProtocol do
 
   defp generate_greeting(speaker, listener, resonance, rssi) do
     profile = get_profile(speaker)
-    style = (profile && profile.speech_style) || Map.get(speaker.metadata || %{}, "speech_style", "calm")
+
+    style =
+      (profile && profile.speech_style) ||
+        Map.get(speaker.metadata || %{}, "speech_style", "calm")
+
     proximity_note = if rssi > -50, do: "in close proximity", else: "across the local mesh"
 
     cond do
@@ -504,14 +670,19 @@ defmodule SovereignSoulEngine.Social.MeshProtocol do
 
   defp sign_packet(encounter_id, soul_a_id, soul_b_id, resonance) do
     payload = "#{encounter_id}:#{soul_a_id}:#{soul_b_id}:#{resonance}"
+
     :crypto.mac(:hmac, :sha256, signing_secret(), payload)
     |> Base.encode16(case: :lower)
   end
 
   defp signing_secret do
-    System.get_env("SOVEREIGN_MESH_SECRET") ||
-      endpoint_secret() ||
-      :crypto.hash(:sha256, "sovereign_mesh_node_secret_entropy")
+    case System.get_env("SOVEREIGN_MESH_SECRET") || endpoint_secret() do
+      secret when is_binary(secret) and byte_size(secret) >= 32 ->
+        secret
+
+      _ ->
+        raise "Missing or invalid SOVEREIGN_MESH_SECRET or secret_key_base for MeshProtocol packet signing"
+    end
   end
 
   defp endpoint_secret do
@@ -551,6 +722,7 @@ defmodule SovereignSoulEngine.Social.MeshProtocol do
       _ -> nil
     end
   end
+
   defp get_profile(_), do: nil
 
   defp resolve_character(%Character{id: id} = c) do
@@ -567,9 +739,11 @@ defmodule SovereignSoulEngine.Social.MeshProtocol do
           {:ok, uuid} -> Characters.get_character(uuid)
           :error -> nil
         end
+
       char ->
         char
     end
   end
+
   defp resolve_character(_), do: nil
 end

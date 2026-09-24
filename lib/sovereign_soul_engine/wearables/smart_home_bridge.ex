@@ -62,7 +62,8 @@ defmodule SovereignSoulEngine.Wearables.SmartHomeBridge do
           brightness_pct: 35,
           color_temp_kelvin: 2700,
           effect: "diffuse_calm",
-          rationale: "Cortisol spike detected. Diffusing gentle anti-glare lavender to stimulate parasympathetic recovery.",
+          rationale:
+            "Cortisol spike detected. Diffusing gentle anti-glare lavender to stimulate parasympathetic recovery.",
           neurochemistry: %{
             cortisol: neurochem.cortisol,
             oxytocin: neurochem.oxytocin,
@@ -80,7 +81,8 @@ defmodule SovereignSoulEngine.Wearables.SmartHomeBridge do
           brightness_pct: 55,
           color_temp_kelvin: 2200,
           effect: "candle_warmth",
-          rationale: "High oxytocinergic bonding. Setting warm hearth ambiance for intimate connection.",
+          rationale:
+            "High oxytocinergic bonding. Setting warm hearth ambiance for intimate connection.",
           neurochemistry: %{
             cortisol: neurochem.cortisol,
             oxytocin: neurochem.oxytocin,
@@ -98,7 +100,8 @@ defmodule SovereignSoulEngine.Wearables.SmartHomeBridge do
           brightness_pct: 85,
           color_temp_kelvin: 3500,
           effect: "sunrise_glow",
-          rationale: "High dopamine and creative curiosity. Projecting uplifting golden spectrum.",
+          rationale:
+            "High dopamine and creative curiosity. Projecting uplifting golden spectrum.",
           neurochemistry: %{
             cortisol: neurochem.cortisol,
             oxytocin: neurochem.oxytocin,
@@ -116,7 +119,8 @@ defmodule SovereignSoulEngine.Wearables.SmartHomeBridge do
           brightness_pct: 40,
           color_temp_kelvin: 2000,
           effect: "embers",
-          rationale: "Low serotonin / vulnerability. Illuminating warm fireplace spectrum for emotional safety.",
+          rationale:
+            "Low serotonin / vulnerability. Illuminating warm fireplace spectrum for emotional safety.",
           neurochemistry: %{
             cortisol: neurochem.cortisol,
             oxytocin: neurochem.oxytocin,
@@ -196,7 +200,13 @@ defmodule SovereignSoulEngine.Wearables.SmartHomeBridge do
   @impl true
   def handle_info({:neurochemistry_updated, payload}, state) do
     profile = compute_light_profile(payload)
-    Phoenix.PubSub.broadcast(SovereignSoulEngine.PubSub, "smart_home:lighting", {:ambient_light_sync, profile})
+
+    Phoenix.PubSub.broadcast(
+      SovereignSoulEngine.PubSub,
+      "smart_home:lighting",
+      {:ambient_light_sync, profile}
+    )
+
     dispatch_to_iot_services(profile)
     {:noreply, %{state | last_synced_profile: profile}}
   end
@@ -204,7 +214,13 @@ defmodule SovereignSoulEngine.Wearables.SmartHomeBridge do
   @impl true
   def handle_info({:telemetry_received, %{character_id: char_id}}, state) do
     profile = get_current_ambient_profile(char_id)
-    Phoenix.PubSub.broadcast(SovereignSoulEngine.PubSub, "smart_home:lighting", {:ambient_light_sync, profile})
+
+    Phoenix.PubSub.broadcast(
+      SovereignSoulEngine.PubSub,
+      "smart_home:lighting",
+      {:ambient_light_sync, profile}
+    )
+
     dispatch_to_iot_services(profile)
     {:noreply, %{state | last_synced_profile: profile}}
   end
@@ -237,7 +253,13 @@ defmodule SovereignSoulEngine.Wearables.SmartHomeBridge do
           {"Content-Type", "application/json"}
         ]
 
-        case Req.post(endpoint, json: body, headers: headers) do
+        case Req.post(endpoint,
+               json: body,
+               headers: headers,
+               receive_timeout: 4000,
+               connect_options: [timeout: 2000],
+               retry: false
+             ) do
           {:ok, %{status: 200}} ->
             Logger.info("[SmartHomeBridge] Home Assistant light synced to #{profile.name}")
 

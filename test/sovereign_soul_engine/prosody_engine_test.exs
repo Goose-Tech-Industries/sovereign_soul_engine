@@ -29,7 +29,10 @@ defmodule SovereignSoulEngine.Voice.ProsodyEngineTest do
         oxytocin: 85.0
       }
 
-      prosody = ProsodyEngine.compute_prosody(warm_calm_neurochem, circadian: %{melatonin: 40.0, state: :winding_down})
+      prosody =
+        ProsodyEngine.compute_prosody(warm_calm_neurochem,
+          circadian: %{melatonin: 40.0, state: :winding_down}
+        )
 
       assert prosody.pitch_semitones < 0.0
       assert prosody.breathiness > 0.6

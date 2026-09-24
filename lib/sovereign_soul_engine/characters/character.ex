@@ -27,7 +27,18 @@ defmodule SovereignSoulEngine.Characters.Character do
 
   def changeset(character, attrs) do
     character
-    |> cast(attrs, [:name, :slug, :kind, :description, :status, :metadata, :external_source, :external_id, :user_id, :in_living_world])
+    |> cast(attrs, [
+      :name,
+      :slug,
+      :kind,
+      :description,
+      :status,
+      :metadata,
+      :external_source,
+      :external_id,
+      :user_id,
+      :in_living_world
+    ])
     |> validate_required([:name, :slug, :kind])
     |> validate_inclusion(:kind, @kind_values)
     |> validate_inclusion(:status, ~w(active inactive archived dead))

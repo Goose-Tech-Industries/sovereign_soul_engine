@@ -81,10 +81,12 @@ defmodule SovereignSoulEngineWeb.SoulLedgerLive do
               <.icon name="hero-arrow-left" class="size-4 inline" /> Dashboard
             </.link>
             <h1 class="text-2xl font-bold text-base-content mt-1">Soul Ledger</h1>
+
             <p class="text-sm text-base-content/50 mt-0.5">
               Immutable timeline of all canonical soul mutations
             </p>
           </div>
+
           <div class="flex gap-2">
             <form phx-change="filter_character" id="ledger-filter-form">
               <select
@@ -93,6 +95,7 @@ defmodule SovereignSoulEngineWeb.SoulLedgerLive do
                 class="text-sm rounded-lg border border-base-300 bg-base-200 px-3 py-1.5 text-base-content"
               >
                 <option value="">All Characters</option>
+
                 <%= for char <- @characters do %>
                   <option value={char.id} selected={@filter_character_id == char.id}>
                     {char.name}
@@ -102,7 +105,6 @@ defmodule SovereignSoulEngineWeb.SoulLedgerLive do
             </form>
           </div>
         </div>
-
         <%!-- Ledger Timeline --%>
         <div :if={@ledger_entries == []} class="p-8 text-center rounded-xl border border-base-300">
           <p class="text-base-content/50">
@@ -112,6 +114,7 @@ defmodule SovereignSoulEngineWeb.SoulLedgerLive do
 
         <div class="relative">
           <div class="absolute left-5 top-0 bottom-0 w-px bg-base-300"></div>
+
           <div class="space-y-4">
             <%= for entry <- @ledger_entries do %>
               <div class="relative pl-12">
@@ -130,6 +133,7 @@ defmodule SovereignSoulEngineWeb.SoulLedgerLive do
                           {entry.entry_type}
                         </span>
                       </div>
+
                       <p class="text-sm text-base-content/70">{entry.summary}</p>
 
                       <div class="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-1">
@@ -147,9 +151,8 @@ defmodule SovereignSoulEngineWeb.SoulLedgerLive do
                     </div>
 
                     <div class="shrink-0 text-right">
-                      <p class="text-xs text-base-content/40">
-                        {format_time(entry.inserted_at)}
-                      </p>
+                      <p class="text-xs text-base-content/40">{format_time(entry.inserted_at)}</p>
+
                       <p
                         :if={character_name(@characters, entry.character_id)}
                         class="text-xs text-primary/70 mt-0.5"

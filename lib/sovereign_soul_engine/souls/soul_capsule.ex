@@ -675,9 +675,13 @@ defmodule SovereignSoulEngine.Souls.SoulCapsule do
       true ->
         endpoint = Application.get_env(:sovereign_soul_engine, SovereignSoulEngineWeb.Endpoint)
 
-        (endpoint && endpoint[:secret_key_base]) ||
-          System.get_env("SECRET_KEY_BASE") ||
-          "sovereign_soul_capsule_insecure_fallback_secret"
+        case (endpoint && endpoint[:secret_key_base]) || System.get_env("SECRET_KEY_BASE") do
+          key when is_binary(key) and byte_size(key) >= 32 ->
+            key
+
+          _ ->
+            raise "Missing or invalid secret_key_base for SoulCapsule signing; configure SECRET_KEY_BASE"
+        end
     end
   end
 

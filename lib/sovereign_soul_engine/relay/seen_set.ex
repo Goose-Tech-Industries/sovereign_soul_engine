@@ -34,6 +34,11 @@ defmodule SovereignSoulEngine.Relay.SeenSet do
     end
   end
 
+  @impl true
+  def handle_info(_msg, state) do
+    {:noreply, state}
+  end
+
   defp add(entry, nonce) do
     {set, queue} =
       if MapSet.size(entry.set) >= @max_per_did do

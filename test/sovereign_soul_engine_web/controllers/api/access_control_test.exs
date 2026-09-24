@@ -13,11 +13,15 @@ defmodule SovereignSoulEngineWeb.Api.AccessControlTest do
           {:post, "/privacy/settings"},
           {:post, "/privacy/safe_word/clear"},
           {:post, "/webhooks/telegram"},
-          {:post, "/webhooks/stripe"},
           {:post, "/alexa"}
         ] do
       response = dispatch(conn, @endpoint, method, prefix <> path, %{})
       assert json_response(response, 401)["error"] == "missing api key"
+    end
+
+    for prefix <- ["/api", "/sse/api"] do
+      response = post(conn, prefix <> "/webhooks/stripe", %{})
+      assert json_response(response, 400)["error"] == "Webhook verification failed"
     end
   end
 

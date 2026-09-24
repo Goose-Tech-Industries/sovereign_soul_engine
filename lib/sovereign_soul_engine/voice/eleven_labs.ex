@@ -186,34 +186,15 @@ defmodule SovereignSoulEngine.Voice.ElevenLabs do
       key when is_binary(key) and byte_size(key) > 0 ->
         key
 
-      # Explicit `api_key: nil` (or empty string) disables the ambient env/.env
+      # Explicit `api_key: nil` (or empty string) disables the ambient env
       # lookup so callers — and tests — can deterministically force an
       # "unconfigured" state without touching the environment.
       _ ->
         if Keyword.has_key?(opts, :api_key) do
           nil
         else
-          System.get_env("ELEVENLABS_API_KEY") || read_env_file("ELEVENLABS_API_KEY")
+          System.get_env("ELEVENLABS_API_KEY")
         end
     end
-  end
-
-  defp read_env_file(key) do
-    env_paths = [
-      Path.join(File.cwd!(), ".env"),
-      Path.join([File.cwd!(), "..", "tew_sidecar", ".env"])
-    ]
-
-    Enum.find_value(env_paths, fn path ->
-      if File.exists?(path) do
-        File.stream!(path)
-        |> Enum.find_value(fn line ->
-          case String.split(String.trim(line), "=", parts: 2) do
-            [^key, val] -> String.trim(val, "\"")
-            _ -> nil
-          end
-        end)
-      end
-    end)
   end
 end

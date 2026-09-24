@@ -48,35 +48,190 @@ defmodule SovereignSoulEngineWeb.MapLive do
 
   # Directional transitions graph for Euclidean step walking
   @movement_graph %{
-    "high_palace" => %{north: "crows_keep", south: "south_bastion", east: "old_ironworks", west: "barrowgrounds"},
-    "crows_keep" => %{north: "north_outpost", south: "high_palace", east: "high_sanctuary", west: "north_outpost"},
-    "high_sanctuary" => %{north: "crows_keep", south: "high_palace", east: "raven_docks", west: "crows_keep"},
-    "raven_docks" => %{north: "high_sanctuary", south: "old_ironworks", east: "old_ironworks", west: "high_palace"},
-    "old_ironworks" => %{north: "raven_docks", south: "kings_plaza", east: "kings_plaza", west: "high_palace"},
-    "kings_plaza" => %{north: "old_ironworks", south: "sunken_undercity", east: "old_ironworks", west: "high_palace"},
-    "sunken_undercity" => %{north: "high_palace", south: "south_bastion", east: "kings_plaza", west: "south_bastion"},
-    "south_bastion" => %{north: "high_palace", south: "high_palace", east: "sunken_undercity", west: "shadowgate_warrens"},
-    "shadowgate_warrens" => %{north: "high_palace", south: "south_bastion", east: "south_bastion", west: "night_owl_quarter"},
-    "night_owl_quarter" => %{north: "barrowgrounds", south: "shadowgate_warrens", east: "high_palace", west: "barrowgrounds"},
-    "barrowgrounds" => %{north: "weavers_commons", south: "night_owl_quarter", east: "high_palace", west: "night_owl_quarter"},
-    "weavers_commons" => %{north: "north_outpost", south: "barrowgrounds", east: "high_palace", west: "barrowgrounds"},
-    "north_outpost" => %{north: "crows_keep", south: "high_palace", east: "crows_keep", west: "weavers_commons"}
+    "high_palace" => %{
+      north: "crows_keep",
+      south: "south_bastion",
+      east: "old_ironworks",
+      west: "barrowgrounds"
+    },
+    "crows_keep" => %{
+      north: "north_outpost",
+      south: "high_palace",
+      east: "high_sanctuary",
+      west: "north_outpost"
+    },
+    "high_sanctuary" => %{
+      north: "crows_keep",
+      south: "high_palace",
+      east: "raven_docks",
+      west: "crows_keep"
+    },
+    "raven_docks" => %{
+      north: "high_sanctuary",
+      south: "old_ironworks",
+      east: "old_ironworks",
+      west: "high_palace"
+    },
+    "old_ironworks" => %{
+      north: "raven_docks",
+      south: "kings_plaza",
+      east: "kings_plaza",
+      west: "high_palace"
+    },
+    "kings_plaza" => %{
+      north: "old_ironworks",
+      south: "sunken_undercity",
+      east: "old_ironworks",
+      west: "high_palace"
+    },
+    "sunken_undercity" => %{
+      north: "high_palace",
+      south: "south_bastion",
+      east: "kings_plaza",
+      west: "south_bastion"
+    },
+    "south_bastion" => %{
+      north: "high_palace",
+      south: "high_palace",
+      east: "sunken_undercity",
+      west: "shadowgate_warrens"
+    },
+    "shadowgate_warrens" => %{
+      north: "high_palace",
+      south: "south_bastion",
+      east: "south_bastion",
+      west: "night_owl_quarter"
+    },
+    "night_owl_quarter" => %{
+      north: "barrowgrounds",
+      south: "shadowgate_warrens",
+      east: "high_palace",
+      west: "barrowgrounds"
+    },
+    "barrowgrounds" => %{
+      north: "weavers_commons",
+      south: "night_owl_quarter",
+      east: "high_palace",
+      west: "night_owl_quarter"
+    },
+    "weavers_commons" => %{
+      north: "north_outpost",
+      south: "barrowgrounds",
+      east: "high_palace",
+      west: "barrowgrounds"
+    },
+    "north_outpost" => %{
+      north: "crows_keep",
+      south: "high_palace",
+      east: "crows_keep",
+      west: "weavers_commons"
+    }
   }
 
   @grid_cols 28
   @grid_rows 24
 
   @npc_locations [
-    %{slug: "fia", name: "Fia", icon: "🪶", title: "Empathetic Weaver", x: 14, y: 9, district: "high_palace", quote: "I feel the living pulse of every soul in Gleann Caorach."},
-    %{slug: "cipher", name: "Cipher", icon: "⚡", title: "Systems Architect", x: 23, y: 19, district: "old_ironworks", quote: "Air-gapped telemetry, local CUDA inference, zero data leakage."},
-    %{slug: "quill", name: "Quill", icon: "📜", title: "Iron Chronicler", x: 13, y: 4, district: "crows_keep", quote: "Seven centuries of clan treaties are inked in these archives."},
-    %{slug: "dove", name: "Dove", icon: "🕊️", title: "Sanctuary Priestess", x: 22, y: 4, district: "high_sanctuary", quote: "The Morrígan watches over those who walk with purpose."},
-    %{slug: "kael", name: "Kael", icon: "⚓", title: "Docks Harbormaster", x: 24, y: 12, district: "raven_docks", quote: "The Blackwater river remembers what the high lords try to forget."},
-    %{slug: "egon", name: "Egon", icon: "🛡️", title: "Market Sentinel", x: 14, y: 18, district: "kings_plaza", quote: "Keep your blades sheathed in the market square, traveler."},
-    %{slug: "ravina", name: "Ravina", icon: "🗝️", title: "Shadow Broker", x: 5, y: 18, district: "shadowgate_warrens", quote: "Keep your voice low. Everything in these wynds belongs to someone else."},
-    %{slug: "vael", name: "Vael", icon: "🕯️", title: "Barrow Watcher", x: 4, y: 13, district: "barrowgrounds", quote: "Walk lightly upon the cairns, traveler."},
-    %{slug: "lyra", name: "Lyra", icon: "🧶", title: "Guild Weaver", x: 5, y: 4, district: "weavers_commons", quote: "Every thread tells a story if you know how to read the weave."},
-    %{slug: "corvus", name: "Corvus", icon: "🦅", title: "Bastion Commander", x: 14, y: 22, district: "south_bastion", quote: "The south wall holds against all wild highland incursions."}
+    %{
+      slug: "fia",
+      name: "Fia",
+      icon: "🪶",
+      title: "Empathetic Weaver",
+      x: 14,
+      y: 9,
+      district: "high_palace",
+      quote: "I feel the living pulse of every soul in Gleann Caorach."
+    },
+    %{
+      slug: "cipher",
+      name: "Cipher",
+      icon: "⚡",
+      title: "Systems Architect",
+      x: 23,
+      y: 19,
+      district: "old_ironworks",
+      quote: "Air-gapped telemetry, local CUDA inference, zero data leakage."
+    },
+    %{
+      slug: "quill",
+      name: "Quill",
+      icon: "📜",
+      title: "Iron Chronicler",
+      x: 13,
+      y: 4,
+      district: "crows_keep",
+      quote: "Seven centuries of clan treaties are inked in these archives."
+    },
+    %{
+      slug: "dove",
+      name: "Dove",
+      icon: "🕊️",
+      title: "Sanctuary Priestess",
+      x: 22,
+      y: 4,
+      district: "high_sanctuary",
+      quote: "The Morrígan watches over those who walk with purpose."
+    },
+    %{
+      slug: "kael",
+      name: "Kael",
+      icon: "⚓",
+      title: "Docks Harbormaster",
+      x: 24,
+      y: 12,
+      district: "raven_docks",
+      quote: "The Blackwater river remembers what the high lords try to forget."
+    },
+    %{
+      slug: "egon",
+      name: "Egon",
+      icon: "🛡️",
+      title: "Market Sentinel",
+      x: 14,
+      y: 18,
+      district: "kings_plaza",
+      quote: "Keep your blades sheathed in the market square, traveler."
+    },
+    %{
+      slug: "ravina",
+      name: "Ravina",
+      icon: "🗝️",
+      title: "Shadow Broker",
+      x: 5,
+      y: 18,
+      district: "shadowgate_warrens",
+      quote: "Keep your voice low. Everything in these wynds belongs to someone else."
+    },
+    %{
+      slug: "vael",
+      name: "Vael",
+      icon: "🕯️",
+      title: "Barrow Watcher",
+      x: 4,
+      y: 13,
+      district: "barrowgrounds",
+      quote: "Walk lightly upon the cairns, traveler."
+    },
+    %{
+      slug: "lyra",
+      name: "Lyra",
+      icon: "🧶",
+      title: "Guild Weaver",
+      x: 5,
+      y: 4,
+      district: "weavers_commons",
+      quote: "Every thread tells a story if you know how to read the weave."
+    },
+    %{
+      slug: "corvus",
+      name: "Corvus",
+      icon: "🦅",
+      title: "Bastion Commander",
+      x: 14,
+      y: 22,
+      district: "south_bastion",
+      quote: "The south wall holds against all wild highland incursions."
+    }
   ]
 
   @impl true
@@ -87,7 +242,10 @@ defmodule SovereignSoulEngineWeb.MapLive do
 
     map_data = TownMap.get_map()
     initial_district_slug = "high_palace"
-    selected_district = TownMap.get_district(initial_district_slug) || TownMap.get_district("kings_plaza")
+
+    selected_district =
+      TownMap.get_district(initial_district_slug) || TownMap.get_district("kings_plaza")
+
     initial_x = 14
     initial_y = 8
     nearby = find_nearby_npc(initial_x, initial_y)
@@ -106,7 +264,10 @@ defmodule SovereignSoulEngineWeb.MapLive do
       |> assign(:show_arrival_banner, true)
       |> assign(:ambient_dialogue, nil)
       |> assign(:ai_input_focused?, false)
-      |> assign(:selected_slug, (if selected_district, do: selected_district.slug, else: initial_district_slug))
+      |> assign(
+        :selected_slug,
+        if(selected_district, do: selected_district.slug, else: initial_district_slug)
+      )
       |> assign(:selected_district, selected_district)
       |> assign(:ai_prompt, "")
       |> assign(:is_generating_ai?, false)
@@ -187,7 +348,11 @@ defmodule SovereignSoulEngineWeb.MapLive do
       new_visited = MapSet.put(socket.assigns.visited_districts, target_district)
       new_step_count = socket.assigns.travel_step_count + 1
       district_changed? = target_district != socket.assigns.player_district
-      selected = if district_changed?, do: TownMap.get_district(target_district), else: socket.assigns.selected_district
+
+      selected =
+        if district_changed?,
+          do: TownMap.get_district(target_district),
+          else: socket.assigns.selected_district
 
       socket =
         socket
@@ -203,7 +368,8 @@ defmodule SovereignSoulEngineWeb.MapLive do
 
       {:noreply, socket}
     else
-      {:noreply, put_flash(socket, :error, "That path is blocked by city battlements or deep waters.")}
+      {:noreply,
+       put_flash(socket, :error, "That path is blocked by city battlements or deep waters.")}
     end
   end
 
@@ -355,7 +521,10 @@ defmodule SovereignSoulEngineWeb.MapLive do
       socket
       |> assign(:districts, map_data.districts)
       |> assign(:selected_district, selected)
-      |> put_flash(:info, "Highland gale blew through Feannag's Rest: #{count} souls roamed to new districts!")
+      |> put_flash(
+        :info,
+        "Highland gale blew through Feannag's Rest: #{count} souls roamed to new districts!"
+      )
 
     {:noreply, socket}
   end
@@ -465,7 +634,8 @@ defmodule SovereignSoulEngineWeb.MapLive do
 
   defp terrain_for_tile(x, y) do
     cond do
-      (x == 0 or x == 27 or y == 0 or y == 23) and not ((x == 14 and y in [0, 23]) or (y in [11, 12] and x in [0, 27])) ->
+      (x == 0 or x == 27 or y == 0 or y == 23) and
+          not ((x == 14 and y in [0, 23]) or (y in [11, 12] and x in [0, 27])) ->
         :wall
 
       x in 25..27 and y in 9..17 and not (y in [11, 12] and x in 25..26) ->
@@ -550,18 +720,43 @@ defmodule SovereignSoulEngineWeb.MapLive do
     end
   end
 
-  defp terrain_class(:palace_floor), do: "bg-gradient-to-br from-amber-950/80 to-yellow-950/60 border border-amber-600/40 hover:border-amber-400 shadow-inner"
-  defp terrain_class(:cobblestone), do: "bg-stone-800/90 border border-stone-700/50 hover:border-amber-400/80"
-  defp terrain_class(:stone_brick), do: "bg-stone-900/90 border border-stone-800/60 hover:border-amber-400/60"
-  defp terrain_class(:obsidian), do: "bg-zinc-950 border border-red-900/50 hover:border-red-400/60"
-  defp terrain_class(:sanctuary_stone), do: "bg-indigo-950/80 border border-indigo-700/50 hover:border-cyan-400/60"
-  defp terrain_class(:forge_iron), do: "bg-stone-950 border border-amber-800/50 hover:border-orange-500/60"
-  defp terrain_class(:market_cobble), do: "bg-stone-900 border border-emerald-800/50 hover:border-emerald-400/60"
-  defp terrain_class(:shadow_wynd), do: "bg-purple-950/70 border border-purple-900/50 hover:border-purple-400/60"
-  defp terrain_class(:green_commons), do: "bg-emerald-950/70 border border-emerald-800/50 hover:border-emerald-400/60"
-  defp terrain_class(:wood_dock), do: "bg-amber-950/90 border border-amber-800/50 hover:border-yellow-500/60"
-  defp terrain_class(:water), do: "bg-cyan-950/90 border border-cyan-800/50 opacity-60 cursor-not-allowed"
-  defp terrain_class(:wall), do: "bg-zinc-900 border border-zinc-700/80 opacity-75 cursor-not-allowed"
+  defp terrain_class(:palace_floor),
+    do:
+      "bg-gradient-to-br from-amber-950/80 to-yellow-950/60 border border-amber-600/40 hover:border-amber-400 shadow-inner"
+
+  defp terrain_class(:cobblestone),
+    do: "bg-stone-800/90 border border-stone-700/50 hover:border-amber-400/80"
+
+  defp terrain_class(:stone_brick),
+    do: "bg-stone-900/90 border border-stone-800/60 hover:border-amber-400/60"
+
+  defp terrain_class(:obsidian),
+    do: "bg-zinc-950 border border-red-900/50 hover:border-red-400/60"
+
+  defp terrain_class(:sanctuary_stone),
+    do: "bg-indigo-950/80 border border-indigo-700/50 hover:border-cyan-400/60"
+
+  defp terrain_class(:forge_iron),
+    do: "bg-stone-950 border border-amber-800/50 hover:border-orange-500/60"
+
+  defp terrain_class(:market_cobble),
+    do: "bg-stone-900 border border-emerald-800/50 hover:border-emerald-400/60"
+
+  defp terrain_class(:shadow_wynd),
+    do: "bg-purple-950/70 border border-purple-900/50 hover:border-purple-400/60"
+
+  defp terrain_class(:green_commons),
+    do: "bg-emerald-950/70 border border-emerald-800/50 hover:border-emerald-400/60"
+
+  defp terrain_class(:wood_dock),
+    do: "bg-amber-950/90 border border-amber-800/50 hover:border-yellow-500/60"
+
+  defp terrain_class(:water),
+    do: "bg-cyan-950/90 border border-cyan-800/50 opacity-60 cursor-not-allowed"
+
+  defp terrain_class(:wall),
+    do: "bg-zinc-900 border border-zinc-700/80 opacity-75 cursor-not-allowed"
+
   defp terrain_class(_), do: "bg-stone-900/80 border border-stone-800/40"
 
   # Zero-compute ambient in-character greeting generator (< 1ms, $0 cost)
@@ -652,7 +847,7 @@ defmodule SovereignSoulEngineWeb.MapLive do
   defp node_coords(_), do: {500, 390}
 
   defp is_connected_to_player?(slug1, slug2, player_slug) do
-    (slug1 == player_slug or slug2 == player_slug)
+    slug1 == player_slug or slug2 == player_slug
   end
 
   defp zone_color(:palace), do: "#fbbf24"
@@ -703,12 +898,18 @@ defmodule SovereignSoulEngineWeb.MapLive do
       <%!-- Navigation Header --%>
       <header class="h-16 border-b border-base-800/80 bg-base-950/90 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30">
         <div class="flex items-center gap-3 sm:gap-4">
-          <.link navigate={~p"/sse/chat"} class="btn btn-ghost btn-xs text-base-content/60 hover:text-base-content flex items-center gap-1.5">
+          <.link
+            navigate={~p"/sse/chat"}
+            class="btn btn-ghost btn-xs text-base-content/60 hover:text-base-content flex items-center gap-1.5"
+          >
             <.icon name="hero-arrow-left" class="size-4" />
             <span class="hidden sm:inline">Chat</span>
           </.link>
 
-          <.link navigate={~p"/sse/feed"} class="btn btn-ghost btn-xs text-base-content/60 hover:text-base-content flex items-center gap-1.5">
+          <.link
+            navigate={~p"/sse/feed"}
+            class="btn btn-ghost btn-xs text-base-content/60 hover:text-base-content flex items-center gap-1.5"
+          >
             <span>📰</span>
             <span class="hidden sm:inline">Feed</span>
           </.link>
@@ -719,7 +920,9 @@ defmodule SovereignSoulEngineWeb.MapLive do
             <h1 class="text-base font-extrabold tracking-tight text-white flex items-center gap-2">
               <span class="text-amber-500">🏰</span>
               <span>{@town_name}</span>
-              <span class="text-xs font-normal text-base-content/50 font-serif italic">({@region_name})</span>
+              <span class="text-xs font-normal text-base-content/50 font-serif italic">
+                ({@region_name})
+              </span>
             </h1>
             <p class="text-[11px] text-base-content/50 font-medium tracking-wide hidden sm:block">
               Walkable Dark Walled City • 13 Regions • WASD / Arrow Keys or Click-to-Travel
@@ -751,7 +954,13 @@ defmodule SovereignSoulEngineWeb.MapLive do
             <button
               phx-click="set_view_mode"
               phx-value-mode="rpg"
-              class={["btn btn-xs join-item font-semibold gap-1 transition-all", if(@view_mode == "rpg", do: "btn-primary text-white shadow-sm", else: "btn-ghost text-base-content/60 hover:text-white")]}
+              class={[
+                "btn btn-xs join-item font-semibold gap-1 transition-all",
+                if(@view_mode == "rpg",
+                  do: "btn-primary text-white shadow-sm",
+                  else: "btn-ghost text-base-content/60 hover:text-white"
+                )
+              ]}
               title="2D Walkable RPG Map (Twisted Grid)"
             >
               <span>🎮</span>
@@ -760,7 +969,13 @@ defmodule SovereignSoulEngineWeb.MapLive do
             <button
               phx-click="set_view_mode"
               phx-value-mode="radar"
-              class={["btn btn-xs join-item font-semibold gap-1 transition-all", if(@view_mode == "radar", do: "btn-primary text-white shadow-sm", else: "btn-ghost text-base-content/60 hover:text-white")]}
+              class={[
+                "btn btn-xs join-item font-semibold gap-1 transition-all",
+                if(@view_mode == "radar",
+                  do: "btn-primary text-white shadow-sm",
+                  else: "btn-ghost text-base-content/60 hover:text-white"
+                )
+              ]}
               title="Strategic District Radar"
             >
               <span>🗺️</span>
@@ -781,13 +996,19 @@ defmodule SovereignSoulEngineWeb.MapLive do
 
       <%!-- Flash Banners --%>
       <%= if flash = Phoenix.Flash.get(@flash, :info) do %>
-        <div id="flash-info" class="bg-amber-500/20 border-b border-amber-500/30 text-amber-300 text-xs py-2 px-6 font-medium flex items-center gap-2">
+        <div
+          id="flash-info"
+          class="bg-amber-500/20 border-b border-amber-500/30 text-amber-300 text-xs py-2 px-6 font-medium flex items-center gap-2"
+        >
           <.icon name="hero-sparkles" class="size-4 text-amber-400" />
           <span>{flash}</span>
         </div>
       <% end %>
       <%= if flash = Phoenix.Flash.get(@flash, :error) do %>
-        <div id="flash-error" class="bg-rose-500/20 border-b border-rose-500/30 text-rose-300 text-xs py-2 px-6 font-medium flex items-center gap-2">
+        <div
+          id="flash-error"
+          class="bg-rose-500/20 border-b border-rose-500/30 text-rose-300 text-xs py-2 px-6 font-medium flex items-center gap-2"
+        >
           <.icon name="hero-exclamation-triangle" class="size-4 text-rose-400" />
           <span>{flash}</span>
         </div>
@@ -798,7 +1019,8 @@ defmodule SovereignSoulEngineWeb.MapLive do
         <%!-- SVG Interactive Walkable Map Canvas --%>
         <div class="flex-1 relative bg-gradient-to-b from-[#050811] via-[#070b16] to-[#090e1d] overflow-hidden flex items-center justify-center p-2 sm:p-4">
           <%!-- Background Ambient Grid Pattern --%>
-          <div class="absolute inset-0 opacity-5 pointer-events-none bg-[radial-gradient(#38bdf8_1px,transparent_1px)] [background-size:24px_24px]"></div>
+          <div class="absolute inset-0 opacity-5 pointer-events-none bg-[radial-gradient(#38bdf8_1px,transparent_1px)] [background-size:24px_24px]">
+          </div>
 
           <%!-- Cinematic Arrival Banner (HUD Overlay Top) --%>
           <%= if @show_arrival_banner && @selected_district do %>
@@ -812,7 +1034,9 @@ defmodule SovereignSoulEngineWeb.MapLive do
                 </div>
                 <div>
                   <div class="flex items-center gap-2 flex-wrap">
-                    <span class="text-xs font-bold text-white tracking-wide">{@selected_district.name}</span>
+                    <span class="text-xs font-bold text-white tracking-wide">
+                      {@selected_district.name}
+                    </span>
                     <span class="badge badge-xs badge-outline text-amber-400/80 font-serif italic text-[10px]">
                       {@selected_district.gaelic_name}
                     </span>
@@ -829,7 +1053,9 @@ defmodule SovereignSoulEngineWeb.MapLive do
                   <div class="flex items-center gap-2 mt-1.5 text-[10px] text-cyan-400 font-mono">
                     <span>📍 Tile: {@selected_district.tile_id}</span>
                     <span>•</span>
-                    <span>👥 {@selected_district.soul_count || length(@selected_district.present_souls)} souls present</span>
+                    <span>
+                      👥 {@selected_district.soul_count || length(@selected_district.present_souls)} souls present
+                    </span>
                   </div>
                 </div>
               </div>
@@ -856,9 +1082,14 @@ defmodule SovereignSoulEngineWeb.MapLive do
                     💬
                   </div>
                   <span class="text-xs font-bold text-white">{@ambient_dialogue.name}</span>
-                  <span class="text-[10px] text-indigo-300/60 font-mono">({@ambient_dialogue.district})</span>
+                  <span class="text-[10px] text-indigo-300/60 font-mono">
+                    ({@ambient_dialogue.district})
+                  </span>
                 </div>
-                <button phx-click="dismiss_ambient_dialogue" class="text-base-content/40 hover:text-white text-xs">
+                <button
+                  phx-click="dismiss_ambient_dialogue"
+                  class="text-base-content/40 hover:text-white text-xs"
+                >
                   <.icon name="hero-x-mark" class="size-3.5" />
                 </button>
               </div>
@@ -883,7 +1114,7 @@ defmodule SovereignSoulEngineWeb.MapLive do
             <div class="text-[10px] font-mono text-base-content/40 uppercase tracking-wider mb-2 flex items-center gap-1">
               <span>🧭 Move (WASD)</span>
             </div>
-            
+
             <div class="grid grid-cols-3 gap-1 w-28 h-28">
               <div></div>
               <button
@@ -1012,7 +1243,13 @@ defmodule SovereignSoulEngineWeb.MapLive do
                     <button
                       phx-click="set_tile_size"
                       phx-value-size="24"
-                      class={["btn btn-xs px-2 h-6 min-h-0 text-[10px]", if(@tile_size == 24, do: "btn-primary", else: "btn-ghost text-base-content/60")]}
+                      class={[
+                        "btn btn-xs px-2 h-6 min-h-0 text-[10px]",
+                        if(@tile_size == 24,
+                          do: "btn-primary",
+                          else: "btn-ghost text-base-content/60"
+                        )
+                      ]}
                       title="Compact View"
                     >
                       24px
@@ -1020,7 +1257,13 @@ defmodule SovereignSoulEngineWeb.MapLive do
                     <button
                       phx-click="set_tile_size"
                       phx-value-size="30"
-                      class={["btn btn-xs px-2 h-6 min-h-0 text-[10px]", if(@tile_size == 30, do: "btn-primary", else: "btn-ghost text-base-content/60")]}
+                      class={[
+                        "btn btn-xs px-2 h-6 min-h-0 text-[10px]",
+                        if(@tile_size == 30,
+                          do: "btn-primary",
+                          else: "btn-ghost text-base-content/60"
+                        )
+                      ]}
                       title="Normal View"
                     >
                       30px
@@ -1028,7 +1271,13 @@ defmodule SovereignSoulEngineWeb.MapLive do
                     <button
                       phx-click="set_tile_size"
                       phx-value-size="36"
-                      class={["btn btn-xs px-2 h-6 min-h-0 text-[10px]", if(@tile_size == 36, do: "btn-primary", else: "btn-ghost text-base-content/60")]}
+                      class={[
+                        "btn btn-xs px-2 h-6 min-h-0 text-[10px]",
+                        if(@tile_size == 36,
+                          do: "btn-primary",
+                          else: "btn-ghost text-base-content/60"
+                        )
+                      ]}
                       title="Large View"
                     >
                       36px
@@ -1044,7 +1293,11 @@ defmodule SovereignSoulEngineWeb.MapLive do
               </div>
 
               <%!-- 2D Scrollable Tile Grid Container --%>
-              <div class="flex-1 w-full overflow-auto flex items-start justify-center p-4 relative" id="rpg-grid-container" style="min-height: 480px;">
+              <div
+                class="flex-1 w-full overflow-auto flex items-start justify-center p-4 relative"
+                id="rpg-grid-container"
+                style="min-height: 480px;"
+              >
                 <div
                   id="rpg-grid-board"
                   class="bg-base-950/95 p-3 sm:p-4 rounded-2xl border-2 border-amber-900/40 shadow-2xl relative select-none"
@@ -1061,13 +1314,17 @@ defmodule SovereignSoulEngineWeb.MapLive do
                       class={[
                         "rounded transition-all duration-75 flex items-center justify-center relative cursor-pointer group",
                         terrain_class(tile.terrain),
-                        if(tile.x == @player_x and tile.y == @player_y, do: "ring-2 ring-amber-400 z-20 shadow-lg shadow-amber-500/30", else: "")
+                        if(tile.x == @player_x and tile.y == @player_y,
+                          do: "ring-2 ring-amber-400 z-20 shadow-lg shadow-amber-500/30",
+                          else: ""
+                        )
                       ]}
                     >
                       <%!-- Player Token (YOU) --%>
                       <%= if tile.x == @player_x and tile.y == @player_y do %>
                         <div class="relative flex items-center justify-center w-full h-full">
-                          <span class="absolute -inset-1 rounded-full bg-amber-400/40 animate-ping"></span>
+                          <span class="absolute -inset-1 rounded-full bg-amber-400/40 animate-ping">
+                          </span>
                           <div class="size-5 sm:size-6 rounded-full bg-gradient-to-tr from-amber-400 to-yellow-200 text-black font-black text-xs flex items-center justify-center shadow-lg border-2 border-white z-10">
                             👑
                           </div>
@@ -1087,11 +1344,16 @@ defmodule SovereignSoulEngineWeb.MapLive do
                             title={"#{npc.name} (#{npc.title})"}
                           >
                             <%= if is_nearby?(npc, @player_x, @player_y) do %>
-                              <span class="absolute -inset-1.5 rounded-full bg-cyan-400/60 animate-pulse"></span>
+                              <span class="absolute -inset-1.5 rounded-full bg-cyan-400/60 animate-pulse">
+                              </span>
                             <% end %>
                             <div class={[
                               "size-5 sm:size-6 rounded-full flex items-center justify-center text-xs shadow-md border z-10 transition-transform group-hover:scale-125",
-                              if(is_nearby?(npc, @player_x, @player_y), do: "bg-cyan-500 text-black border-white ring-2 ring-cyan-300 animate-bounce", else: "bg-base-900 text-white border-base-700")
+                              if(is_nearby?(npc, @player_x, @player_y),
+                                do:
+                                  "bg-cyan-500 text-black border-white ring-2 ring-cyan-300 animate-bounce",
+                                else: "bg-base-900 text-white border-base-700"
+                              )
                             ]}>
                               {npc.icon}
                             </div>
@@ -1120,8 +1382,12 @@ defmodule SovereignSoulEngineWeb.MapLive do
                     </div>
                     <div class="flex-1 min-w-0">
                       <div class="flex items-center gap-2">
-                        <span class="text-xs font-bold text-white tracking-wide">{@nearby_npc.name}</span>
-                        <span class="badge badge-xs badge-info font-mono text-[9px]">{@nearby_npc.title}</span>
+                        <span class="text-xs font-bold text-white tracking-wide">
+                          {@nearby_npc.name}
+                        </span>
+                        <span class="badge badge-xs badge-info font-mono text-[9px]">
+                          {@nearby_npc.title}
+                        </span>
                         <span class="text-[10px] text-emerald-400 font-mono">Nearby</span>
                       </div>
                       <p class="text-[11px] text-cyan-100/90 italic mt-1 leading-snug line-clamp-2">
@@ -1171,243 +1437,338 @@ defmodule SovereignSoulEngineWeb.MapLive do
                   <div
                     class="size-2 rounded-full bg-amber-400 border border-white absolute shadow-lg animate-pulse"
                     style={"left: #{(@player_x / 28.0) * 100}%; top: #{(@player_y / 24.0) * 100}%; transform: translate(-50%, -50%);"}
-                  ></div>
+                  >
+                  </div>
                 </div>
               </div>
             </div>
           <% end %>
 
           <%!-- Strategic District Radar SVG Canvas (Shown in Radar mode or queried by tests) --%>
-          <div class={if(@view_mode == "radar", do: "w-full h-full flex items-center justify-center", else: "hidden")}>
-          <svg viewBox="0 0 1000 780" class="w-full h-full max-h-[85vh] select-none filter drop-shadow-2xl">
-            <defs>
-              <%!-- Radial glow filter for district nodes --%>
-              <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-                <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur" />
-                <feMerge>
-                  <feMergeNode in="blur" />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
-              </filter>
+          <div class={
+            if(@view_mode == "radar",
+              do: "w-full h-full flex items-center justify-center",
+              else: "hidden"
+            )
+          }>
+            <svg
+              viewBox="0 0 1000 780"
+              class="w-full h-full max-h-[85vh] select-none filter drop-shadow-2xl"
+            >
+              <defs>
+                <%!-- Radial glow filter for district nodes --%>
+                <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+                  <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur" />
+                  <feMerge>
+                    <feMergeNode in="blur" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
 
-              <%!-- Compass Rose Marker --%>
-              <g id="compass-rose">
-                <circle cx="0" cy="0" r="28" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1.5" stroke-dasharray="4,4" />
-                <path d="M 0 -35 L 5 -5 L 35 0 L 5 5 L 0 35 L -5 5 L -35 0 L -5 -5 Z" fill="rgba(245,158,11,0.2)" stroke="rgba(245,158,11,0.5)" stroke-width="1" />
-                <text x="0" y="-40" fill="rgba(245,158,11,0.8)" font-size="11" font-weight="bold" text-anchor="middle" font-family="serif">N</text>
+                <%!-- Compass Rose Marker --%>
+                <g id="compass-rose">
+                  <circle
+                    cx="0"
+                    cy="0"
+                    r="28"
+                    fill="none"
+                    stroke="rgba(255,255,255,0.08)"
+                    stroke-width="1.5"
+                    stroke-dasharray="4,4"
+                  />
+                  <path
+                    d="M 0 -35 L 5 -5 L 35 0 L 5 5 L 0 35 L -5 5 L -35 0 L -5 -5 Z"
+                    fill="rgba(245,158,11,0.2)"
+                    stroke="rgba(245,158,11,0.5)"
+                    stroke-width="1"
+                  />
+                  <text
+                    x="0"
+                    y="-40"
+                    fill="rgba(245,158,11,0.8)"
+                    font-size="11"
+                    font-weight="bold"
+                    text-anchor="middle"
+                    font-family="serif"
+                  >
+                    N
+                  </text>
+                </g>
+              </defs>
+
+              <%!-- Compass Rose in upper left --%>
+              <use href="#compass-rose" x="80" y="80" />
+
+              <%!-- Concentric City Walls (Elder Scrolls Imperial City Architecture) --%>
+              <%!-- Inner Sovereign Citadel Moat & Wall around High Palace --%>
+              <circle
+                cx="500"
+                cy="390"
+                r="115"
+                fill="rgba(251, 191, 36, 0.03)"
+                stroke="rgba(251, 191, 36, 0.25)"
+                stroke-width="2.5"
+                stroke-dasharray="6,6"
+              />
+              <%!-- Outer Ring Avenue Guideline --%>
+              <circle
+                cx="500"
+                cy="390"
+                r="280"
+                fill="none"
+                stroke="rgba(148, 163, 184, 0.12)"
+                stroke-width="2"
+                stroke-dasharray="8,6"
+              />
+              <%!-- Great Mountain Curtain Wall --%>
+              <path
+                d="M 120 700 C 350 780, 650 780, 880 700 C 950 500, 950 250, 880 120 C 650 40, 350 40, 120 120 C 50 250, 50 500, 120 700 Z"
+                fill="none"
+                stroke="rgba(148, 163, 184, 0.15)"
+                stroke-width="3.5"
+                stroke-dasharray="10,6"
+              />
+
+              <%!-- Blackwater River winding through Raven Docks & Foundry --%>
+              <path
+                d="M 960 110 Q 760 170, 750 250 T 780 390 T 890 620 T 960 720"
+                fill="none"
+                stroke="rgba(56, 189, 248, 0.22)"
+                stroke-width="20"
+                stroke-linecap="round"
+              />
+              <path
+                d="M 960 110 Q 760 170, 750 250 T 780 390 T 890 620 T 960 720"
+                fill="none"
+                stroke="rgba(14, 165, 233, 0.35)"
+                stroke-width="7"
+                stroke-dasharray="14,8"
+              />
+
+              <%!-- Road Connections between Districts --%>
+              <g class="roads">
+                <%= for {from_slug, to_slug} <- @road_connections do %>
+                  <% {x1, y1} = node_coords(from_slug) %>
+                  <% {x2, y2} = node_coords(to_slug) %>
+                  <% is_player_road = is_connected_to_player?(from_slug, to_slug, @player_district) %>
+                  <line
+                    x1={x1}
+                    y1={y1}
+                    x2={x2}
+                    y2={y2}
+                    stroke={if is_player_road, do: "#fbbf24", else: "rgba(255,255,255,0.12)"}
+                    stroke-width={if is_player_road, do: "4.5", else: "2"}
+                    stroke-dasharray={if is_player_road, do: "none", else: "6,6"}
+                    class={
+                      if is_player_road,
+                        do: "filter drop-shadow-[0_0_8px_rgba(251,191,36,0.6)] animate-pulse",
+                        else: ""
+                    }
+                  />
+                <% end %>
               </g>
-            </defs>
 
-            <%!-- Compass Rose in upper left --%>
-            <use href="#compass-rose" x="80" y="80" />
+              <%!-- 13 District Interactive Nodes --%>
+              <%= for district <- @districts do %>
+                <% {nx, ny} = node_coords(district.slug) %>
+                <% is_player_here = district.slug == @player_district %>
+                <% is_selected = district.slug == @selected_slug %>
+                <% is_visited = MapSet.member?(@visited_districts, district.slug) %>
+                <% color = zone_color(district.zone_type) %>
+                <% soul_count = district.soul_count || length(district.present_souls || []) %>
 
-            <%!-- Concentric City Walls (Elder Scrolls Imperial City Architecture) --%>
-            <%!-- Inner Sovereign Citadel Moat & Wall around High Palace --%>
-            <circle
-              cx="500"
-              cy="390"
-              r="115"
-              fill="rgba(251, 191, 36, 0.03)"
-              stroke="rgba(251, 191, 36, 0.25)"
-              stroke-width="2.5"
-              stroke-dasharray="6,6"
-            />
-            <%!-- Outer Ring Avenue Guideline --%>
-            <circle
-              cx="500"
-              cy="390"
-              r="280"
-              fill="none"
-              stroke="rgba(148, 163, 184, 0.12)"
-              stroke-width="2"
-              stroke-dasharray="8,6"
-            />
-            <%!-- Great Mountain Curtain Wall --%>
-            <path
-              d="M 120 700 C 350 780, 650 780, 880 700 C 950 500, 950 250, 880 120 C 650 40, 350 40, 120 120 C 50 250, 50 500, 120 700 Z"
-              fill="none"
-              stroke="rgba(148, 163, 184, 0.15)"
-              stroke-width="3.5"
-              stroke-dasharray="10,6"
-            />
+                <g
+                  id={"node-#{district.slug}"}
+                  transform={"translate(#{nx}, #{ny})"}
+                  phx-click="select_district"
+                  phx-value-slug={district.slug}
+                  class="cursor-pointer group"
+                >
+                  <%!-- Active Radiance Aura when Player or Selected --%>
+                  <%= if is_player_here do %>
+                    <circle cx="0" cy="0" r="42" fill="rgba(251, 191, 36, 0.15)" class="animate-ping" />
+                    <circle
+                      cx="0"
+                      cy="0"
+                      r="34"
+                      fill="none"
+                      stroke="#fbbf24"
+                      stroke-width="2"
+                      class="animate-pulse"
+                    />
+                  <% end %>
 
-            <%!-- Blackwater River winding through Raven Docks & Foundry --%>
-            <path
-              d="M 960 110 Q 760 170, 750 250 T 780 390 T 890 620 T 960 720"
-              fill="none"
-              stroke="rgba(56, 189, 248, 0.22)"
-              stroke-width="20"
-              stroke-linecap="round"
-            />
-            <path
-              d="M 960 110 Q 760 170, 750 250 T 780 390 T 890 620 T 960 720"
-              fill="none"
-              stroke="rgba(14, 165, 233, 0.35)"
-              stroke-width="7"
-              stroke-dasharray="14,8"
-            />
+                  <%= if is_selected and not is_player_here do %>
+                    <circle
+                      cx="0"
+                      cy="0"
+                      r="32"
+                      fill="none"
+                      stroke="#38bdf8"
+                      stroke-width="2"
+                      stroke-dasharray="4,4"
+                    />
+                  <% end %>
 
-            <%!-- Road Connections between Districts --%>
-            <g class="roads">
-              <%= for {from_slug, to_slug} <- @road_connections do %>
-                <% {x1, y1} = node_coords(from_slug) %>
-                <% {x2, y2} = node_coords(to_slug) %>
-                <% is_player_road = is_connected_to_player?(from_slug, to_slug, @player_district) %>
-                <line
-                  x1={x1}
-                  y1={y1}
-                  x2={x2}
-                  y2={y2}
-                  stroke={if is_player_road, do: "#fbbf24", else: "rgba(255,255,255,0.12)"}
-                  stroke-width={if is_player_road, do: "4.5", else: "2"}
-                  stroke-dasharray={if is_player_road, do: "none", else: "6,6"}
-                  class={if is_player_road, do: "filter drop-shadow-[0_0_8px_rgba(251,191,36,0.6)] animate-pulse", else: ""}
-                />
+                  <%!-- Main District Node Circle --%>
+                  <circle
+                    cx="0"
+                    cy="0"
+                    r={if district.slug == "high_palace", do: "32", else: "26"}
+                    fill={if is_player_here, do: "#090d16", else: "#0f172a"}
+                    stroke={if is_player_here, do: "#fbbf24", else: color}
+                    stroke-width={if is_player_here or is_selected, do: "3.5", else: "2"}
+                    filter={if is_player_here, do: "url(#glow)", else: "none"}
+                    class="transition-all duration-300 group-hover:stroke-white group-hover:scale-110"
+                  />
+
+                  <%!-- District Monogram inside Node --%>
+                  <text
+                    x="0"
+                    y="-4"
+                    fill={if is_player_here, do: "#fbbf24", else: "#ffffff"}
+                    font-size={if district.slug == "high_palace", do: "16", else: "11"}
+                    font-weight="900"
+                    text-anchor="middle"
+                    font-family="monospace"
+                    class="pointer-events-none"
+                  >
+                    {district_monogram(district.slug)}
+                  </text>
+
+                  <%!-- Explored / Visited Indicator --%>
+                  <%= if is_visited and not is_player_here do %>
+                    <circle cx="18" cy="-18" r="4" fill="#10b981" />
+                  <% end %>
+
+                  <%!-- Soul Count Badge inside Node --%>
+                  <g transform="translate(0, 12)">
+                    <rect
+                      x="-18"
+                      y="-8"
+                      width="36"
+                      height="14"
+                      rx="7"
+                      fill="#1e293b"
+                      stroke={color}
+                      stroke-width="1"
+                    />
+                    <text
+                      x="0"
+                      y="3"
+                      fill="#38bdf8"
+                      font-size="9"
+                      font-weight="bold"
+                      text-anchor="middle"
+                      font-family="monospace"
+                    >
+                      {soul_count} souls
+                    </text>
+                  </g>
+
+                  <%!-- Gaelic Name Label Below Node --%>
+                  <text
+                    x="0"
+                    y="48"
+                    fill={if is_selected or is_player_here, do: "#f8fafc", else: "#cbd5e1"}
+                    font-size="11"
+                    font-weight="bold"
+                    text-anchor="middle"
+                    font-family="system-ui, sans-serif"
+                    class="pointer-events-none drop-shadow-md"
+                  >
+                    {district.name}
+                  </text>
+                  <text
+                    x="0"
+                    y="62"
+                    fill="rgba(148, 163, 184, 0.7)"
+                    font-size="9"
+                    font-style="italic"
+                    text-anchor="middle"
+                    font-family="serif"
+                    class="pointer-events-none"
+                  >
+                    {district.gaelic_name}
+                  </text>
+                </g>
               <% end %>
-            </g>
 
-            <%!-- 13 District Interactive Nodes --%>
-            <%= for district <- @districts do %>
-              <% {nx, ny} = node_coords(district.slug) %>
-              <% is_player_here = district.slug == @player_district %>
-              <% is_selected = district.slug == @selected_slug %>
-              <% is_visited = MapSet.member?(@visited_districts, district.slug) %>
-              <% color = zone_color(district.zone_type) %>
-              <% soul_count = district.soul_count || length(district.present_souls || []) %>
-
+              <%!-- Visual Player Token (Rendered on top of active district) --%>
+              <% {px, py} = node_coords(@player_district) %>
               <g
-                id={"node-#{district.slug}"}
-                transform={"translate(#{nx}, #{ny})"}
-                phx-click="select_district"
-                phx-value-slug={district.slug}
-                class="cursor-pointer group"
+                id="player-avatar-token"
+                transform={"translate(#{px}, #{py})"}
+                class="pointer-events-none transition-all duration-500"
               >
-                <%!-- Active Radiance Aura when Player or Selected --%>
-                <%= if is_player_here do %>
-                  <circle cx="0" cy="0" r="42" fill="rgba(251, 191, 36, 0.15)" class="animate-ping" />
-                  <circle cx="0" cy="0" r="34" fill="none" stroke="#fbbf24" stroke-width="2" class="animate-pulse" />
-                <% end %>
-
-                <%= if is_selected and not is_player_here do %>
-                  <circle cx="0" cy="0" r="32" fill="none" stroke="#38bdf8" stroke-width="2" stroke-dasharray="4,4" />
-                <% end %>
-
-                <%!-- Main District Node Circle --%>
+                <%!-- Animated Radar Pulse --%>
                 <circle
                   cx="0"
                   cy="0"
-                  r={if district.slug == "high_palace", do: "32", else: "26"}
-                  fill={if is_player_here, do: "#090d16", else: "#0f172a"}
-                  stroke={if is_player_here, do: "#fbbf24", else: color}
-                  stroke-width={if is_player_here or is_selected, do: "3.5", else: "2"}
-                  filter={if is_player_here, do: "url(#glow)", else: "none"}
-                  class="transition-all duration-300 group-hover:stroke-white group-hover:scale-110"
+                  r="40"
+                  fill="none"
+                  stroke="#38bdf8"
+                  stroke-width="2.5"
+                  class="animate-ping opacity-60"
                 />
+                <circle cx="0" cy="0" r="28" fill="rgba(56, 189, 248, 0.3)" filter="url(#glow)" />
 
-                <%!-- District Monogram inside Node --%>
-                <text
-                  x="0"
-                  y="-4"
-                  fill={if is_player_here, do: "#fbbf24", else: "#ffffff"}
-                  font-size={if district.slug == "high_palace", do: "16", else: "11"}
-                  font-weight="900"
-                  text-anchor="middle"
-                  font-family="monospace"
-                  class="pointer-events-none"
-                >
-                  {district_monogram(district.slug)}
-                </text>
+                <%!-- Player Emblem --%>
+                <circle cx="0" cy="0" r="18" fill="#020617" stroke="#fbbf24" stroke-width="3" />
+                <text x="0" y="5" font-size="13" text-anchor="middle">🧭</text>
 
-                <%!-- Explored / Visited Indicator --%>
-                <%= if is_visited and not is_player_here do %>
-                  <circle cx="18" cy="-18" r="4" fill="#10b981" />
-                <% end %>
-
-                <%!-- Soul Count Badge inside Node --%>
-                <g transform="translate(0, 12)">
+                <%!-- Overhead Badge --%>
+                <g transform="translate(0, -32)">
                   <rect
-                    x="-18"
-                    y="-8"
-                    width="36"
-                    height="14"
-                    rx="7"
-                    fill="#1e293b"
-                    stroke={color}
-                    stroke-width="1"
+                    x="-44"
+                    y="-10"
+                    width="88"
+                    height="20"
+                    rx="10"
+                    fill="#020617"
+                    stroke="#38bdf8"
+                    stroke-width="1.5"
                   />
                   <text
                     x="0"
                     y="3"
                     fill="#38bdf8"
                     font-size="9"
-                    font-weight="bold"
+                    font-weight="extrabold"
                     text-anchor="middle"
                     font-family="monospace"
                   >
-                    {soul_count} souls
+                    YOU (Traveler)
                   </text>
                 </g>
-
-                <%!-- Gaelic Name Label Below Node --%>
-                <text
-                  x="0"
-                  y="48"
-                  fill={if is_selected or is_player_here, do: "#f8fafc", else: "#cbd5e1"}
-                  font-size="11"
-                  font-weight="bold"
-                  text-anchor="middle"
-                  font-family="system-ui, sans-serif"
-                  class="pointer-events-none drop-shadow-md"
-                >
-                  {district.name}
-                </text>
-                <text
-                  x="0"
-                  y="62"
-                  fill="rgba(148, 163, 184, 0.7)"
-                  font-size="9"
-                  font-style="italic"
-                  text-anchor="middle"
-                  font-family="serif"
-                  class="pointer-events-none"
-                >
-                  {district.gaelic_name}
-                </text>
               </g>
-            <% end %>
-
-            <%!-- Visual Player Token (Rendered on top of active district) --%>
-            <% {px, py} = node_coords(@player_district) %>
-            <g id="player-avatar-token" transform={"translate(#{px}, #{py})"} class="pointer-events-none transition-all duration-500">
-              <%!-- Animated Radar Pulse --%>
-              <circle cx="0" cy="0" r="40" fill="none" stroke="#38bdf8" stroke-width="2.5" class="animate-ping opacity-60" />
-              <circle cx="0" cy="0" r="28" fill="rgba(56, 189, 248, 0.3)" filter="url(#glow)" />
-              
-              <%!-- Player Emblem --%>
-              <circle cx="0" cy="0" r="18" fill="#020617" stroke="#fbbf24" stroke-width="3" />
-              <text x="0" y="5" font-size="13" text-anchor="middle">🧭</text>
-
-              <%!-- Overhead Badge --%>
-              <g transform="translate(0, -32)">
-                <rect x="-44" y="-10" width="88" height="20" rx="10" fill="#020617" stroke="#38bdf8" stroke-width="1.5" />
-                <text x="0" y="3" fill="#38bdf8" font-size="9" font-weight="extrabold" text-anchor="middle" font-family="monospace">
-                  YOU (Traveler)
-                </text>
-              </g>
-            </g>
-          </svg>
+            </svg>
           </div>
 
           <%!-- Legend Footer --%>
           <div class="absolute bottom-4 right-6 hidden md:flex items-center gap-3 px-3 py-1.5 rounded-xl bg-base-950/80 backdrop-blur-md border border-base-800 text-[11px] text-base-content/60 shadow-lg">
             <span class="font-bold text-white uppercase text-[9px] tracking-wider">Regions:</span>
-            <span class="flex items-center gap-1"><span class="size-2 rounded-full bg-amber-400"></span> Palace</span>
-            <span class="flex items-center gap-1"><span class="size-2 rounded-full bg-amber-500"></span> Citadel</span>
-            <span class="flex items-center gap-1"><span class="size-2 rounded-full bg-cyan-500"></span> Sacred</span>
-            <span class="flex items-center gap-1"><span class="size-2 rounded-full bg-emerald-500"></span> Market</span>
-            <span class="flex items-center gap-1"><span class="size-2 rounded-full bg-orange-500"></span> Forge</span>
-            <span class="flex items-center gap-1"><span class="size-2 rounded-full bg-purple-500"></span> Underworld</span>
-            <span class="flex items-center gap-1"><span class="size-2 rounded-full bg-rose-500"></span> Bastion</span>
+            <span class="flex items-center gap-1">
+              <span class="size-2 rounded-full bg-amber-400"></span> Palace
+            </span>
+            <span class="flex items-center gap-1">
+              <span class="size-2 rounded-full bg-amber-500"></span> Citadel
+            </span>
+            <span class="flex items-center gap-1">
+              <span class="size-2 rounded-full bg-cyan-500"></span> Sacred
+            </span>
+            <span class="flex items-center gap-1">
+              <span class="size-2 rounded-full bg-emerald-500"></span> Market
+            </span>
+            <span class="flex items-center gap-1">
+              <span class="size-2 rounded-full bg-orange-500"></span> Forge
+            </span>
+            <span class="flex items-center gap-1">
+              <span class="size-2 rounded-full bg-purple-500"></span> Underworld
+            </span>
+            <span class="flex items-center gap-1">
+              <span class="size-2 rounded-full bg-rose-500"></span> Bastion
+            </span>
           </div>
         </div>
 
@@ -1499,7 +1860,9 @@ defmodule SovereignSoulEngineWeb.MapLive do
                           </div>
                           <div class="min-w-0">
                             <div class="text-xs font-bold text-white truncate">{soul.name}</div>
-                            <div class="text-[10px] text-base-content/50 font-mono truncate">@{soul.slug}</div>
+                            <div class="text-[10px] text-base-content/50 font-mono truncate">
+                              @{soul.slug}
+                            </div>
                           </div>
                         </div>
 
@@ -1517,7 +1880,9 @@ defmodule SovereignSoulEngineWeb.MapLive do
 
                           <%!-- Direct Chat Navigation Link with Location Context --%>
                           <.link
-                            navigate={~p"/sse/chat?character_id=#{soul.id}&location=#{@selected_district.name}"}
+                            navigate={
+                              ~p"/sse/chat?character_id=#{soul.id}&location=#{@selected_district.name}"
+                            }
                             class="btn btn-xs btn-outline border-base-700 text-teal-300 hover:bg-teal-500/20"
                             title={"Talk with #{soul.name} in private chat"}
                           >
@@ -1568,7 +1933,9 @@ defmodule SovereignSoulEngineWeb.MapLive do
                   <div class="p-3 rounded-xl bg-amber-950/40 border border-amber-800/50 space-y-1">
                     <div class="flex items-center justify-between text-xs font-bold text-amber-300">
                       <span>✨ {exp.title}</span>
-                      <span class="badge badge-xs badge-warning uppercase text-[9px]">{exp.type}</span>
+                      <span class="badge badge-xs badge-warning uppercase text-[9px]">
+                        {exp.type}
+                      </span>
                     </div>
                     <p class="text-[11px] text-base-content/80 leading-relaxed">
                       {exp.description}
@@ -1588,7 +1955,9 @@ defmodule SovereignSoulEngineWeb.MapLive do
                   </div>
                   <div>
                     <h4 class="text-xs font-bold text-white">AI World Architect</h4>
-                    <p class="text-[10px] text-base-content/50">Expand this district with procedural lore</p>
+                    <p class="text-[10px] text-base-content/50">
+                      Expand this district with procedural lore
+                    </p>
                   </div>
                 </div>
 
@@ -1626,22 +1995,34 @@ defmodule SovereignSoulEngineWeb.MapLive do
 
       <%!-- Mobile Bottom Navigation Dock (Matching Feed & Chat PWA feel) --%>
       <nav class="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-base-950/95 backdrop-blur-lg border-t border-base-800/80 px-4 py-2 flex items-center justify-around">
-        <.link navigate={~p"/sse/chat"} class="flex flex-col items-center gap-0.5 text-base-content/60 hover:text-white">
+        <.link
+          navigate={~p"/sse/chat"}
+          class="flex flex-col items-center gap-0.5 text-base-content/60 hover:text-white"
+        >
           <span class="text-lg">💬</span>
           <span class="text-[10px] font-medium">Chat</span>
         </.link>
 
-        <.link navigate={~p"/sse/feed"} class="flex flex-col items-center gap-0.5 text-base-content/60 hover:text-white">
+        <.link
+          navigate={~p"/sse/feed"}
+          class="flex flex-col items-center gap-0.5 text-base-content/60 hover:text-white"
+        >
           <span class="text-lg">📰</span>
           <span class="text-[10px] font-medium">Feed</span>
         </.link>
 
-        <.link navigate={~p"/sse/map"} class="flex flex-col items-center gap-0.5 text-amber-400 font-bold">
+        <.link
+          navigate={~p"/sse/map"}
+          class="flex flex-col items-center gap-0.5 text-amber-400 font-bold"
+        >
           <span class="text-lg">🏰</span>
           <span class="text-[10px]">Map</span>
         </.link>
 
-        <.link navigate={~p"/sse/acp/moderation"} class="flex flex-col items-center gap-0.5 text-base-content/60 hover:text-white">
+        <.link
+          navigate={~p"/sse/acp/moderation"}
+          class="flex flex-col items-center gap-0.5 text-base-content/60 hover:text-white"
+        >
           <span class="text-lg">🛡️</span>
           <span class="text-[10px] font-medium">Shield</span>
         </.link>

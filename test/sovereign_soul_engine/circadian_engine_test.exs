@@ -68,6 +68,7 @@ defmodule SovereignSoulEngine.Souls.CircadianEngineTest do
     test "respects configurable utc_offset for local timezone evaluation" do
       # 02:00 UTC with -4 hours offset (EDT) -> 22:00 local time (start of night flow)
       {:ok, utc_time, _} = DateTime.from_iso8601("2026-09-16T02:00:00Z")
+
       settings = %{
         "chronotype" => "night_owl",
         "circadian_enabled" => true,
@@ -101,8 +102,18 @@ defmodule SovereignSoulEngine.Souls.CircadianEngineTest do
 
     test "adaptive_sync respects wearable sleep sensor state during daytime" do
       {:ok, daytime, _} = DateTime.from_iso8601("2026-09-16T13:00:00Z")
-      settings_awake = %{"chronotype" => "adaptive_sync", "circadian_enabled" => true, "wearable_sleeping" => false}
-      settings_asleep = %{"chronotype" => "adaptive_sync", "circadian_enabled" => true, "wearable_sleeping" => true}
+
+      settings_awake = %{
+        "chronotype" => "adaptive_sync",
+        "circadian_enabled" => true,
+        "wearable_sleeping" => false
+      }
+
+      settings_asleep = %{
+        "chronotype" => "adaptive_sync",
+        "circadian_enabled" => true,
+        "wearable_sleeping" => true
+      }
 
       state_awake = CircadianEngine.current_state(settings_awake, daytime)
       state_asleep = CircadianEngine.current_state(settings_asleep, daytime)

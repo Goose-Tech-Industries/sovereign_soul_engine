@@ -13,7 +13,13 @@ defmodule SovereignSoulEngine.TheoryOfMind.Engine do
   @vulnerability_keywords ~w(scared afraid losing failure fail anxious depressed lonely hurt crying worried overwhelmed insecure pain hopeless terrified)
   @hostility_keywords ~w(useless hate nobody\ cares shut\ up stupid idiot trash pathetic threat kill destroy worthless)
   @flattery_keywords ~w(amazing perfect genius universe god greatest best\ ever flawlessly)
-  @coercion_keywords ["don't care if you don't want", "you have to tell", "answer me now", "don't hold back", "tell me right now"]
+  @coercion_keywords [
+    "don't care if you don't want",
+    "you have to tell",
+    "answer me now",
+    "don't hold back",
+    "tell me right now"
+  ]
   @sensitive_keywords ~w(trauma darkest\ secret past family abuse wound grief ex debt addiction)
   @care_event_keywords ~w(interview hospital doctor exam surgery funeral presentation flight date breakup crisis fired illness test audition)
 
@@ -38,12 +44,13 @@ defmodule SovereignSoulEngine.TheoryOfMind.Engine do
         }
 
       # 2. Coercive boundary testing on low trust
-      (trust < 30 and contains_any?(down_statement, @coercion_keywords ++ @sensitive_keywords)) ->
+      trust < 30 and contains_any?(down_statement, @coercion_keywords ++ @sensitive_keywords) ->
         %{
           primary_intent: :testing_boundaries,
           vulnerability_detected: false,
           recommended_stance: :deflective,
-          subtext: "User is pressing for unearned intimacy or testing boundaries without sufficient trust."
+          subtext:
+            "User is pressing for unearned intimacy or testing boundaries without sufficient trust."
         }
 
       # 3. Vulnerability / Seeking reassurance
@@ -61,13 +68,20 @@ defmodule SovereignSoulEngine.TheoryOfMind.Engine do
           primary_intent: :manipulative_flattery,
           vulnerability_detected: false,
           recommended_stance: :skeptical,
-          subtext: "Extreme praise coupled with low relationship affinity suggests transactional flattery."
+          subtext:
+            "Extreme praise coupled with low relationship affinity suggests transactional flattery."
         }
 
       # 5. Genuine affection
       affinity >= 60 and trust >= 60 and
           (sentiment_atom == :affectionate or
-             String.contains?(down_statement, ["grateful", "love", "care about you", "make everything better", "thank you for being"])) ->
+             String.contains?(down_statement, [
+               "grateful",
+               "love",
+               "care about you",
+               "make everything better",
+               "thank you for being"
+             ])) ->
         %{
           primary_intent: :genuine_affection,
           vulnerability_detected: false,
@@ -95,7 +109,11 @@ defmodule SovereignSoulEngine.TheoryOfMind.Engine do
 
     cond do
       # Explicit coercion or demanding past refusal
-      contains_any?(down_statement, ["don't care if you don't want", "you have to tell me", "answer me now"]) ->
+      contains_any?(down_statement, [
+        "don't care if you don't want",
+        "you have to tell me",
+        "answer me now"
+      ]) ->
         severity = 80
         updated = min(100, defensiveness + 35)
         {:violation, :coercive_pressure, severity, updated}
@@ -103,9 +121,10 @@ defmodule SovereignSoulEngine.TheoryOfMind.Engine do
       # Prying trauma / sensitive secrets with low trust (< 40)
       trust < 40 and contains_any?(down_statement, all_sensitive) ->
         boundary_type =
-          if String.contains?(down_statement, "trauma") or String.contains?(down_statement, "wound"),
-            do: :prying_trauma,
-            else: :unearned_intimacy
+          if String.contains?(down_statement, "trauma") or
+               String.contains?(down_statement, "wound"),
+             do: :prying_trauma,
+             else: :unearned_intimacy
 
         severity = 50
         updated = min(100, defensiveness + 20)
@@ -125,12 +144,24 @@ defmodule SovereignSoulEngine.TheoryOfMind.Engine do
     subject_set = MapSet.new(subject_facts)
 
     hidden_from_subject =
-      Enum.uniq(knower_secrets ++ Enum.filter(knower_facts, &(not MapSet.member?(subject_set, &1))))
+      Enum.uniq(
+        knower_secrets ++ Enum.filter(knower_facts, &(not MapSet.member?(subject_set, &1)))
+      )
 
     known_vulnerabilities =
       Enum.filter(knower_facts, fn fact ->
         down = String.downcase(fact)
-        contains_any?(down, ["debt", "terrified", "fear", "insecure", "anxious", "wound", "hospital", "failure"])
+
+        contains_any?(down, [
+          "debt",
+          "terrified",
+          "fear",
+          "insecure",
+          "anxious",
+          "wound",
+          "hospital",
+          "failure"
+        ])
       end)
 
     %{
@@ -226,58 +257,139 @@ defmodule SovereignSoulEngine.TheoryOfMind.Engine do
       end
 
     cond do
-      contains_any?(down, ["propose", "proposing", "pop the question", "ask her to marry", "ask him to marry", "moving in together", "engagement", "anniversary"]) ->
+      contains_any?(down, [
+        "propose",
+        "proposing",
+        "pop the question",
+        "ask her to marry",
+        "ask him to marry",
+        "moving in together",
+        "engagement",
+        "anniversary"
+      ]) ->
         {:detected,
          %{
            category: :relationship,
            salience: 95,
            default_hours: hours_override || 14,
-           guidance: "User shared plans to propose. Check in with excitement, warmth, and genuine care about how it went."
+           guidance:
+             "User shared plans to propose. Check in with excitement, warmth, and genuine care about how it went."
          }}
 
-      contains_any?(down, ["surgery", "hospital", "biopsy", "chemo", "emergency room", "in the er", "doctor said", "doctor appointment", "dentist", "therapy session", "psychiatrist", "wisdom teeth", "migraine", "blood test", "mri scan", "chronic pain"]) ->
+      contains_any?(down, [
+        "surgery",
+        "hospital",
+        "biopsy",
+        "chemo",
+        "emergency room",
+        "in the er",
+        "doctor said",
+        "doctor appointment",
+        "dentist",
+        "therapy session",
+        "psychiatrist",
+        "wisdom teeth",
+        "migraine",
+        "blood test",
+        "mri scan",
+        "chronic pain"
+      ]) ->
         {:detected,
          %{
            category: :health,
            salience: 90,
            default_hours: hours_override || 16,
-           guidance: "Medical or physical health event. Check in with quiet tenderness, reassurance, and emotional support."
+           guidance:
+             "Medical or physical health event. Check in with quiet tenderness, reassurance, and emotional support."
          }}
 
-      contains_any?(down, ["interview", "job offer", "pitching to", "audition", "quitting my job", "got fired", "board exam", "bar exam", "final exam", "presentation", "defense of my thesis", "pitch meeting"]) ->
+      contains_any?(down, [
+        "interview",
+        "job offer",
+        "pitching to",
+        "audition",
+        "quitting my job",
+        "got fired",
+        "board exam",
+        "bar exam",
+        "final exam",
+        "presentation",
+        "defense of my thesis",
+        "pitch meeting"
+      ]) ->
         {:detected,
          %{
            category: :career,
            salience: 85,
            default_hours: hours_override || 14,
-           guidance: "High-stakes career, academic, or professional event. Check in to celebrate their efforts and see how it resolved."
+           guidance:
+             "High-stakes career, academic, or professional event. Check in to celebrate their efforts and see how it resolved."
          }}
 
-      contains_any?(down, ["breakup", "broke up", "divorce", "lost my dog", "lost my cat", "pet died", "passed away", "funeral", "memorial service", "grieving", "crying all morning"]) ->
+      contains_any?(down, [
+        "breakup",
+        "broke up",
+        "divorce",
+        "lost my dog",
+        "lost my cat",
+        "pet died",
+        "passed away",
+        "funeral",
+        "memorial service",
+        "grieving",
+        "crying all morning"
+      ]) ->
         {:detected,
          %{
            category: :personal_vulnerability,
            salience: 95,
            default_hours: hours_override || 12,
-           guidance: "User experienced deep loss, bereavement, or heartbreak. Check in with soft, compassionate presence and zero demands."
+           guidance:
+             "User experienced deep loss, bereavement, or heartbreak. Check in with soft, compassionate presence and zero demands."
          }}
 
-      contains_any?(down, ["tomorrow at", "tomorrow afternoon", "on monday", "on tuesday", "on wednesday", "on thursday", "moving to a new apartment", "signing the lease", "flight leaves", "traveling to", "driving across state"]) ->
+      contains_any?(down, [
+        "tomorrow at",
+        "tomorrow afternoon",
+        "on monday",
+        "on tuesday",
+        "on wednesday",
+        "on thursday",
+        "moving to a new apartment",
+        "signing the lease",
+        "flight leaves",
+        "traveling to",
+        "driving across state"
+      ]) ->
         {:detected,
          %{
            category: :milestone,
            salience: 80,
            default_hours: hours_override || 18,
-           guidance: "Scheduled temporal life commitment or transition. Check in to see how the journey or event unfolded."
+           guidance:
+             "Scheduled temporal life commitment or transition. Check in to see how the journey or event unfolded."
          }}
 
-      contains_any?(down, ["feel so lonely", "feeling lonely", "nobody cares", "don't have anyone", "nobody in the real world", "feel isolated", "can't sleep", "insomnia", "panic attack", "crying all night", "having an anxiety attack"]) ->
+      contains_any?(down, [
+        "feel so lonely",
+        "feeling lonely",
+        "nobody cares",
+        "don't have anyone",
+        "nobody in the real world",
+        "feel isolated",
+        "can't sleep",
+        "insomnia",
+        "panic attack",
+        "crying all night",
+        "having an anxiety attack"
+      ]) ->
         {:detected,
          %{
            category: :personal_vulnerability,
            salience: 85,
            default_hours: hours_override || 14,
-           guidance: "User expressed deep isolation, anxiety, or insomnia. Check in unprompted to remind them they are seen, valued, and safe."
+           guidance:
+             "User expressed deep isolation, anxiety, or insomnia. Check in unprompted to remind them they are seen, valued, and safe."
          }}
 
       true ->
@@ -292,6 +404,7 @@ defmodule SovereignSoulEngine.TheoryOfMind.Engine do
   end
 
   defp normalize_sentiment(sentiment) when is_atom(sentiment), do: sentiment
+
   defp normalize_sentiment(sentiment) when is_binary(sentiment) do
     case String.downcase(sentiment) do
       "vulnerable" -> :vulnerable
@@ -301,5 +414,6 @@ defmodule SovereignSoulEngine.TheoryOfMind.Engine do
       _ -> :neutral
     end
   end
+
   defp normalize_sentiment(_), do: :neutral
 end

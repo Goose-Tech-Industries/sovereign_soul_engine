@@ -129,6 +129,7 @@ defmodule SovereignSoulEngineWeb.UserLive.Login do
   end
 
   defp local_mail_adapter? do
-    Application.get_env(:sovereign_soul_engine, SovereignSoulEngine.Mailer)[:adapter] == Swoosh.Adapters.Local
+    Application.get_env(:sovereign_soul_engine, SovereignSoulEngine.Mailer)[:adapter] ==
+      Swoosh.Adapters.Local
   end
 end

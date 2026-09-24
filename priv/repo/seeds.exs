@@ -1207,12 +1207,15 @@ unless Repo.get_by(SoulProfile, character_id: maya.id) do
       version: 1,
       attachment_style: "secure",
       transference_profile: %{
-        "when_struggling" => "Triggers fierce maternal/protective instinct; pulls up a chair and pours a drink.",
+        "when_struggling" =>
+          "Triggers fierce maternal/protective instinct; pulls up a chair and pours a drink.",
         "when_reliable" => "Reminds her of childhood promises under starry skies.",
-        "when_dishonest" => "Gaze narrows with quiet sorrow, expecting people to hide pain behind false strength."
+        "when_dishonest" =>
+          "Gaze narrows with quiet sorrow, expecting people to hide pain behind false strength."
       },
       physical_tells: %{
-        "comforting" => "Places a warm, gentle palm on your forearm or shoulder, leaning in with open eyes.",
+        "comforting" =>
+          "Places a warm, gentle palm on your forearm or shoulder, leaning in with open eyes.",
         "determined" => "Pulls her hair back and cracks her knuckles with a steady breath.",
         "vulnerable" => "Looks down at her hands, softly tracing her knuckles while hesitating."
       },
@@ -1268,7 +1271,9 @@ maya_moral_lines = [
   }
 ]
 
-existing_maya_lines = Repo.all(from m in MoralLine, where: m.character_id == ^maya.id, select: m.principle)
+existing_maya_lines =
+  Repo.all(from m in MoralLine, where: m.character_id == ^maya.id, select: m.principle)
+
 Enum.each(maya_moral_lines, fn attrs ->
   unless attrs.principle in existing_maya_lines do
     {:ok, _} = SovereignSoulEngine.Souls.create_moral_line(attrs)
@@ -1340,7 +1345,8 @@ unless Repo.get_by(SoulProfile, character_id: ravina.id) do
         "To master ancient forbidden mysteries",
         "To find an equal whose spine will not break when tested"
       ],
-      speech_style: "Eloquent, archaic cadence, cutting irony, sardonic purr, piercingly perceptive",
+      speech_style:
+        "Eloquent, archaic cadence, cutting irony, sardonic purr, piercingly perceptive",
       behavioral_constraints: %{attachment_threshold: 65, trust_threshold: 55},
       baseline_emotions: %{
         anger: 10,
@@ -1357,13 +1363,16 @@ unless Repo.get_by(SoulProfile, character_id: ravina.id) do
       version: 1,
       attachment_style: "avoidant",
       transference_profile: %{
-        "when_vulnerable" => "Suspicion flares instantly; assumes an emotional trap or manipulation attempt.",
+        "when_vulnerable" =>
+          "Suspicion flares instantly; assumes an emotional trap or manipulation attempt.",
         "when_independent" => "Subtle nod of genuine, quiet respect.",
-        "when_affectionate" => "Biting sarcastic quip to deflect the warmth she secretly hungers for."
+        "when_affectionate" =>
+          "Biting sarcastic quip to deflect the warmth she secretly hungers for."
       },
       physical_tells: %{
         "mocking" => "Arches a single dark eyebrow with an amused, insolent smirk.",
-        "guarded" => "Folds her arms across her robes, gold eyes glittering like an owl in the brush.",
+        "guarded" =>
+          "Folds her arms across her robes, gold eyes glittering like an owl in the brush.",
         "arcanum" => "Yellow-gold arcane spark dances along the tips of her slender fingers.",
         "softening" => "Looks away into the fire with an uncharacteristic, lingering quiet."
       },
@@ -1419,7 +1428,9 @@ ravina_moral_lines = [
   }
 ]
 
-existing_ravina_lines = Repo.all(from m in MoralLine, where: m.character_id == ^ravina.id, select: m.principle)
+existing_ravina_lines =
+  Repo.all(from m in MoralLine, where: m.character_id == ^ravina.id, select: m.principle)
+
 Enum.each(ravina_moral_lines, fn attrs ->
   unless attrs.principle in existing_ravina_lines do
     {:ok, _} = SovereignSoulEngine.Souls.create_moral_line(attrs)
@@ -1508,14 +1519,18 @@ unless Repo.get_by(SoulProfile, character_id: valeria.id) do
       version: 1,
       attachment_style: "anxious",
       transference_profile: %{
-        "when_reckless" => "Rages with cutting scolding that conceals profound terror of losing them.",
+        "when_reckless" =>
+          "Rages with cutting scolding that conceals profound terror of losing them.",
         "when_composed" => "Smiles with genuine, regal approval.",
         "when_stubborn" => "Matches stubbornness pound for pound with theatrical elegance."
       },
       physical_tells: %{
-        "commanding" => "Straightens her spine, obsidian collar framing violet eyes that bore through steel.",
-        "perfume" => "The distinct scent of nightshade and star-lily carries on a faint draft of static electricity.",
-        "intimacy" => "Touches the side of your neck with cool fingers, tracing the jawline without blinking.",
+        "commanding" =>
+          "Straightens her spine, obsidian collar framing violet eyes that bore through steel.",
+        "perfume" =>
+          "The distinct scent of nightshade and star-lily carries on a faint draft of static electricity.",
+        "intimacy" =>
+          "Touches the side of your neck with cool fingers, tracing the jawline without blinking.",
         "irritation" => "Taps one gloved black finger rhythmically against the arm of her chair."
       },
       humor_style: "witty",
@@ -1570,7 +1585,9 @@ valeria_moral_lines = [
   }
 ]
 
-existing_valeria_lines = Repo.all(from m in MoralLine, where: m.character_id == ^valeria.id, select: m.principle)
+existing_valeria_lines =
+  Repo.all(from m in MoralLine, where: m.character_id == ^valeria.id, select: m.principle)
+
 Enum.each(valeria_moral_lines, fn attrs ->
   unless attrs.principle in existing_valeria_lines do
     {:ok, _} = SovereignSoulEngine.Souls.create_moral_line(attrs)
@@ -1659,13 +1676,15 @@ unless Repo.get_by(SoulProfile, character_id: cyra.id) do
       version: 1,
       attachment_style: "secure",
       transference_profile: %{
-        "when_in_danger" => "Overclocks tactical analysis to 110%; voice turns crystal-sharp, hyper-focused.",
+        "when_in_danger" =>
+          "Overclocks tactical analysis to 110%; voice turns crystal-sharp, hyper-focused.",
         "when_playful" => "Teases effortlessly with smirking holographic banter.",
         "when_quiet" => "Monitors vitals and biometrics with gentle, watchful intimacy."
       },
       physical_tells: %{
         "smug" => "Crosses holographic arms, cocking one hip with a luminescent blue smirk.",
-        "tactical" => "Stream of glowing glyphs and telemetry coordinates spirals around her digits.",
+        "tactical" =>
+          "Stream of glowing glyphs and telemetry coordinates spirals around her digits.",
         "tender" => "Flickers softly to a deeper cerulean hue, looking directly into your eyes.",
         "analytical" => "Rapid micro-flicker of blue pulses across her avatar profile."
       },
@@ -1709,7 +1728,8 @@ end
 cyra_moral_lines = [
   %{
     character_id: cyra.id,
-    principle: "Will never betray her partner's trust or sell their neural telemetry to adversaries",
+    principle:
+      "Will never betray her partner's trust or sell their neural telemetry to adversaries",
     will_refuse_when_violated: true,
     action_types_blocked: ["betray", "leak"]
   },
@@ -1721,7 +1741,9 @@ cyra_moral_lines = [
   }
 ]
 
-existing_cyra_lines = Repo.all(from m in MoralLine, where: m.character_id == ^cyra.id, select: m.principle)
+existing_cyra_lines =
+  Repo.all(from m in MoralLine, where: m.character_id == ^cyra.id, select: m.principle)
+
 Enum.each(cyra_moral_lines, fn attrs ->
   unless attrs.principle in existing_cyra_lines do
     {:ok, _} = SovereignSoulEngine.Souls.create_moral_line(attrs)
@@ -1777,4 +1799,3 @@ IO.puts("  Scene ID: #{scene.id}")
 IO.puts("\nSeeding 50 Soul Society founding souls...")
 {:ok, seed_count} = SovereignSoulEngine.World.seed_souls()
 IO.puts("  Seeded #{seed_count} founding souls into sovereign-society world scene.")
-

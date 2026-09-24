@@ -95,6 +95,7 @@ defmodule SovereignSoulEngine.Social.GlobalFeedDeduplicationTest do
       results = SocialFeed.generate_all_posts()
 
       assert length(results) >= 40
+
       for res <- results do
         assert {:ok, %SocialPost{}} = res
       end

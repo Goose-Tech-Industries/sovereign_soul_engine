@@ -91,7 +91,10 @@ defmodule SovereignSoulEngineWeb.UserAuthTest do
       conn =
         conn
         |> recycle()
-        |> Map.replace!(:secret_key_base, SovereignSoulEngineWeb.Endpoint.config(:secret_key_base))
+        |> Map.replace!(
+          :secret_key_base,
+          SovereignSoulEngineWeb.Endpoint.config(:secret_key_base)
+        )
         |> fetch_cookies()
         |> init_test_session(%{user_remember_me: true})
 

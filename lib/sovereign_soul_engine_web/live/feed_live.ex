@@ -42,7 +42,13 @@ defmodule SovereignSoulEngineWeb.FeedLive do
       end
 
     top_friends = Relationships.get_top_friends(player.id, 8)
-    npcs = Enum.filter(Characters.list_living_world_characters(), &(&1.kind == "npc" and &1.status == "active"))
+
+    npcs =
+      Enum.filter(
+        Characters.list_living_world_characters(),
+        &(&1.kind == "npc" and &1.status == "active")
+      )
+
     recent_events = World.list_recent_events(limit: 10)
 
     # Load initial posts
@@ -167,7 +173,13 @@ defmodule SovereignSoulEngineWeb.FeedLive do
                  metadata: %{
                    "location" => "Feannag's Rest",
                    "comments" => [],
-                   "reactions" => %{"love" => 1, "honor" => 1, "fire" => 0, "laugh" => 0, "moon" => 1}
+                   "reactions" => %{
+                     "love" => 1,
+                     "honor" => 1,
+                     "fire" => 0,
+                     "laugh" => 0,
+                     "moon" => 1
+                   }
                  }
                }) do
             {:ok, post} ->
@@ -334,7 +346,10 @@ defmodule SovereignSoulEngineWeb.FeedLive do
         {"⚡", "#{from_name} and #{to_name} had a guarded, tense exchange (#{res}% resonance)."}
 
       "gossip" ->
-        summary = get_in(event.payload || %{}, ["summary"]) || "Whispers spread between #{from_name} and #{to_name}."
+        summary =
+          get_in(event.payload || %{}, ["summary"]) ||
+            "Whispers spread between #{from_name} and #{to_name}."
+
         {"🗣️", summary}
 
       "world_post" ->
@@ -385,13 +400,17 @@ defmodule SovereignSoulEngineWeb.FeedLive do
             </div>
             <div>
               <span class="font-extrabold text-base tracking-tight text-white flex items-center gap-1.5">
-                SoulBook <span class="badge badge-warning badge-xs font-mono font-bold">FEANNAG'S REST</span>
+                SoulBook
+                <span class="badge badge-warning badge-xs font-mono font-bold">FEANNAG'S REST</span>
               </span>
             </div>
           </.link>
 
           <nav class="hidden md:flex items-center gap-4 ml-6 text-xs font-semibold text-slate-400">
-            <.link navigate={~p"/sse/feed"} class="text-amber-400 font-bold border-b-2 border-amber-400 pb-1">
+            <.link
+              navigate={~p"/sse/feed"}
+              class="text-amber-400 font-bold border-b-2 border-amber-400 pb-1"
+            >
               📰 Living Feed
             </.link>
             <.link navigate={~p"/sse/chat"} class="hover:text-slate-200 transition-colors">
@@ -437,7 +456,10 @@ defmodule SovereignSoulEngineWeb.FeedLive do
             <span class="size-1.5 rounded-full bg-amber-400 animate-ping"></span>
             <span>{@toast}</span>
           </div>
-          <button phx-click="dismiss_toast" class="text-amber-400 hover:text-white uppercase font-bold text-[10px]">
+          <button
+            phx-click="dismiss_toast"
+            class="text-amber-400 hover:text-white uppercase font-bold text-[10px]"
+          >
             Dismiss
           </button>
         </div>
@@ -455,17 +477,23 @@ defmodule SovereignSoulEngineWeb.FeedLive do
               </div>
               <div>
                 <h2 class="font-extrabold text-white text-base leading-tight">{@player.name}</h2>
-                <span class="text-xs font-mono text-amber-400">@{String.downcase(@player.slug)} • Sovereign Traveler</span>
+                <span class="text-xs font-mono text-amber-400">
+                  @{String.downcase(@player.slug)} • Sovereign Traveler
+                </span>
               </div>
             </div>
 
             <p class="text-xs text-slate-400 leading-relaxed">
-              {@player.description || "Commander walking through the 13 concentric districts of Feannag's Rest."}
+              {@player.description ||
+                "Commander walking through the 13 concentric districts of Feannag's Rest."}
             </p>
 
             <div class="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
               <span>Status: <strong class="text-emerald-400">Active in Feannag's Rest</strong></span>
-              <.link navigate={~p"/sse/chat"} class="text-amber-400 hover:text-amber-300 font-semibold text-[11px]">
+              <.link
+                navigate={~p"/sse/chat"}
+                class="text-amber-400 hover:text-amber-300 font-semibold text-[11px]"
+              >
                 Open Chat →
               </.link>
             </div>
@@ -517,7 +545,9 @@ defmodule SovereignSoulEngineWeb.FeedLive do
                     </div>
 
                     <div class="mt-2 pt-2 border-t border-slate-900 flex items-center justify-between text-[10px]">
-                      <span class="text-slate-400 font-mono">Affinity: <strong class="text-amber-400">{rel.affinity}</strong></span>
+                      <span class="text-slate-400 font-mono">
+                        Affinity: <strong class="text-amber-400">{rel.affinity}</strong>
+                      </span>
                       <.link
                         navigate={~p"/sse/chat?character=#{rel.target_character.slug}"}
                         class="text-blue-400 hover:text-blue-300 font-semibold"
@@ -593,7 +623,9 @@ defmodule SovereignSoulEngineWeb.FeedLive do
                   <div class="flex items-start justify-between gap-3">
                     <div class="flex items-center gap-3">
                       <.link
-                        navigate={if post.character, do: ~p"/sse/characters/#{post.character.id}", else: "#"}
+                        navigate={
+                          if post.character, do: ~p"/sse/characters/#{post.character.id}", else: "#"
+                        }
                         class="size-10 rounded-xl bg-gradient-to-tr from-amber-500/20 to-purple-500/20 border border-amber-500/30 text-amber-400 hover:border-amber-400 flex items-center justify-center font-bold text-sm transition-all shadow-xs"
                         title="View Soul Profile"
                       >
@@ -602,7 +634,11 @@ defmodule SovereignSoulEngineWeb.FeedLive do
                       <div>
                         <div class="flex items-center gap-1.5">
                           <.link
-                            navigate={if post.character, do: ~p"/sse/characters/#{post.character.id}", else: "#"}
+                            navigate={
+                              if post.character,
+                                do: ~p"/sse/characters/#{post.character.id}",
+                                else: "#"
+                            }
                             class="font-extrabold text-sm text-white hover:text-amber-400 transition-colors"
                             title="View Soul Profile"
                           >
@@ -701,10 +737,16 @@ defmodule SovereignSoulEngineWeb.FeedLive do
                         </div>
                         <div class="space-y-0.5 flex-1 min-w-0">
                           <div class="flex items-center gap-1.5">
-                            <span class="font-bold text-white text-[11px]">{comment["author_name"]}</span>
-                            <span class="text-[9px] text-slate-500 font-mono">{comment["inserted_at"]}</span>
+                            <span class="font-bold text-white text-[11px]">
+                              {comment["author_name"]}
+                            </span>
+                            <span class="text-[9px] text-slate-500 font-mono">
+                              {comment["inserted_at"]}
+                            </span>
                           </div>
-                          <p class="text-slate-300 leading-relaxed break-words">{comment["content"]}</p>
+                          <p class="text-slate-300 leading-relaxed break-words">
+                            {comment["content"]}
+                          </p>
                         </div>
                       </div>
                     <% end %>
@@ -746,7 +788,8 @@ defmodule SovereignSoulEngineWeb.FeedLive do
                   <p class="text-[10px] text-slate-500">Autonomous ledger murmurs</p>
                 </div>
               </div>
-              <span class="size-2 rounded-full bg-emerald-400 animate-pulse" title="Live updates"></span>
+              <span class="size-2 rounded-full bg-emerald-400 animate-pulse" title="Live updates">
+              </span>
             </div>
 
             <%= if @recent_events == [] do %>
@@ -763,7 +806,9 @@ defmodule SovereignSoulEngineWeb.FeedLive do
                         <span>{icon}</span>
                         <span>{String.upcase(event.kind)}</span>
                       </span>
-                      <span class="text-slate-500 font-mono">{format_event_time(event.inserted_at)}</span>
+                      <span class="text-slate-500 font-mono">
+                        {format_event_time(event.inserted_at)}
+                      </span>
                     </div>
                     <p class="text-[11px] text-slate-300 leading-snug">
                       {narrative}
@@ -787,27 +832,42 @@ defmodule SovereignSoulEngineWeb.FeedLive do
 
       <%!-- Universal PWA Mobile Bottom Navigation Dock (visible on mobile screens) --%>
       <nav class="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-slate-950/95 backdrop-blur-lg border-t border-slate-800 px-4 py-2 flex items-center justify-around">
-        <.link navigate={~p"/sse/chat"} class="flex flex-col items-center gap-1 text-slate-400 hover:text-white">
+        <.link
+          navigate={~p"/sse/chat"}
+          class="flex flex-col items-center gap-1 text-slate-400 hover:text-white"
+        >
           <span class="text-lg leading-none">💬</span>
           <span class="text-[10px] font-semibold">Chat</span>
         </.link>
 
-        <.link navigate={~p"/sse/feed"} class="flex flex-col items-center gap-1 text-amber-400 font-bold">
+        <.link
+          navigate={~p"/sse/feed"}
+          class="flex flex-col items-center gap-1 text-amber-400 font-bold"
+        >
           <span class="text-lg leading-none">📰</span>
           <span class="text-[10px]">Feed</span>
         </.link>
 
-        <.link navigate={~p"/sse/acp"} class="flex flex-col items-center gap-1 text-slate-400 hover:text-white">
+        <.link
+          navigate={~p"/sse/acp"}
+          class="flex flex-col items-center gap-1 text-slate-400 hover:text-white"
+        >
           <span class="text-lg leading-none">⚙️</span>
           <span class="text-[10px] font-semibold">Studio</span>
         </.link>
 
-        <.link navigate={~p"/sse/memories"} class="flex flex-col items-center gap-1 text-slate-400 hover:text-white">
+        <.link
+          navigate={~p"/sse/memories"}
+          class="flex flex-col items-center gap-1 text-slate-400 hover:text-white"
+        >
           <span class="text-lg leading-none">🧠</span>
           <span class="text-[10px] font-semibold">Vault</span>
         </.link>
 
-        <.link navigate={~p"/sse/acp/moderation"} class="flex flex-col items-center gap-1 text-slate-400 hover:text-rose-400">
+        <.link
+          navigate={~p"/sse/acp/moderation"}
+          class="flex flex-col items-center gap-1 text-slate-400 hover:text-rose-400"
+        >
           <span class="text-lg leading-none">🛡️</span>
           <span class="text-[10px] font-semibold">Shield</span>
         </.link>

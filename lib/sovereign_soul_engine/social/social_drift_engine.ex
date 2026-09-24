@@ -86,6 +86,7 @@ defmodule SovereignSoulEngine.Social.SocialDriftEngine do
     fears_b = MapSet.new(profile_b.fears || [])
 
     shared_values = MapSet.intersection(values_a, values_b) |> MapSet.size()
+
     conflicting_values =
       (MapSet.difference(values_a, values_b) |> MapSet.size()) +
         (MapSet.difference(values_b, values_a) |> MapSet.size())
@@ -97,7 +98,8 @@ defmodule SovereignSoulEngine.Social.SocialDriftEngine do
         conflicting_values * @value_conflict_penalty +
         shared_fears * 1
 
-    max_possible = max(MapSet.size(values_a) + MapSet.size(values_b), 1) * @value_compatibility_bonus
+    max_possible =
+      max(MapSet.size(values_a) + MapSet.size(values_b), 1) * @value_compatibility_bonus
 
     Float.round(raw_score / max_possible, 3)
   end

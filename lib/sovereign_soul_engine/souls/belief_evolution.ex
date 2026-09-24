@@ -65,12 +65,22 @@ defmodule SovereignSoulEngine.Souls.BeliefEvolution do
   """
   def trigger_traumatic_shift(%SoulProfile{} = profile, relationship, correlation_id) do
     current_values = profile.core_values || []
-    {shifted_values, shifted_from, shifted_to} = evolve_values(current_values, @traumatic_shifts, :traumatic)
+
+    {shifted_values, shifted_from, shifted_to} =
+      evolve_values(current_values, @traumatic_shifts, :traumatic)
 
     reason =
       "Epigenetic betrayal shift: Severe wound (#{Map.get(relationship, :wound, 80)}/100) shattered baseline value."
 
-    apply_evolution(profile, shifted_values, shifted_from, shifted_to, reason, :betrayal, correlation_id)
+    apply_evolution(
+      profile,
+      shifted_values,
+      shifted_from,
+      shifted_to,
+      reason,
+      :betrayal,
+      correlation_id
+    )
   end
 
   @doc """
@@ -78,12 +88,22 @@ defmodule SovereignSoulEngine.Souls.BeliefEvolution do
   """
   def trigger_bonding_shift(%SoulProfile{} = profile, relationship, correlation_id) do
     current_values = profile.core_values || []
-    {shifted_values, shifted_from, shifted_to} = evolve_values(current_values, @bonding_shifts, :bonding)
+
+    {shifted_values, shifted_from, shifted_to} =
+      evolve_values(current_values, @bonding_shifts, :bonding)
 
     reason =
       "Epigenetic bonding shift: Sustained transcendent trust (#{Map.get(relationship, :trust, 90)}/100) softened cynicism."
 
-    apply_evolution(profile, shifted_values, shifted_from, shifted_to, reason, :bonding, correlation_id)
+    apply_evolution(
+      profile,
+      shifted_values,
+      shifted_from,
+      shifted_to,
+      reason,
+      :bonding,
+      correlation_id
+    )
   end
 
   defp evolve_values(current_values, patterns, fallback_type) do
@@ -110,7 +130,15 @@ defmodule SovereignSoulEngine.Souls.BeliefEvolution do
     end
   end
 
-  defp apply_evolution(profile, new_values, shifted_from, shifted_to, reason, type, correlation_id) do
+  defp apply_evolution(
+         profile,
+         new_values,
+         shifted_from,
+         shifted_to,
+         reason,
+         type,
+         correlation_id
+       ) do
     changeset =
       SoulProfile.changeset(profile, %{
         core_values: new_values,

@@ -68,7 +68,10 @@ defmodule SovereignSoulEngine.Wearables.RoboticsBridge do
 
       battery = parse_float(params["battery_pct"] || params[:battery_pct], 100.0)
       motor_temp = parse_float(params["motor_temp_c"] || params[:motor_temp_c], 35.0)
-      obstacle_dist = parse_float(params["obstacle_distance_m"] || params[:obstacle_distance_m], 2.0)
+
+      obstacle_dist =
+        parse_float(params["obstacle_distance_m"] || params[:obstacle_distance_m], 2.0)
+
       touch_event = params["touch_sensor"] || params[:touch_sensor]
 
       # Low battery increases companion fatigue
@@ -89,7 +92,9 @@ defmodule SovereignSoulEngine.Wearables.RoboticsBridge do
       # If an obstacle collision or near miss occurred (< 0.3m), heighten startle cortisol
       if obstacle_dist < 0.3 do
         case Repo.get_by(EmotionalState, character_id: character.id) do
-          nil -> :ok
+          nil ->
+            :ok
+
           emotional ->
             Souls.update_emotional_state(emotional, %{
               fear: min(100, (emotional.fear || 0) + 20),
@@ -101,7 +106,9 @@ defmodule SovereignSoulEngine.Wearables.RoboticsBridge do
       # Handle physical touch on the robot chassis
       if touch_event in ["pat", "hug", "stroke"] do
         case Repo.get_by(EmotionalState, character_id: character.id) do
-          nil -> :ok
+          nil ->
+            :ok
+
           emotional ->
             Souls.update_emotional_state(emotional, %{
               attachment: min(100, (emotional.attachment || 0) + 12),
@@ -110,13 +117,14 @@ defmodule SovereignSoulEngine.Wearables.RoboticsBridge do
         end
       end
 
-      {:ok, %{
-        status: "ok",
-        character_slug: character.slug,
-        fatigue: updated_somatic.fatigue,
-        pain: updated_somatic.pain,
-        battery_pct: battery
-      }}
+      {:ok,
+       %{
+         status: "ok",
+         character_slug: character.slug,
+         fatigue: updated_somatic.fatigue,
+         pain: updated_somatic.pain,
+         battery_pct: battery
+       }}
     else
       {:error, :character_not_found}
     end
@@ -270,9 +278,12 @@ defmodule SovereignSoulEngine.Wearables.RoboticsBridge do
 
   defp parse_float(val, _default) when is_float(val), do: val
   defp parse_float(val, _default) when is_integer(val), do: val * 1.0
+
   defp parse_float(val, default) when is_binary(val) do
     case Float.parse(val) do
-      {f, _} -> f
+      {f, _} ->
+        f
+
       :error ->
         case Integer.parse(val) do
           {i, _} -> i * 1.0
@@ -280,6 +291,7 @@ defmodule SovereignSoulEngine.Wearables.RoboticsBridge do
         end
     end
   end
+
   defp parse_float(_, default), do: default
 
   defp resolve_character(id_or_slug) when is_binary(id_or_slug) do
@@ -289,9 +301,12 @@ defmodule SovereignSoulEngine.Wearables.RoboticsBridge do
           {:ok, uuid} -> Characters.get_character(uuid)
           :error -> nil
         end
-      char -> char
+
+      char ->
+        char
     end
   end
+
   defp resolve_character(%Character{} = c), do: c
   defp resolve_character(_), do: nil
 end

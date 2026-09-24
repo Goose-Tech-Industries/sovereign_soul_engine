@@ -87,6 +87,21 @@ if config_env() == :prod do
       You can generate one by calling: mix phx.gen.secret
       """
 
+  if byte_size(secret_key_base) < 64 do
+    raise """
+    environment variable SECRET_KEY_BASE is too short.
+    It must be at least 64 bytes. You can generate one by calling: mix phx.gen.secret
+    """
+  end
+
+  stripe_key = System.get_env("STRIPE_SECRET_KEY")
+
+  if is_binary(stripe_key) and stripe_key != "" and
+       (is_nil(System.get_env("STRIPE_WEBHOOK_SECRET")) or
+          System.get_env("STRIPE_WEBHOOK_SECRET") == "") do
+    raise "STRIPE_WEBHOOK_SECRET is required when STRIPE_SECRET_KEY is configured in production"
+  end
+
   # A shared relay secret is mandatory once peers are configured in production,
   # otherwise any node could relay envelopes into the cluster.
   peers = (System.get_env("RELAY_PEERS") || "") |> String.split(",", trim: true)

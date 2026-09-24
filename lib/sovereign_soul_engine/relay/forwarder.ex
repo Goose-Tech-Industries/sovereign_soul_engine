@@ -45,6 +45,8 @@ defmodule SovereignSoulEngine.Relay.Forwarder do
     case Req.post(url,
            json: %{"envelope" => envelope, "hops" => hops},
            headers: headers,
+           receive_timeout: 3000,
+           connect_options: [timeout: 1500],
            retry: false
          ) do
       {:ok, %{status: status}} when status in 200..299 -> :ok

@@ -137,6 +137,28 @@ defmodule SovereignSoulEngineWeb.Api.CoreApiControllersTest do
       assert is_binary(body["reply"])
     end
 
+    test "POST /sse/api/npc_chat can return an opt-in cognition trace", %{
+      conn: conn,
+      npc: npc
+    } do
+      conn =
+        post(conn, ~p"/sse/api/npc_chat", %{
+          "external_source" => "twisted",
+          "external_player_id" => "trace_player",
+          "external_player_name" => "Trace Player",
+          "npc_id" => npc.id,
+          "message" => "Tell me about the Crow's Keep.",
+          "context" => %{"district" => "crows_keep"},
+          "cognition_trace" => true
+        })
+
+      trace = json_response(conn, 200)["cognition_trace"]
+      assert trace["checkpoint"]["status"] == "completed"
+      assert "crows_keep" in trace["lore_slugs"]
+      assert trace["approval"]["status"] == "pending"
+      assert is_binary(trace["action_intent_id"])
+    end
+
     test "GET /sse/api/npc_chat/relationship returns known: false for new encounters", %{
       conn: conn,
       npc: npc

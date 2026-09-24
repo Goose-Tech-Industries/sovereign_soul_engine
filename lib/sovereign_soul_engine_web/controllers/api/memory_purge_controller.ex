@@ -38,8 +38,7 @@ defmodule SovereignSoulEngineWeb.Api.MemoryPurgeController do
 
       {:ok, memories_purged} = Memories.purge_memories_for_character(character.id, opts)
 
-      # Also purge from Theory of Mind knowledge base if topic or all specified
-      player = Characters.get_character_by_slug("goose") || character
+      # Also purge from Theory of Mind knowledge base and life threads if topic or all specified
       tom_opts = []
 
       tom_opts =
@@ -49,11 +48,17 @@ defmodule SovereignSoulEngineWeb.Api.MemoryPurgeController do
 
       tom_opts = if purge_all, do: Keyword.put(tom_opts, :all, true), else: tom_opts
 
-      {:ok, tom_purged} =
+      {tom_purged, threads_purged} =
         if topic || purge_all do
-          TheoryOfMind.purge_knowledge_about(character.id, player.id, tom_opts)
+          {:ok, knowledge_count} =
+            TheoryOfMind.purge_knowledge_for_character(character.id, tom_opts)
+
+          {:ok, threads_count} =
+            TheoryOfMind.purge_life_threads_for_character(character.id, tom_opts)
+
+          {knowledge_count, threads_count}
         else
-          {:ok, 0}
+          {0, 0}
         end
 
       json(conn, %{
@@ -62,6 +67,7 @@ defmodule SovereignSoulEngineWeb.Api.MemoryPurgeController do
         character_slug: character_slug,
         memories_deleted: memories_purged,
         knowledge_facts_deleted: tom_purged,
+        life_threads_deleted: threads_purged,
         filters_applied: %{
           topic: topic,
           category: category,

@@ -21,7 +21,14 @@ defmodule SovereignSoulEngine.TheoryOfMind.CharacterKnowledge do
 
   def changeset(knowledge, attrs) do
     knowledge
-    |> cast(attrs, [:knower_character_id, :subject_character_id, :known_fact, :certainty, :is_assumption, :last_updated_at])
+    |> cast(attrs, [
+      :knower_character_id,
+      :subject_character_id,
+      :known_fact,
+      :certainty,
+      :is_assumption,
+      :last_updated_at
+    ])
     |> validate_required([:knower_character_id, :subject_character_id, :known_fact])
     |> validate_number(:certainty, greater_than_or_equal_to: 0, less_than_or_equal_to: 100)
   end

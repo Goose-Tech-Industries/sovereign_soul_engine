@@ -176,8 +176,7 @@ defmodule SovereignSoulEngine.Souls.DeliveryModel do
   def monetization_matrix do
     %{
       game_studios: %{
-        licensing_type:
-          "Annual Title License + Revenue Share Cap (The Unreal / Wwise Model)",
+        licensing_type: "Annual Title License + Revenue Share Cap (The Unreal / Wwise Model)",
         rationale:
           "Studios reject metered per-token API pricing due to unpredictable runaway costs. Predictable annual licensing provides safe budgeting.",
         tiers: [
@@ -217,13 +216,15 @@ defmodule SovereignSoulEngine.Souls.DeliveryModel do
       companion_creators: %{
         model: "All-Access Companion Pass ($14.99 & $19.99) + Gold Tier Engagement Pool",
         pool_allocation: "15% of total subscription revenue allocated to verified Gold Tier bots",
-        platform_retained: "85% (funds dedicated 24/7 GPU clusters, vector memory, voice synthesis, net profit)",
+        platform_retained:
+          "85% (funds dedicated 24/7 GPU clusters, vector memory, voice synthesis, net profit)",
         rationale:
           "Users subscribe to the entire platform (Town Map, SoulBook, Canon personas), not individual bots. Gold Tier creators earn proportional monthly distributions based on qualified message engagement.",
         tier_requirements: %{
           bronze: "Community sandbox, link-only, 0% pool",
           silver: "100+ interactions, clean record, tips eligible",
-          gold: "1,000+ interactions, >35% 7-day retention, qualifies for Monthly Pool distributions"
+          gold:
+            "1,000+ interactions, >35% 7-day retention, qualifies for Monthly Pool distributions"
         },
         one_time_forge_fee:
           "$49.00 USD (covers automated cloud LoRA fine-tuning and GGUF compilation)",
@@ -236,7 +237,8 @@ defmodule SovereignSoulEngine.Souls.DeliveryModel do
           %{
             tier: "Archon 18+ Uncensored",
             price: "$19.99 / month",
-            features: "All Companion Pass features + unmoderated local weight routing & erotic subtext"
+            features:
+              "All Companion Pass features + unmoderated local weight routing & erotic subtext"
           }
         ]
       }

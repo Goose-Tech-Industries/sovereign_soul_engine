@@ -85,7 +85,10 @@ defmodule SovereignSoulEngineWeb.BillingLive do
       |> assign(:age_status, age_status)
       |> assign(:success_banner?, true)
       |> assign(:success_tier, tier_id)
-      |> put_flash(:info, "Stripe checkout successful! Your #{subscription.tier_name} subscription is now active.")
+      |> put_flash(
+        :info,
+        "Stripe checkout successful! Your #{subscription.tier_name} subscription is now active."
+      )
 
     {:noreply, socket}
   end
@@ -107,7 +110,8 @@ defmodule SovereignSoulEngineWeb.BillingLive do
         {:noreply, redirect(socket, to: mock_redirect_url)}
 
       {:error, reason} ->
-        {:noreply, put_flash(socket, :error, "Failed to initiate Stripe checkout: #{inspect(reason)}")}
+        {:noreply,
+         put_flash(socket, :error, "Failed to initiate Stripe checkout: #{inspect(reason)}")}
     end
   end
 
@@ -183,7 +187,10 @@ defmodule SovereignSoulEngineWeb.BillingLive do
         socket =
           socket
           |> assign(:age_status, age_status)
-          |> put_flash(:info, "Age verification confirmed (18+). Mature roleplay and M-rated content unlocked!")
+          |> put_flash(
+            :info,
+            "Age verification confirmed (18+). Mature roleplay and M-rated content unlocked!"
+          )
 
         {:noreply, socket}
 
@@ -225,7 +232,10 @@ defmodule SovereignSoulEngineWeb.BillingLive do
       <%!-- Navigation Header --%>
       <header class="border-b border-slate-800 bg-slate-950/90 backdrop-blur-md px-6 py-4 flex items-center justify-between sticky top-0 z-30">
         <div class="flex items-center gap-3">
-          <.link navigate={~p"/sse/chat"} class="btn btn-ghost btn-xs text-slate-400 hover:text-white flex items-center gap-1.5">
+          <.link
+            navigate={~p"/sse/chat"}
+            class="btn btn-ghost btn-xs text-slate-400 hover:text-white flex items-center gap-1.5"
+          >
             <.icon name="hero-arrow-left" class="size-4" />
             <span>Chat</span>
           </.link>
@@ -244,10 +254,16 @@ defmodule SovereignSoulEngineWeb.BillingLive do
         </div>
 
         <div class="flex items-center gap-3">
-          <.link navigate={~p"/sse/feed"} class="btn btn-ghost btn-xs text-slate-400 hover:text-white hidden sm:inline-flex">
+          <.link
+            navigate={~p"/sse/feed"}
+            class="btn btn-ghost btn-xs text-slate-400 hover:text-white hidden sm:inline-flex"
+          >
             <span>📰 Feed</span>
           </.link>
-          <.link navigate={~p"/sse/acp"} class="btn btn-ghost btn-xs text-slate-400 hover:text-white hidden sm:inline-flex">
+          <.link
+            navigate={~p"/sse/acp"}
+            class="btn btn-ghost btn-xs text-slate-400 hover:text-white hidden sm:inline-flex"
+          >
             <span>⚙️ Studio</span>
           </.link>
         </div>
@@ -282,14 +298,22 @@ defmodule SovereignSoulEngineWeb.BillingLive do
                 </span>
                 <span class={[
                   "badge badge-sm font-mono text-[10px] uppercase font-bold",
-                  if(@subscription.tier_id == "archon_1999", do: "badge-error text-rose-200", else: if(@subscription.tier_id == "companion_1499", do: "badge-primary text-primary-content", else: "badge-ghost text-slate-400"))
+                  if(@subscription.tier_id == "archon_1999",
+                    do: "badge-error text-rose-200",
+                    else:
+                      if(@subscription.tier_id == "companion_1499",
+                        do: "badge-primary text-primary-content",
+                        else: "badge-ghost text-slate-400"
+                      )
+                  )
                 ]}>
                   {@subscription.tier_name}
                 </span>
               </div>
               <p class="text-xs text-slate-400 mt-1">
                 Active Plan: <span class="font-bold text-white">${@subscription.price_usd}/mo</span>
-                • Content Maturity: <span class="font-bold uppercase text-primary">{@subscription.maturity_rating}</span>
+                • Content Maturity:
+                <span class="font-bold uppercase text-primary">{@subscription.maturity_rating}</span>
               </p>
             </div>
           </div>
@@ -330,7 +354,11 @@ defmodule SovereignSoulEngineWeb.BillingLive do
               <% is_current = @subscription.tier_id == tier.id %>
               <div class={[
                 "p-8 rounded-3xl border flex flex-col justify-between space-y-6 relative transition-all duration-200",
-                if(tier.id == "archon_1999", do: "bg-gradient-to-b from-rose-950/20 to-slate-900 border-rose-500/40 shadow-2xl shadow-rose-950/50", else: "bg-slate-900/90 border-slate-800 shadow-xl"),
+                if(tier.id == "archon_1999",
+                  do:
+                    "bg-gradient-to-b from-rose-950/20 to-slate-900 border-rose-500/40 shadow-2xl shadow-rose-950/50",
+                  else: "bg-slate-900/90 border-slate-800 shadow-xl"
+                ),
                 if(is_current, do: "ring-2 ring-primary")
               ]}>
                 <%= if is_current do %>
@@ -367,7 +395,10 @@ defmodule SovereignSoulEngineWeb.BillingLive do
 
                 <div class="space-y-2 pt-4">
                   <%= if is_current do %>
-                    <button disabled class="btn btn-sm btn-outline btn-block border-slate-700 text-slate-400">
+                    <button
+                      disabled
+                      class="btn btn-sm btn-outline btn-block border-slate-700 text-slate-400"
+                    >
                       Active on Your Account
                     </button>
                   <% else %>
@@ -376,7 +407,10 @@ defmodule SovereignSoulEngineWeb.BillingLive do
                       phx-value-tier_id={tier.id}
                       class={[
                         "btn btn-sm btn-block font-bold text-xs shadow-lg",
-                        if(tier.id == "archon_1999", do: "btn-error text-white shadow-rose-600/30", else: "btn-primary shadow-primary/30")
+                        if(tier.id == "archon_1999",
+                          do: "btn-error text-white shadow-rose-600/30",
+                          else: "btn-primary shadow-primary/30"
+                        )
                       ]}
                     >
                       <.icon name="hero-credit-card" class="size-4" />
@@ -414,7 +448,9 @@ defmodule SovereignSoulEngineWeb.BillingLive do
               🔞
             </div>
             <div>
-              <h3 class="text-base font-bold text-white">Date-of-Birth & Informed Consent Verification</h3>
+              <h3 class="text-base font-bold text-white">
+                Date-of-Birth & Informed Consent Verification
+              </h3>
               <p class="text-xs text-slate-400">
                 Required for M-rated swearing, psychological horror, and 18+ adult intimate scenes.
               </p>
@@ -426,8 +462,12 @@ defmodule SovereignSoulEngineWeb.BillingLive do
               <div class="flex items-center gap-3">
                 <.icon name="hero-check-circle" class="size-6 text-emerald-400" />
                 <div>
-                  <div class="text-xs font-bold text-emerald-200">Your 18+ status is active and verified</div>
-                  <div class="text-[11px] text-slate-400">Verified via {@age_status.method} on {@age_status.verified_at}</div>
+                  <div class="text-xs font-bold text-emerald-200">
+                    Your 18+ status is active and verified
+                  </div>
+                  <div class="text-[11px] text-slate-400">
+                    Verified via {@age_status.method} on {@age_status.verified_at}
+                  </div>
                 </div>
               </div>
               <span class="badge badge-sm badge-success font-bold text-[10px]">VERIFIED 18+</span>
@@ -436,7 +476,9 @@ defmodule SovereignSoulEngineWeb.BillingLive do
             <form phx-submit="submit_age_verification" class="space-y-5">
               <%!-- DOB Pickers --%>
               <div class="space-y-2">
-                <label class="text-xs font-bold text-slate-300 uppercase tracking-wider">Date of Birth</label>
+                <label class="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                  Date of Birth
+                </label>
                 <div class="grid grid-cols-3 gap-3">
                   <div>
                     <span class="text-[10px] text-slate-500">Year</span>
@@ -480,23 +522,41 @@ defmodule SovereignSoulEngineWeb.BillingLive do
               <%!-- Informed Consent Checkboxes --%>
               <div class="space-y-3 pt-2">
                 <label class="flex items-start gap-3 cursor-pointer p-3 rounded-xl bg-slate-950/80 border border-slate-800">
-                  <input type="checkbox" name="certify_18" class="checkbox checkbox-sm checkbox-primary mt-0.5" required />
+                  <input
+                    type="checkbox"
+                    name="certify_18"
+                    class="checkbox checkbox-sm checkbox-primary mt-0.5"
+                    required
+                  />
                   <span class="text-xs text-slate-300 leading-relaxed">
-                    <strong>Majority Certification:</strong> I certify under penalty of terms suspension and perjury that I am at least 18 years of age.
+                    <strong>Majority Certification:</strong>
+                    I certify under penalty of terms suspension and perjury that I am at least 18 years of age.
                   </span>
                 </label>
 
                 <label class="flex items-start gap-3 cursor-pointer p-3 rounded-xl bg-slate-950/80 border border-slate-800">
-                  <input type="checkbox" name="ai_disclaimer" class="checkbox checkbox-sm checkbox-primary mt-0.5" required />
+                  <input
+                    type="checkbox"
+                    name="ai_disclaimer"
+                    class="checkbox checkbox-sm checkbox-primary mt-0.5"
+                    required
+                  />
                   <span class="text-xs text-slate-300 leading-relaxed">
-                    <strong>AI Software Entity Disclosure:</strong> I understand that Sovereign Souls are generative artificial intelligence software entities and NOT licensed medical doctors, therapists, or human persons.
+                    <strong>AI Software Entity Disclosure:</strong>
+                    I understand that Sovereign Souls are generative artificial intelligence software entities and NOT licensed medical doctors, therapists, or human persons.
                   </span>
                 </label>
 
                 <label class="flex items-start gap-3 cursor-pointer p-3 rounded-xl bg-slate-950/80 border border-slate-800">
-                  <input type="checkbox" name="mature_consent" class="checkbox checkbox-sm checkbox-primary mt-0.5" required />
+                  <input
+                    type="checkbox"
+                    name="mature_consent"
+                    class="checkbox checkbox-sm checkbox-primary mt-0.5"
+                    required
+                  />
                   <span class="text-xs text-slate-300 leading-relaxed">
-                    <strong>Mature & Unrestricted Content Consent:</strong> I voluntarily consent to mature (M-rated) and adult themes, including swearing, dark fantasy violence, and adult roleplay.
+                    <strong>Mature & Unrestricted Content Consent:</strong>
+                    I voluntarily consent to mature (M-rated) and adult themes, including swearing, dark fantasy violence, and adult roleplay.
                   </span>
                 </label>
               </div>
@@ -512,27 +572,42 @@ defmodule SovereignSoulEngineWeb.BillingLive do
 
       <%!-- Mobile Bottom Navigation Dock --%>
       <nav class="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-950/95 backdrop-blur-lg border-t border-slate-800 px-4 py-2 flex items-center justify-around">
-        <.link navigate={~p"/sse/chat"} class="flex flex-col items-center gap-0.5 text-slate-400 hover:text-white">
+        <.link
+          navigate={~p"/sse/chat"}
+          class="flex flex-col items-center gap-0.5 text-slate-400 hover:text-white"
+        >
           <span class="text-lg">💬</span>
           <span class="text-[10px] font-medium">Chat</span>
         </.link>
 
-        <.link navigate={~p"/sse/feed"} class="flex flex-col items-center gap-0.5 text-slate-400 hover:text-white">
+        <.link
+          navigate={~p"/sse/feed"}
+          class="flex flex-col items-center gap-0.5 text-slate-400 hover:text-white"
+        >
           <span class="text-lg">📰</span>
           <span class="text-[10px] font-medium">Feed</span>
         </.link>
 
-        <.link navigate={~p"/sse/acp"} class="flex flex-col items-center gap-0.5 text-slate-400 hover:text-white">
+        <.link
+          navigate={~p"/sse/acp"}
+          class="flex flex-col items-center gap-0.5 text-slate-400 hover:text-white"
+        >
           <span class="text-lg">⚙️</span>
           <span class="text-[10px] font-medium">Studio</span>
         </.link>
 
-        <.link navigate={~p"/sse/billing"} class="flex flex-col items-center gap-0.5 text-primary font-bold">
+        <.link
+          navigate={~p"/sse/billing"}
+          class="flex flex-col items-center gap-0.5 text-primary font-bold"
+        >
           <span class="text-lg">💳</span>
           <span class="text-[10px]">Billing</span>
         </.link>
 
-        <.link navigate={~p"/sse/acp/moderation"} class="flex flex-col items-center gap-0.5 text-slate-400 hover:text-white">
+        <.link
+          navigate={~p"/sse/acp/moderation"}
+          class="flex flex-col items-center gap-0.5 text-slate-400 hover:text-white"
+        >
           <span class="text-lg">🛡️</span>
           <span class="text-[10px] font-medium">Shield</span>
         </.link>

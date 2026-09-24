@@ -26,7 +26,8 @@ defmodule SovereignSoulEngineWeb.Api.DreamController do
           status: "ok",
           character_slug: character_slug,
           latest_dream: nil,
-          message: "No dream states recorded yet. Trigger consolidation to initiate REM dream cycle."
+          message:
+            "No dream states recorded yet. Trigger consolidation to initiate REM dream cycle."
         })
 
       {:error, reason} ->

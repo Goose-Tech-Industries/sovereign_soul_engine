@@ -7,12 +7,18 @@ defmodule SovereignSoulEngine.Souls.PsychologicalEnginesTest do
     DefenseMechanisms,
     Neurochemistry
   }
+
   alias SovereignSoulEngine.Memories.{Memory, DreamResidue, DreamLoop}
   alias SovereignSoulEngine.{Characters, Souls}
 
   describe "NeurosisState Engine" do
     test "returns :normal baseline when emotions and somatic stress are balanced" do
-      state = NeurosisState.evaluate(%{stress: 20, fear: 10, sadness: 10, shame: 5}, %{fatigue: 20, pain: 0})
+      state =
+        NeurosisState.evaluate(%{stress: 20, fear: 10, sadness: 10, shame: 5}, %{
+          fatigue: 20,
+          pain: 0
+        })
+
       assert state.state == :normal
       assert state.intensity == 0
       assert state.symptoms == []
@@ -60,6 +66,7 @@ defmodule SovereignSoulEngine.Souls.PsychologicalEnginesTest do
         emotional_intensity: 30,
         status: "active"
       }
+
       res = PTSDFlashback.detect_flashback([memory], %{"mood" => "calm"}, "hello")
       assert res.triggered? == false
       assert res.memory == nil
@@ -74,7 +81,13 @@ defmodule SovereignSoulEngine.Souls.PsychologicalEnginesTest do
         status: "active"
       }
 
-      res = PTSDFlashback.detect_flashback([traumatic_memory], %{"weather" => "heavy smoke"}, "There is blood on the floor")
+      res =
+        PTSDFlashback.detect_flashback(
+          [traumatic_memory],
+          %{"weather" => "heavy smoke"},
+          "There is blood on the floor"
+        )
+
       assert res.triggered? == true
       assert res.trigger_cue in ["blood", "fire", "citadel", "burned"]
       assert res.heart_rate_surge >= 80
@@ -190,7 +203,9 @@ defmodule SovereignSoulEngine.Souls.PsychologicalEnginesTest do
       assert last_dream["narrative"] == residue.narrative
     end
 
-    test "DreamLoop.run_cycle executes full consolidation and applies waking deltas", %{character: char} do
+    test "DreamLoop.run_cycle executes full consolidation and applies waking deltas", %{
+      character: char
+    } do
       assert {:ok, result} = DreamLoop.run_cycle(char.id, force: true)
       assert result.character_id == char.id
       assert is_map(result.emotional_decay)

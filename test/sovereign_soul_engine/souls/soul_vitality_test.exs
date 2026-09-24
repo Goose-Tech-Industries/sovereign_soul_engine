@@ -73,7 +73,9 @@ defmodule SovereignSoulEngine.Souls.SoulVitalityTest do
       assert is_binary(did_record.public_key)
     end
 
-    test "idempotent: calling ensure_soul_vitality repeatedly does not duplicate profile", %{character: char} do
+    test "idempotent: calling ensure_soul_vitality repeatedly does not duplicate profile", %{
+      character: char
+    } do
       p1 = Souls.ensure_soul_vitality(char)
       p2 = Souls.ensure_soul_vitality(char)
 
@@ -87,7 +89,10 @@ defmodule SovereignSoulEngine.Souls.SoulVitalityTest do
       Souls.ensure_soul_vitality(char)
 
       emotional = Souls.get_emotional_state_by_character(char.id)
-      {:ok, updated_emotional} = Souls.update_emotional_state(emotional, %{anger: 85, sadness: 20})
+
+      {:ok, updated_emotional} =
+        Souls.update_emotional_state(emotional, %{anger: 85, sadness: 20})
+
       assert updated_emotional.anger == 85
 
       # Re-run ensure_soul_vitality
@@ -135,7 +140,9 @@ defmodule SovereignSoulEngine.Souls.SoulVitalityTest do
       assert Souls.ensure_soul_vitality(fake_id) == nil
     end
 
-    test "sets default Big 5 personality traits within normalized 0.0..1.0 range", %{character: char} do
+    test "sets default Big 5 personality traits within normalized 0.0..1.0 range", %{
+      character: char
+    } do
       profile = Souls.ensure_soul_vitality(char)
       traits = profile.personality_traits
 
@@ -181,7 +188,10 @@ defmodule SovereignSoulEngine.Souls.SoulVitalityTest do
 
     test "preserves profile updates across future ensure_soul_vitality calls", %{character: char} do
       profile = Souls.ensure_soul_vitality(char)
-      {:ok, updated} = Souls.update_soul_profile(profile, %{speech_style: "Gruff northern dialect"})
+
+      {:ok, updated} =
+        Souls.update_soul_profile(profile, %{speech_style: "Gruff northern dialect"})
+
       assert updated.speech_style == "Gruff northern dialect"
 
       refetched = Souls.ensure_soul_vitality(char)
@@ -329,7 +339,10 @@ defmodule SovereignSoulEngine.Souls.SoulVitalityTest do
       did = Identity.get_did_for_character(char.id)
       assert did != nil
       assert String.starts_with?(did.did, "did:soul:z")
-      assert {:ok, pubkey} = SovereignSoulEngine.Identity.SoulIdentity.public_key_from_did(did.did)
+
+      assert {:ok, pubkey} =
+               SovereignSoulEngine.Identity.SoulIdentity.public_key_from_did(did.did)
+
       assert byte_size(pubkey) == 32
       assert resolved_char = Identity.ensure_local_character(did.did)
       assert resolved_char.id == char.id

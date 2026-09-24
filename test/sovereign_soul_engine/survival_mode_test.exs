@@ -36,7 +36,9 @@ defmodule SovereignSoulEngine.Edge.SurvivalModeTest do
     assert reverted["force_local_offline"] == false
   end
 
-  test "generate_offline_fallback/5 generates in-character responses without cloud dependency", %{character: char} do
+  test "generate_offline_fallback/5 generates in-character responses without cloud dependency", %{
+    character: char
+  } do
     neurochem = %{valence: 70.0, arousal: 45.0, cortisol: 12.0}
     circadian = %{state: :night_focus}
 

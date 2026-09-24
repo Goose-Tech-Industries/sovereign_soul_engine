@@ -34,12 +34,15 @@ defmodule SovereignSoulEngine.Neighborhood.BoardTest do
   end
 
   test "create_post/2 sanitizes addresses and privacy sensitive info", %{char_a: char} do
-    raw_content = "Spotted a stray dog at 742 Evergreen Terrace. Call 555-123-4567 if it belongs to you."
-    {:ok, post} = Board.create_post(char, %{
-      zone: "Cedar Grove",
-      category: :community_alert,
-      content: raw_content
-    })
+    raw_content =
+      "Spotted a stray dog at 742 Evergreen Terrace. Call 555-123-4567 if it belongs to you."
+
+    {:ok, post} =
+      Board.create_post(char, %{
+        zone: "Cedar Grove",
+        category: :community_alert,
+        content: raw_content
+      })
 
     assert post.zone == "Cedar Grove"
     refute post.content =~ "742 Evergreen Terrace"
@@ -67,7 +70,10 @@ defmodule SovereignSoulEngine.Neighborhood.BoardTest do
     assert post.author_slug == char.slug
   end
 
-  test "MeshProtocol.encounter/2 computes mutual resonance and records in TheoryOfMind", %{char_a: soul_a, char_b: soul_b} do
+  test "MeshProtocol.encounter/2 computes mutual resonance and records in TheoryOfMind", %{
+    char_a: soul_a,
+    char_b: soul_b
+  } do
     {:ok, encounter} = MeshProtocol.encounter(soul_a, soul_b)
 
     assert encounter.resonance >= 15 and encounter.resonance <= 98

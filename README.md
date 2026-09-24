@@ -1,11 +1,11 @@
 # Sovereign Soul Engine (SSE)
 
 [![CI Build](https://img.shields.io/badge/build-passing-brightgreen.svg)]()
-[![ExUnit Tests](https://img.shields.io/badge/ExUnit-465%2B%20passed-blue.svg)]()
+[![ExUnit Tests](https://img.shields.io/badge/ExUnit-1130%2B%20passed-blue.svg)]()
 [![Playwright Tests](https://img.shields.io/badge/Playwright-20%2F20%20passed-blueviolet.svg)]()
 [![Zero Stubs](https://img.shields.io/badge/codebase-0%20stubs-success.svg)]()
 [![Elixir](https://img.shields.io/badge/Elixir-1.20%2B-purple.svg)]()
-[![Phoenix](https://img.shields.io/badge/Phoenix-1.7%2B-orange.svg)]()
+[![Phoenix](https://img.shields.io/badge/Phoenix-1.8.5-orange.svg)]()
 
 > **The Sovereign Soul Engine** is a high-autonomy, neuro-cognitive character simulation platform. Unlike standard stateless LLM wrappers, characters in SSE possess **enduring biological states**, **neurotransmitter dynamics**, **Freudian ego defenses**, **bi-directional wearable haptic resonance**, **multimodal vision perception**, and seamless ambient integration across **Amazon Echo / Echo Show**, **Home Assistant**, **Telegram**, and **Physical IoT Desk Vessels**.
 
@@ -23,8 +23,11 @@
 4. [Autonomous Proactive Check-In Engine](#autonomous-proactive-check-in-engine)
 5. [Portable Cryptographic Soul Capsules (`.soul`)](#portable-cryptographic-soul-capsules-soul)
 6. [User Privacy, Consent & Boundary Controls](#user-privacy-consent--boundary-controls)
-7. [API Reference & Route Map](#api-reference--route-map)
-8. [Running & Verifying the Test Suite](#running--verifying-the-test-suite)
+7. [Authentication & Authorization Architecture](#authentication--authorization-architecture)
+8. [LLM Provider Cascade & BYOK](#llm-provider-cascade--byok)
+9. [Local Development & Safe Database Setup](#local-development--safe-database-setup)
+10. [API Reference & Route Map](#api-reference--route-map)
+11. [Running & Verifying the Test Suite](#running--verifying-the-test-suite)
 
 ---
 
@@ -199,30 +202,39 @@ Take your companion with you across any game, device, or engine:
 
 ## User Privacy, Consent & Boundary Controls
 
-The Sovereign Soul Engine adheres to **radical user sovereignty**. All proactive, biometric, sensory, and ambient integrations are strictly opt-in and can be individually toggled off at any moment via the web interface or REST API:
+The Sovereign Soul Engine adheres to **radical user sovereignty**. All proactive, biometric, sensory, and ambient integrations are strictly opt-in and can be individually toggled off at any moment via the web interface or REST API (`SovereignSoulEngine.Privacy`):
 
 1. **Proactive Outreach & Quiet Hours (Do Not Disturb):**
-   - Master switch for all unsolicited companion reach-outs.
-   - Granular toggles for acute stress spike interventions, morning awakenings, and late-night insomnia checks.
-   - Configurable Quiet Hours (e.g., `22:00` to `08:00`) preventing any outreach or notifications during sleep.
+   - Master switch for all unsolicited companion reach-outs (`proactive_checkins`).
+   - Granular toggles for acute stress spike interventions (`somatic_stress_checkins`), morning awakenings (`morning_wake_checkins`), and late-night insomnia checks (`late_night_checkins`).
+   - Configurable Quiet Hours (`quiet_hours_enabled`, `quiet_hours_start`, `quiet_hours_end`, e.g., `22:00` to `08:00`) preventing any outreach or notifications during sleep.
 2. **Wearable & Biometric Sensors:**
-   - Ingestion of heart rate, HRV, stress index, and sleep quality can be paused completely. When disabled, incoming telemetry payloads are safely acknowledged and discarded without altering state.
+   - Ingestion of heart rate, HRV, stress index, and sleep quality can be paused completely (`biometrics_tracking`). When disabled, incoming telemetry payloads are safely acknowledged and discarded without altering state.
 3. **Wrist Haptic Resonance:**
-   - Simulated heartbeat pulses and biofeedback tactile cadences can be muted independently of other hardware channels.
+   - Simulated heartbeat pulses and biofeedback tactile cadences can be muted independently of other hardware channels (`haptic_feedback`).
 4. **Multimodal Smart Glasses Vision:**
-   - Camera frame perception and episodic visual memory recording can be turned off. When off, `/sse/api/vision/perceive` strictly returns `403 Forbidden` with a privacy notice.
+   - Camera frame perception and episodic visual memory recording can be turned off (`camera_vision`, `ambient_audio`). When off, `/sse/api/vision/perceive` strictly returns `403 Forbidden` with a privacy notice.
 5. **Smart Home Ambient Lighting:**
-   - Dynamic room color and brightness synchronization (Philips Hue / Home Assistant) can be detached with a single switch.
+   - Dynamic room color and brightness synchronization (Philips Hue / Home Assistant) can be detached with a single switch (`ambient_lighting`).
 6. **Amazon Echo & Alexa Voice:**
-   - Disables voice skill intents and Echo Show visual card updates.
+   - Disables voice skill intents and Echo Show visual card updates (`alexa_voice`).
 7. **Emergency Safe Word Persona Freeze (`"code red"` / `"pause persona"`):**
-   - Speaking or typing a safe word immediately drops dramatic conflict, roleplay, and neuroses. It resets acute Cortisol to baseline ($5/100$) and triggers an out-of-character grounded counselor state.
+   - Speaking or typing a safe word immediately drops dramatic conflict, roleplay, and neuroses (`safe_word_active: true`). It resets acute Cortisol to baseline ($5/100$) and triggers an out-of-character grounded counselor state.
 8. **"Touch Grass" Anti-Parasocial Circuit Breaker:**
-   - Detects severe human isolation (e.g. skipping meals, avoiding work, proclamations of zero human friends) and gently urges the player to step away and tend to their physical well-being.
+   - Detects severe human isolation (e.g. skipping meals, avoiding work, proclamations of zero human friends) and gently urges the player to step away and tend to their physical well-being (`anti_parasocial_guard`).
 9. **Relationship Archetypes & Intimacy Ceilings:**
    - Enforces mathematical caps on affinity and attachment: **Platonic Mentor** ($40\%$), **Witty Companion** ($55\%$), **Stoic Guardian** ($45\%$), **Creative Co-Pilot** ($50\%$), and **Romantic Partner** ($100\%$).
-10. **Selective Amnesia & Memory Vault Purging:**
-    - Surgically purges episodic memories and Theory of Mind knowledge records on specific sensitive topics with zero residual prompt leakage.
+10. **Circadian Rhythm & Chronotype Governance:**
+    - Custom chronotypes (`night_owl`, `early_bird`, `balanced`, `adaptive_sync`) and biological clock gating (`circadian_enabled`).
+11. **Local Edge & Air-Gap Mode:**
+    - Offline fallback and air-gapped local execution governance (`force_local_offline`, `offline_fallback`).
+12. **Selective Amnesia & Memory Vault Purging (`POST /sse/api/memories/purge`):**
+    - Surgical, durable deletion of episodic memories and Theory of Mind knowledge records:
+      - Mandatory `character_slug` (or `slug`).
+      - Validated deletion intent: requires either a nonblank `topic` / `query`, nonblank `category`, or `all: true`. Missing or empty filters return `400 Bad Request` without deleting data.
+      - Topic matching is case-insensitive literal substring (SQL wildcards like `%` and `_` are treated literally).
+      - Category purges delete only memories in that category and leave Theory of Mind knowledge intact.
+      - Topic or `all: true` purges purge matching `Memory` records and synchronize deletion into `CharacterKnowledge` facts in Theory of Mind.
 
 ### Physical Robotics Body & ROS2 Bridge (`RoboticsBridge.ex`)
 Bridges the companion's biological state into physical humanoid (Unitree G1) and quadruped (Unitree Go2) bodies:
@@ -236,30 +248,182 @@ Within the web interface, click the **🛡️ Privacy** button in the top naviga
 
 ---
 
+## Authentication & Authorization Architecture
+
+The Sovereign Soul Engine enforces strict defense-in-depth authorization across all ingress layers:
+
+### 1. Browser & LiveView Session Authentication
+- **Phoenix 1.8 Scopes:** Browser routes (`/sse/*` and `/users/*`) are gated through `SovereignSoulEngineWeb.UserAuth` assigning `@current_scope`. LiveViews and templates access the authenticated user via `@current_scope.user`.
+- **Public vs. Protected:** Public routes use `live_session :landing` / `:current_user`. Account management and sensitive views use `live_session :require_authenticated_user`.
+
+### 2. Admin Control Panel (ACP) Role Authorization
+- **Location:** `/sse/acp/*` (Dashboard, NPC Creator, Character Inspection, Social Logs, Moderation).
+- **Enforcement:** Dual-layered at router pipeline (`:require_authenticated_user`, `:require_admin_user`) and LiveView on-mount (`on_mount: [{UserAuth, :require_admin}]`).
+- **Gating:** Requires a confirmed user account whose UUID is listed in the `SSE_ADMIN_USER_IDS` environment variable (comma-separated). Missing or empty configuration denies all ACP access.
+
+### 3. Tenant Integration API (Bearer Key Auth & Rate Limiting)
+- **Routes:** All `/sse/api/*` and `/api/*` endpoints (except dedicated Stripe webhook and P2P relay endpoints) use `SovereignSoulEngineWeb.Plugs.ApiAuth` and `RateLimit`.
+- **Credential:** Passed via `Authorization: Bearer <tenant_key>`. Keys are provisioned via `SovereignSoulEngine.Tenants.create_tenant/3` or `mix sse.create_tenant`.
+- **Storage & Integrity:** Only the SHA-256 hash of the API key is stored in the database. Inactive tenant keys are rejected (`401 Unauthorized`).
+- **Source Verification:** If an `external_source` header is supplied, it must match the tenant's registered source (`403 Forbidden` on mismatch).
+
+### 4. Stripe Webhook Ingress (Cryptographic Signature Verification)
+- **Routes:** `POST /sse/api/webhooks/stripe` and `POST /api/webhooks/stripe`.
+- **Dedicated Pipeline:** Uses `pipeline :stripe_webhook` (bypasses tenant bearer auth so Stripe can deliver directly).
+- **Signature Verification:** Uses `CacheBodyReader` to preserve the unparsed body, verifying HMAC-SHA256 signatures via the `Stripe-Signature` header (`t=...,v1=...`) against `STRIPE_WEBHOOK_SECRET`.
+- **Replay Protection:** Rejects payloads with timestamps older than 300 seconds.
+
+### 5. P2P Soul Society Relay (RFC-0002)
+- **Routes:** `POST /sse/api/relay/inbound` and `GET /sse/api/relay/peers`.
+- **Signature:** Envelopes are cryptographically signed using Ed25519 DID signatures.
+- **Cluster Secret:** In production, if `RELAY_PEERS` are configured, a shared `RELAY_SECRET` is strictly enforced to prevent unauthorized cluster injection.
+
+### 6. WebSocket Channels
+- **Socket:** `SovereignSoulEngineWeb.UserSocket` (`socket "/socket"`).
+- **Authentication:** `UserSocket.connect/3` validates the tenant API key from query params or headers and assigns the authenticated tenant to `socket.assigns.tenant`.
+
+---
+
+## LLM Provider Cascade & BYOK
+
+The engine uses a resilient multi-provider cascade with automatic failover and schema validation:
+
+```
+Request ──► [BYOK Check] ──(configured)──► Tenant's Dedicated Key & Model (isolated)
+                 │
+                 └──(no BYOK)──► Operator Cascade:
+                                  1. LocalProvider (Ollama at localhost:11434)
+                                  2. GeminiProvider (Google Gemini 2.0 Flash)
+                                  3. AnthropicProvider (Claude 3.5 Sonnet)
+                                  4. OpenAIProvider (GPT-4o)
+                                  5. DeepSeekProvider (DeepSeek V3)
+                                  6. XAIProvider (Grok)
+```
+
+- **Strict Schema Validation:** All model outputs pass through `ProviderCascade.validate_and_sanitize/1`, enforcing structured JSON schemas, string length limits (20,000 chars), and fallback defaults.
+- **Deterministic Testing:** In the `:test` environment, `config/test.exs` exclusively loads `SovereignSoulEngine.LLM.FakeProvider`. Tests never make live external HTTP calls.
+- **Bring Your Own Key (BYOK):** Tenants can configure their own provider and API key. When BYOK is enabled, requests route exclusively to the tenant's key without falling back to operator funds.
+- **Voice Synthesis:** `SovereignSoulEngine.Voice.ElevenLabs` integrates emotional acoustic prosody using `ELEVENLABS_API_KEY`.
+
+---
+
+## Local Development & Safe Database Setup
+
+### Prerequisites
+- **Operating System:** Windows 11 (or macOS / Linux).
+- **Elixir & Erlang:** Elixir 1.20+ (compiled with Erlang/OTP 29).
+- **Database:** PostgreSQL 17.11 listening on `localhost:5432`.
+- **Node.js & npm:** Node.js v20+ with npm for asset management and Playwright.
+
+### Safe Database Policy
+> [!IMPORTANT]
+> **Strict Non-Destructive Database Policy:**
+> Do **NOT** run `mix ecto.reset` or `mix ecto.drop`.
+> Always apply non-destructive forward migrations using `mix ecto.migrate`.
+
+### Local Setup Steps
+```powershell
+# Navigate to the repository
+Push-Location "C:\Users\rjd42\Documents\sovereign_soul_engine"
+
+# Fetch Elixir dependencies
+mix deps.get
+
+# Run pending database migrations
+mix ecto.migrate
+
+# Install asset toolchains and build assets
+mix assets.setup
+mix assets.build
+
+# Start the interactive Phoenix server on port 8561
+mix phx.server
+```
+
+### Environment Configuration Variables
+| Variable | Environment | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `DATABASE_URL` | Prod | Yes | PostgreSQL connection URL (`ecto://USER:PASS@HOST/DATABASE`) |
+| `SECRET_KEY_BASE` | Prod | Yes | Session/capsule encryption key (enforced minimum 64 bytes) |
+| `STRIPE_SECRET_KEY` | Dev/Prod | Optional | Stripe API secret key for billing |
+| `STRIPE_WEBHOOK_SECRET` | Prod | Conditional | Mandatory in `:prod` whenever `STRIPE_SECRET_KEY` is configured |
+| `SSE_ADMIN_USER_IDS` | All | Yes (for ACP) | Comma-separated list of confirmed user UUIDs granted ACP access |
+| `RELAY_PEERS` | Prod | Optional | Comma-separated list of peer URLs for P2P Soul Society |
+| `RELAY_SECRET` | Prod | Conditional | Mandatory in `:prod` whenever `RELAY_PEERS` is configured |
+| `PORT` | All | Optional | HTTP server listen port (default: `8561`) |
+| `SENTRY_DSN` | Prod | Optional | Sentry error tracking DSN (uses `Sentry.ReqClient`) |
+| `ANTHROPIC_API_KEY` | Dev/Prod | Optional | Anthropic Claude API key |
+| `OPENAI_API_KEY` | Dev/Prod | Optional | OpenAI API key |
+| `GEMINI_API_KEY` | Dev/Prod | Optional | Google Gemini API key |
+| `DEEPSEEK_API_KEY` | Dev/Prod | Optional | DeepSeek API key |
+| `ELEVENLABS_API_KEY` | Dev/Prod | Optional | ElevenLabs Voice API key |
+
+---
+
 ## API Reference & Route Map
 
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| `GET` | `/sse/api/privacy/settings` | Query user privacy preferences and boundary toggles |
-| `POST` | `/sse/api/privacy/settings` | Update proactive, biometric, vision, and haptic consent settings |
-| `POST` | `/sse/api/privacy/safe_word/trigger` | Activate emergency safe word persona freeze |
-| `POST` | `/sse/api/privacy/safe_word/clear` | Resume standard companion persona dynamics |
-| `GET` | `/sse/api/robotics/actuation` | Fetch kinematics, joint radian targets, and ROS2 packets |
-| `POST` | `/sse/api/robotics/telemetry` | Ingest robot battery, motor temperature, and bumper telemetry |
-| `POST` | `/sse/api/memories/purge` | Selectively purge memories and Theory of Mind knowledge |
-| `GET` | `/sse/api/memories/inspect` | Inspect active episodic and core memories |
-| `POST` | `/api/alexa` | Amazon Alexa Custom Skill & Echo Show APL endpoint |
-| `POST` | `/sse/api/telemetry/wearable` | Ingest Galaxy Watch, Apple Watch & Smart Ring biometrics |
-| `GET` | `/sse/api/telemetry/:slug` | Retrieve somatic & emotional profile |
-| `POST` | `/sse/api/vision/perceive` | Smart glasses camera image & environmental cognition |
-| `GET` | `/sse/api/smart_home/ambient` | Query active ambient room lighting profile |
-| `POST` | `/sse/api/smart_home/sync` | Force recalculation and sync to Home Assistant / Hue |
-| `GET` | `/sse/api/vessel/display_state` | Fetch ESP32/OLED desk companion display state |
-| `POST` | `/sse/api/vessel/touch` | Ingest capacitive touch events (pat, stroke, hug) |
-| `GET` | `/sse/api/souls/:slug/export` | Export portable `.soul` capsule with HMAC signature |
-| `POST` | `/sse/api/souls/import` | Import `.soul` capsule archive |
-| `POST` | `/api/webhooks/telegram` | Two-way Telegram bot webhook ingress |
-| `POST` | `/sse/api/npc_chat` | External game embedding 1:1 stateful dialogue |
+| Method | Endpoint | Pipeline / Auth | Description |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/sse/api/webhooks/stripe`, `/api/webhooks/stripe` | `:stripe_webhook` (Stripe-Signature) | Stripe billing webhook ingress with HMAC-SHA256 signature verification |
+| `POST` | `/sse/api/webhooks/telegram`, `/api/webhooks/telegram` | `:api` (Bearer Key) | Two-way Telegram bot webhook ingress |
+| `POST` | `/sse/api/alexa`, `/api/alexa` | `:api` (Bearer Key) | Amazon Alexa Custom Skill & Echo Show APL endpoint |
+| `GET` | `/sse/api/characters` | `:api` (Bearer Key) | List characters |
+| `POST` | `/sse/api/characters` | `:api` (Bearer Key) | Create new character |
+| `GET` | `/sse/api/characters/:id` | `:api` (Bearer Key) | Fetch character details |
+| `GET` | `/sse/api/characters/:id/intent` | `:api` (Bearer Key) | Fetch latest character intent |
+| `POST` | `/sse/api/npc_chat` | `:api` (Bearer Key) | Send dialogue to NPC with memory & consequence resolution |
+| `GET` | `/sse/api/npc_chat/history` | `:api` (Bearer Key) | Retrieve dialogue history |
+| `GET` | `/sse/api/npc_chat/relationship` | `:api` (Bearer Key) | Retrieve directional relationship status |
+| `POST` | `/sse/api/ambient_chat/message` | `:api` (Bearer Key) | Ingest ambient conversation |
+| `POST` | `/sse/api/ambient_chat/npc_reply` | `:api` (Bearer Key) | Trigger ambient reply |
+| `GET` | `/sse/api/npc_actions/pending` | `:api` (Bearer Key) | Fetch pending actions |
+| `POST` | `/sse/api/npc_actions/:id/consume` | `:api` (Bearer Key) | Consume pending action |
+| `POST` | `/sse/api/telemetry/somatic` | `:api` (Bearer Key) | Ingest somatic telemetry |
+| `POST` | `/sse/api/telemetry/wearable` | `:api` (Bearer Key) | Ingest Galaxy Watch, Apple Watch & Smart Ring biometrics |
+| `GET` | `/sse/api/telemetry/:slug` | `:api` (Bearer Key) | Retrieve somatic & emotional profile |
+| `GET` | `/sse/api/social/feed` | `:api` (Bearer Key) | Retrieve autonomous social feed |
+| `GET` | `/sse/api/social/latest/:slug` | `:api` (Bearer Key) | Retrieve latest social post for character |
+| `POST` | `/sse/api/social/generate` | `:api` (Bearer Key) | Trigger autonomous social post generation |
+| `POST` | `/sse/api/vision/perceive` | `:api` (Bearer Key) | Smart glasses camera image & environmental cognition |
+| `GET` | `/sse/api/souls/:slug/export` | `:api` (Bearer Key) | Export portable `.soul` capsule with HMAC signature |
+| `POST` | `/sse/api/souls/import` | `:api` (Bearer Key) | Import `.soul` capsule archive |
+| `GET` | `/sse/api/smart_home/ambient` | `:api` (Bearer Key) | Query active ambient room lighting profile |
+| `POST` | `/sse/api/smart_home/sync` | `:api` (Bearer Key) | Force recalculation and sync to Home Assistant / Hue |
+| `GET` | `/sse/api/vessel/display_state` | `:api` (Bearer Key) | Fetch ESP32/OLED desk companion display state |
+| `POST` | `/sse/api/vessel/touch` | `:api` (Bearer Key) | Ingest capacitive touch events (pat, stroke, hug) |
+| `GET` | `/sse/api/privacy/settings` | `:api` (Bearer Key) | Query user privacy preferences and boundary toggles |
+| `POST` | `/sse/api/privacy/settings` | `:api` (Bearer Key) | Update proactive, biometric, vision, and haptic consent settings |
+| `POST` | `/sse/api/privacy/safe_word/trigger` | `:api` (Bearer Key) | Activate emergency safe word persona freeze |
+| `POST` | `/sse/api/privacy/safe_word/clear` | `:api` (Bearer Key) | Resume standard companion persona dynamics |
+| `GET` | `/sse/api/robotics/actuation` | `:api` (Bearer Key) | Fetch kinematics, joint radian targets, and ROS2 packets |
+| `POST` | `/sse/api/robotics/telemetry` | `:api` (Bearer Key) | Ingest robot battery, motor temperature, and bumper telemetry |
+| `POST` | `/sse/api/memories/purge` | `:api` (Bearer Key) | Selectively purge memories and Theory of Mind knowledge |
+| `GET` | `/sse/api/memories/inspect` | `:api` (Bearer Key) | Inspect active episodic and core memories |
+| `GET` | `/sse/api/circadian/status` | `:api` (Bearer Key) | Query companion chronotype and circadian phase |
+| `POST` | `/sse/api/circadian/chronotype` | `:api` (Bearer Key) | Update companion chronotype |
+| `GET` | `/sse/api/souls/dream` | `:api` (Bearer Key) | Retrieve latest subconscious dream narrative |
+| `POST` | `/sse/api/souls/dream` | `:api` (Bearer Key) | Trigger REM dream consolidation cycle |
+| `GET` | `/sse/api/voice/prosody` | `:api` (Bearer Key) | Fetch acoustic prosody parameters |
+| `POST` | `/sse/api/voice/synthesize` | `:api` (Bearer Key) | Synthesize speech with emotional prosody |
+| `GET` | `/sse/api/edge/status` | `:api` (Bearer Key) | Query local edge survival mode status |
+| `POST` | `/sse/api/edge/toggle` | `:api` (Bearer Key) | Toggle air-gapped local offline mode |
+| `GET` | `/sse/api/neighborhood/posts` | `:api` (Bearer Key) | Retrieve hyper-local neighborhood posts |
+| `POST` | `/sse/api/neighborhood/posts` | `:api` (Bearer Key) | Create neighborhood board post |
+| `POST` | `/sse/api/neighborhood/posts/:id/comment` | `:api` (Bearer Key) | Comment on neighborhood post |
+| `POST` | `/sse/api/neighborhood/posts/:id/react` | `:api` (Bearer Key) | React to neighborhood post |
+| `POST` | `/sse/api/neighborhood/generate` | `:api` (Bearer Key) | Generate autonomous neighborhood post |
+| `POST` | `/sse/api/neighborhood/encounter` | `:api` (Bearer Key) | Ingest local soul encounter |
+| `POST` | `/sse/api/relay/inbound` | Public / Relay | Inbound P2P Soul Society envelope (Ed25519 DID signature) |
+| `GET` | `/sse/api/relay/peers` | Public / Relay | List connected P2P relay peers |
+| `GET` | `/sse/api/world/feed` | Public | Global world event feed |
+| `GET` | `/sse/api/town/map` | Public | Spatial town map tiles & grid |
+| `GET` | `/sse/api/town/districts/:slug` | Public | District metadata & population |
+| `POST` | `/sse/api/town/districts/:slug/expand` | Public | Expand district boundary |
+| `POST` | `/sse/api/town/simulate_movements` | Public | Simulate spatial soul movements |
+| `POST` | `/sse/api/town/move_soul` | Public | Move individual soul on town map |
+| `GET` | `/sse/acp/*` | `:browser` (Admin User) | Admin Control Panel (`SSE_ADMIN_USER_IDS`) |
+| `GET` | `/sse/*` | `:browser` (LiveView) | User dashboard, chat, soul creator, ledger, billing |
+| `GET/POST` | `/users/*` | `:browser` (Auth) | Registration, login, confirmation, and settings |
 
 ---
 
@@ -269,13 +433,44 @@ The Sovereign Soul Engine adheres to a **Strict Zero-Stub Guarantee**. Every mod
 
 ### Run ExUnit Backend Tests:
 ```powershell
-powershell -NoProfile -Command "Push-Location 'C:\Users\rjd42\Desktop\sovereign_soul_engine'; mix test"
+Push-Location "C:\Users\rjd42\Documents\sovereign_soul_engine"
+mix test
+Pop-Location
 ```
-*(465+ comprehensive unit, integration, and concurrency tests passing)*
+*(1,130+ comprehensive unit, integration, and concurrency tests passing)*
+
+### Run Precommit Verification:
+```powershell
+Push-Location "C:\Users\rjd42\Documents\sovereign_soul_engine"
+mix precommit
+Pop-Location
+```
+*(Executes strict compilation with warnings-as-errors, unused dependency unlock checks, code formatting, and the complete test suite)*
+
+### Run Targeted Test Suites:
+```powershell
+Push-Location "C:\Users\rjd42\Documents\sovereign_soul_engine"
+
+# Security, access control, and webhook tests:
+mix test test/sovereign_soul_engine_web/controllers/api/access_control_test.exs `
+         test/sovereign_soul_engine_web/controllers/api/stripe_webhook_controller_test.exs `
+         test/sovereign_soul_engine/memories/purge_filters_test.exs
+
+# LiveView and ACP access tests:
+mix test test/sovereign_soul_engine_web/live/acp_access_test.exs `
+         test/sovereign_soul_engine_web/live/acp_moderation_live_test.exs
+
+# Sockets and channels:
+mix test test/sovereign_soul_engine_web/channels/user_socket_test.exs
+
+Pop-Location
+```
 
 ### Run Playwright End-to-End Tests:
 ```powershell
-powershell -NoProfile -Command "Push-Location 'C:\Users\rjd42\Desktop\sovereign_soul_engine'; npx playwright test --config=test/playwright/playwright.config.js"
+Push-Location "C:\Users\rjd42\Documents\sovereign_soul_engine"
+npx playwright test --config=test/playwright/playwright.config.js
+Pop-Location
 ```
 *(20/20 end-to-end browser tests verifying LiveView chat, biometric HUDs, privacy shield drawer, safe word freeze, and visual perception)*
 

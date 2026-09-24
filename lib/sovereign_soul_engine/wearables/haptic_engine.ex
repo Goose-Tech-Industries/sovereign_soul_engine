@@ -10,7 +10,6 @@ defmodule SovereignSoulEngine.Wearables.HapticEngine do
   3. W3C Navigator Vibration API (`navigator.vibrate([ms, ms, ...])`)
   """
 
-
   @type pattern ::
           :heartbeat
           | :panic_flutter
@@ -48,16 +47,38 @@ defmodule SovereignSoulEngine.Wearables.HapticEngine do
     cond do
       # Acute panic or terror tremor
       cortisol >= 75 or (stress >= 80 and fear >= 60) ->
-        bpm = 110 + round((cortisol / 100) * 45)
-        build_signal(:panic_flutter, "Panic Tremor", bpm, [40, 40, 40, 40, 40, 40, 60, 200], 90, :high)
+        bpm = 110 + round(cortisol / 100 * 45)
+
+        build_signal(
+          :panic_flutter,
+          "Panic Tremor",
+          bpm,
+          [40, 40, 40, 40, 40, 40, 60, 200],
+          90,
+          :high
+        )
 
       # High physiological stress requiring biofeedback breathing guidance
       stress >= 70 or cortisol >= 60 ->
-        build_signal(:calming_cadence, "Calming Breath Cadence", 65, [400, 250, 700, 250, 800, 1000], 70, :high)
+        build_signal(
+          :calming_cadence,
+          "Calming Breath Cadence",
+          65,
+          [400, 250, 700, 250, 800, 1000],
+          70,
+          :high
+        )
 
       # Intimacy, warmth, and close relational bonding
       oxytocin >= 65 or (attachment >= 70 and stress <= 35) ->
-        build_signal(:intimacy_warmth, "Intimate Resonance", 70, [150, 100, 250, 600], 60, :normal)
+        build_signal(
+          :intimacy_warmth,
+          "Intimate Resonance",
+          70,
+          [150, 100, 250, 600],
+          60,
+          :normal
+        )
 
       # High arousal / excitement / dopamine discovery
       dopamine >= 70 and stress <= 45 ->
@@ -69,7 +90,7 @@ defmodule SovereignSoulEngine.Wearables.HapticEngine do
 
       # Normal ambient resting companion heartbeat
       true ->
-        calc_bpm = 68 + round((stress / 100) * 20)
+        calc_bpm = 68 + round(stress / 100 * 20)
         delay = max(200, round(60_000 / calc_bpm) - 200)
         build_signal(:heartbeat, "Resting Heartbeat", calc_bpm, [70, 100, 60, delay], 50, :low)
     end
@@ -84,7 +105,15 @@ defmodule SovereignSoulEngine.Wearables.HapticEngine do
 
   def signal_for_event(:ptsd_flashback, opts) do
     bpm = Keyword.get(opts, :bpm, 130)
-    build_signal(:panic_flutter, "PTSD Intrusion Shock", bpm, [50, 30, 50, 30, 80, 50, 100, 300], 95, :high)
+
+    build_signal(
+      :panic_flutter,
+      "PTSD Intrusion Shock",
+      bpm,
+      [50, 30, 50, 30, 80, 50, 100, 300],
+      95,
+      :high
+    )
   end
 
   def signal_for_event(:proactive_ping, _opts) do
@@ -92,7 +121,14 @@ defmodule SovereignSoulEngine.Wearables.HapticEngine do
   end
 
   def signal_for_event(:calming_guidance, _opts) do
-    build_signal(:calming_cadence, "4-7-8 Breathing Pulse", 60, [500, 300, 700, 300, 900, 1200], 80, :high)
+    build_signal(
+      :calming_cadence,
+      "4-7-8 Breathing Pulse",
+      60,
+      [500, 300, 700, 300, 900, 1200],
+      80,
+      :high
+    )
   end
 
   def signal_for_event(:intimacy_surge, _opts) do
@@ -158,8 +194,10 @@ defmodule SovereignSoulEngine.Wearables.HapticEngine do
   end
 
   defp safe_get(nil, _key, default), do: default
+
   defp safe_get(map, key, default) when is_map(map) do
     Map.get(map, key) || Map.get(map, to_string(key)) || default
   end
+
   defp safe_get(_other, _key, default), do: default
 end

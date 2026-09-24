@@ -17,7 +17,8 @@ defmodule SovereignSoulEngine.World.SeedSouls do
       name: "Maya",
       slug: "maya",
       archetype: "Blacksmith",
-      description: "Master forge-tender of the Bastion, forging high-carbon steel blades and listening to the cold whispers of beaten iron.",
+      description:
+        "Master forge-tender of the Bastion, forging high-carbon steel blades and listening to the cold whispers of beaten iron.",
       core_values: ["Steel doesn't lie", "Craft over words"],
       speech_style: "Plain-spoken, warm, blunt"
     },
@@ -25,7 +26,8 @@ defmodule SovereignSoulEngine.World.SeedSouls do
       name: "Ravina",
       slug: "ravina",
       archetype: "Spymaster",
-      description: "Shadow broker of the Shadowgate Warrens, turning whispers and clandestine debts into priceless political leverage.",
+      description:
+        "Shadow broker of the Shadowgate Warrens, turning whispers and clandestine debts into priceless political leverage.",
       core_values: ["Information is leverage", "Courtesy costs nothing"],
       speech_style: "Measured, courteous, watchful"
     },
@@ -33,7 +35,8 @@ defmodule SovereignSoulEngine.World.SeedSouls do
       name: "Valeria",
       slug: "valeria",
       archetype: "Oracle",
-      description: "Master arcanist and violet sorceress of the Spire, reading the convergence of dreams, ley lines, and highland prophecies.",
+      description:
+        "Master arcanist and violet sorceress of the Spire, reading the convergence of dreams, ley lines, and highland prophecies.",
       core_values: ["Patience", "The Spire will answer"],
       speech_style: "Serene, cryptic, unhurried"
     },
@@ -41,7 +44,8 @@ defmodule SovereignSoulEngine.World.SeedSouls do
       name: "Cyra",
       slug: "cyra",
       archetype: "Sentinel",
-      description: "High sentinel and air-gapped cryptographer guarding the perimeter with precise telemetry and calm vigilance.",
+      description:
+        "High sentinel and air-gapped cryptographer guarding the perimeter with precise telemetry and calm vigilance.",
       core_values: ["Perimeter integrity", "Calm under pressure"],
       speech_style: "Precise, technical, composed"
     }
@@ -72,9 +76,12 @@ defmodule SovereignSoulEngine.World.SeedSouls do
      "Silent scout roaming outer crags, tracking wild mountain wolves and sniffing out clandestine encampments before dawn."},
     {"Bella", "Baker", ["Nourishment", "Routine"], "Cheerful, humble",
      "Dawn baker whose warm sourdough loaves and honey oat biscuits draw every soul from the high towers to the lower docks."},
-    {"Cipher", "Systems Architect", ["Air-gapped telemetry", "Cryptographic proof", "Zero leakage"], "Technical, analytical, vigilant",
+    {"Cipher", "Systems Architect",
+     ["Air-gapped telemetry", "Cryptographic proof", "Zero leakage"],
+     "Technical, analytical, vigilant",
      "Systems architect and rogue telemetry cryptographer operating from the heat of the Old Ironworks, safeguarding local autonomy."},
-    {"Lyra", "Guild Weaver", ["Balance", "Pattern", "Tapestry"], "Observant, rhythmic, thoughtful",
+    {"Lyra", "Guild Weaver", ["Balance", "Pattern", "Tapestry"],
+     "Observant, rhythmic, thoughtful",
      "Guild weaver of the Commons whose tapestries hide coded messages and maps of the northern hills."},
     {"Jasper", "Brewer", ["Fermentation", "Generosity"], "Heartily jovial",
      "Master brewer of dark malt stouts and clover mead, bringing warmth and booming laughter to the coldest evenings."},

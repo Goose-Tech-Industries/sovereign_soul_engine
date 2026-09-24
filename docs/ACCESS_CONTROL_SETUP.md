@@ -7,12 +7,13 @@ and send the returned key as `Authorization: Bearer <key>`. Store the key secure
 the database stores only its hash. Inactive tenant keys are rejected, and an
 `external_source` supplied in a request must match the tenant.
 
-Telegram, Alexa, and Stripe routes under both prefixes now also require bearer
-authentication because provider signature checks are missing or permit unsigned
-requests when configuration is absent.
-Direct provider integrations need an authenticated adapter, or a separate
-implementation of provider-specific request verification before public ingress
-can be enabled.
+Telegram and Alexa routes under both prefixes require tenant bearer authentication.
+Stripe webhook ingress (`POST /sse/api/webhooks/stripe` and `POST /api/webhooks/stripe`)
+has been moved to a dedicated `:stripe_webhook` pipeline that verifies cryptographic
+Stripe signatures (`Stripe-Signature`) using `CacheBodyReader` to preserve the raw
+request body, enforced with a 300-second replay tolerance window and fail-closed
+`STRIPE_WEBHOOK_SECRET` validation. This supersedes the previous temporary bearer
+auth requirement for Stripe webhooks.
 
 ACP routes stay in the `/sse/acp` scope and `:acp` LiveView session. The scope uses
 `:browser`, `:require_authenticated_user`, and `:require_admin_user`; the session

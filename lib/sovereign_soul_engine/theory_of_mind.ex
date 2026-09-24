@@ -15,6 +15,7 @@ defmodule SovereignSoulEngine.TheoryOfMind do
   alias SovereignSoulEngine.Characters
   alias SovereignSoulEngine.Relationships
   alias SovereignSoulEngine.Souls
+  alias SovereignSoulEngine.TheoryOfMind.LifeThread
 
   # Delegations to the pure cognitive Engine
   defdelegate attribute_intent(statement, sentiment, relationship), to: Engine
@@ -113,6 +114,64 @@ defmodule SovereignSoulEngine.TheoryOfMind do
           topic = Keyword.get(opts, :topic) || Keyword.get(opts, :query) ->
             from(k in query,
               where: fragment("strpos(lower(?), lower(?)) > 0", k.known_fact, ^topic)
+            )
+
+          true ->
+            query
+        end
+
+      {count, _} = Repo.delete_all(query)
+      {:ok, count}
+    end
+  end
+
+  @doc """
+  Purges all knowledge entries where character is knower or subject, based on optional topic query or all.
+  """
+  def purge_knowledge_for_character(character_id, opts \\ []) do
+    with {:ok, opts} <- SovereignSoulEngine.Memories.PurgeFilters.validate(opts, [:topic]) do
+      query =
+        from(k in CharacterKnowledge,
+          where: k.knower_character_id == ^character_id or k.subject_character_id == ^character_id
+        )
+
+      query =
+        cond do
+          Keyword.get(opts, :all) == true ->
+            query
+
+          topic = Keyword.get(opts, :topic) || Keyword.get(opts, :query) ->
+            from(k in query,
+              where: fragment("strpos(lower(?), lower(?)) > 0", k.known_fact, ^topic)
+            )
+
+          true ->
+            query
+        end
+
+      {count, _} = Repo.delete_all(query)
+      {:ok, count}
+    end
+  end
+
+  @doc """
+  Purges pending life threads where character is knower or subject, based on optional topic query or all.
+  """
+  def purge_life_threads_for_character(character_id, opts \\ []) do
+    with {:ok, opts} <- SovereignSoulEngine.Memories.PurgeFilters.validate(opts, [:topic]) do
+      query =
+        from(t in LifeThread,
+          where: t.knower_character_id == ^character_id or t.subject_character_id == ^character_id
+        )
+
+      query =
+        cond do
+          Keyword.get(opts, :all) == true ->
+            query
+
+          topic = Keyword.get(opts, :topic) || Keyword.get(opts, :query) ->
+            from(t in query,
+              where: fragment("strpos(lower(?), lower(?)) > 0", t.topic, ^topic)
             )
 
           true ->

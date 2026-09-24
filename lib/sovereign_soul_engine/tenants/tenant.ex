@@ -22,7 +22,14 @@ defmodule SovereignSoulEngine.Tenants.Tenant do
 
   def changeset(tenant, attrs) do
     tenant
-    |> cast(attrs, [:name, :external_source, :api_key_hash, :api_key_prefix, :rate_limit_per_minute, :active])
+    |> cast(attrs, [
+      :name,
+      :external_source,
+      :api_key_hash,
+      :api_key_prefix,
+      :rate_limit_per_minute,
+      :active
+    ])
     |> validate_required([:name, :external_source, :api_key_hash, :api_key_prefix])
     |> validate_number(:rate_limit_per_minute, greater_than: 0)
     |> unique_constraint(:external_source)

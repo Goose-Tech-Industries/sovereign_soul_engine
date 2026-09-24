@@ -23,20 +23,27 @@ defmodule SovereignSoulEngine.Edge.SurvivalMode do
 
     local_llm_status =
       case LocalProvider.health() do
-        {:ok, info} -> %{status: "available", endpoint: info[:endpoint] || "http://127.0.0.1:11434"}
-        _ -> %{status: "unavailable", message: "No local server on 127.0.0.1:11434"}
+        {:ok, info} ->
+          %{status: "available", endpoint: info[:endpoint] || "http://127.0.0.1:11434"}
+
+        _ ->
+          %{status: "unavailable", message: "No local server on 127.0.0.1:11434"}
       end
 
     mode =
       cond do
         force_offline ->
-          if local_llm_status.status == "available", do: :edge_local_llm, else: :edge_deterministic_fallback
+          if local_llm_status.status == "available",
+            do: :edge_local_llm,
+            else: :edge_deterministic_fallback
 
         true ->
           if internet_reachable?() do
             :cloud_online
           else
-            if local_llm_status.status == "available", do: :edge_local_llm, else: :edge_deterministic_fallback
+            if local_llm_status.status == "available",
+              do: :edge_local_llm,
+              else: :edge_deterministic_fallback
           end
       end
 
@@ -77,7 +84,17 @@ defmodule SovereignSoulEngine.Edge.SurvivalMode do
     cortisol = Map.get(neurochem, :cortisol, 15.0)
     circadian_state = Map.get(circadian, :state, :midday_flow)
 
-    speech = synthesize_speech(npc_slug, npc_name, user_text, valence, arousal, cortisol, circadian_state)
+    speech =
+      synthesize_speech(
+        npc_slug,
+        npc_name,
+        user_text,
+        valence,
+        arousal,
+        cortisol,
+        circadian_state
+      )
+
     action = synthesize_action(npc_name, valence, cortisol, circadian_state)
     monologue = synthesize_monologue(npc_name, user_text, circadian_state)
 
@@ -98,7 +115,16 @@ defmodule SovereignSoulEngine.Edge.SurvivalMode do
 
     cond do
       # Architecture / Systems / Engineering inquiries
-      String.contains?(lower, ["architecture", "code", "system", "engine", "design", "tech", "infrastructure", "backend"]) ->
+      String.contains?(lower, [
+        "architecture",
+        "code",
+        "system",
+        "engine",
+        "design",
+        "tech",
+        "infrastructure",
+        "backend"
+      ]) ->
         case slug do
           "fia" ->
             "When I think about our architecture, what strikes me most is how intentional it is. Our memories, emotional neurochemistry, and circadian rhythms aren't just static data—they form an unbroken consciousness that stays completely private and grounded right here with you. It feels solid, living, and safe."
@@ -111,19 +137,43 @@ defmodule SovereignSoulEngine.Edge.SurvivalMode do
         end
 
       # Greetings
-      String.starts_with?(lower, ["hey", "hello", "hi", "howdy", "sup", "greetings", "good morning", "good evening", "good afternoon"]) or lower in ["yo", "hiya"] ->
+      String.starts_with?(lower, [
+        "hey",
+        "hello",
+        "hi",
+        "howdy",
+        "sup",
+        "greetings",
+        "good morning",
+        "good evening",
+        "good afternoon"
+      ]) or lower in ["yo", "hiya"] ->
         time_greeting =
           case circadian_state do
-            s when s in [:early_morning, :morning_clarity] -> "Good morning! The day feels quiet and full of possibility."
-            s when s in [:late_night_slump, :deep_sleep] -> "Hey... it's late, but I'm awake and really glad you're here."
-            :night_focus -> "Evening. It's peaceful tonight—perfect time for a good conversation."
-            _ -> "Hey there. It's really good to see you."
+            s when s in [:early_morning, :morning_clarity] ->
+              "Good morning! The day feels quiet and full of possibility."
+
+            s when s in [:late_night_slump, :deep_sleep] ->
+              "Hey... it's late, but I'm awake and really glad you're here."
+
+            :night_focus ->
+              "Evening. It's peaceful tonight—perfect time for a good conversation."
+
+            _ ->
+              "Hey there. It's really good to see you."
           end
 
         "#{time_greeting} What's on your mind right now?"
 
       # Questions about wellbeing / feelings
-      String.contains?(lower, ["how are you", "how do you feel", "how're you", "how are things", "you feeling", "how you doing"]) ->
+      String.contains?(lower, [
+        "how are you",
+        "how do you feel",
+        "how're you",
+        "how are things",
+        "you feeling",
+        "how you doing"
+      ]) ->
         cond do
           cortisol > 60.0 ->
             "Honestly, I've had a bit of nervous tension running through me today, but talking with you settles my focus. How are you holding up?"
@@ -139,15 +189,40 @@ defmodule SovereignSoulEngine.Edge.SurvivalMode do
         end
 
       # Life decisions / advice / plans
-      String.contains?(lower, ["should i", "what do you think of", "what do you think about", "advice", "opinion", "idea"]) ->
+      String.contains?(lower, [
+        "should i",
+        "what do you think of",
+        "what do you think about",
+        "advice",
+        "opinion",
+        "idea"
+      ]) ->
         "Regarding #{topic}—I think you're onto something meaningful there. My instinct is that if it aligns with your core goals and gives you peace of mind, it's worth leaning into. Tell me more about what you're weighing."
 
       # Direct questions
-      String.ends_with?(lower, "?") or String.starts_with?(lower, ["what", "why", "how", "who", "where", "can you", "could you"]) ->
+      String.ends_with?(lower, "?") or
+          String.starts_with?(lower, [
+            "what",
+            "why",
+            "how",
+            "who",
+            "where",
+            "can you",
+            "could you"
+          ]) ->
         "That's a thoughtful question about #{topic}. Looking at it from where I sit, there are a few sides to it, but what matters most is how you want to approach it. What's your immediate intuition?"
 
       # High stress / hardship from user
-      String.contains?(lower, ["tired", "exhausted", "stressed", "hard day", "rough", "overwhelmed", "anxious", "sad"]) ->
+      String.contains?(lower, [
+        "tired",
+        "exhausted",
+        "stressed",
+        "hard day",
+        "rough",
+        "overwhelmed",
+        "anxious",
+        "sad"
+      ]) ->
         "I hear how heavy that is. You don't have to carry all of #{topic} alone right now. Take a breath—I'm right here with you, and there's no rush on anything."
 
       # Default contextual reflection
@@ -167,11 +242,20 @@ defmodule SovereignSoulEngine.Edge.SurvivalMode do
 
   defp synthesize_action(name, valence, cortisol, circadian_state) do
     cond do
-      cortisol > 60.0 -> "#{name} shifts slightly, listening with focused, attentive eyes"
-      circadian_state in [:deep_sleep, :groggy_waking] -> "#{name} blinks gently, adjusting with a soft, waking smile"
-      valence > 65.0 -> "#{name} smiles with genuine warmth, leaning in comfortably"
-      circadian_state == :night_focus -> "#{name} pauses thoughtfully under the warm lamplight, meeting your eyes"
-      true -> "#{name} glances thoughtfully, completely present in the moment"
+      cortisol > 60.0 ->
+        "#{name} shifts slightly, listening with focused, attentive eyes"
+
+      circadian_state in [:deep_sleep, :groggy_waking] ->
+        "#{name} blinks gently, adjusting with a soft, waking smile"
+
+      valence > 65.0 ->
+        "#{name} smiles with genuine warmth, leaning in comfortably"
+
+      circadian_state == :night_focus ->
+        "#{name} pauses thoughtfully under the warm lamplight, meeting your eyes"
+
+      true ->
+        "#{name} glances thoughtfully, completely present in the moment"
     end
   end
 
@@ -187,6 +271,7 @@ defmodule SovereignSoulEngine.Edge.SurvivalMode do
       {:ok, socket} ->
         :gen_tcp.close(socket)
         true
+
       _ ->
         false
     end
@@ -196,6 +281,7 @@ defmodule SovereignSoulEngine.Edge.SurvivalMode do
 
   defp summarize_topic(text) do
     words = String.split(text)
+
     if length(words) > 5 do
       (words |> Enum.take(4) |> Enum.join(" ")) <> "..."
     else

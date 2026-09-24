@@ -31,7 +31,13 @@ defmodule SovereignSoulEngine.Wearables.RoboticsBridgeTest do
       assert is_float(packet.kinematics.head.roll_deg)
 
       # Verify torso kinematics
-      assert packet.kinematics.torso.posture in ["open_relaxed", "tense_guarded", "slumped_exhausted", "upright_alert"]
+      assert packet.kinematics.torso.posture in [
+               "open_relaxed",
+               "tense_guarded",
+               "slumped_exhausted",
+               "upright_alert"
+             ]
+
       assert packet.kinematics.torso.stiffness_pct >= 20
       assert packet.kinematics.torso.respiration_rate_bpm >= 12
       assert packet.kinematics.torso.chest_expansion_mm > 0.0

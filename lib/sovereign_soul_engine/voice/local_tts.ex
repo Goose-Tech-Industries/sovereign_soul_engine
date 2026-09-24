@@ -60,7 +60,9 @@ defmodule SovereignSoulEngine.Voice.LocalTTS do
       # Clean text of markdown quotes, actions, or bracketed thoughts before speaking
       clean_spoken_text = sanitize_for_speech(trimmed)
 
-      cmd = System.find_executable("edge-tts") || System.find_executable("edge-tts.exe") || "edge-tts"
+      cmd =
+        System.find_executable("edge-tts") || System.find_executable("edge-tts.exe") || "edge-tts"
+
       args = ["--voice", voice, "--text", clean_spoken_text, "--write-media", file_path]
 
       case System.cmd(cmd, args, stderr_to_stdout: true) do

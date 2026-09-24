@@ -21,7 +21,8 @@ defmodule SovereignSoulEngine.Souls.TraitCatalog do
     %{
       key: "bipolar",
       label: "Mood Swings",
-      blurb: "Emotional baseline drifts between highs and lows over time, not just in reaction to events."
+      blurb:
+        "Emotional baseline drifts between highs and lows over time, not just in reaction to events."
     },
     %{
       key: "ocd",
@@ -31,7 +32,8 @@ defmodule SovereignSoulEngine.Souls.TraitCatalog do
     %{
       key: "splitting",
       label: "All-or-Nothing Views",
-      blurb: "People and situations tend to flip between wholly good or wholly bad, little middle ground."
+      blurb:
+        "People and situations tend to flip between wholly good or wholly bad, little middle ground."
     },
     %{
       key: "adhd",
@@ -46,7 +48,8 @@ defmodule SovereignSoulEngine.Souls.TraitCatalog do
     %{
       key: "impostor",
       label: "Impostor Doubt",
-      blurb: "Achievements feel unearned — expects to be \"found out\" regardless of actual competence."
+      blurb:
+        "Achievements feel unearned — expects to be \"found out\" regardless of actual competence."
     },
     %{
       key: "codependency",

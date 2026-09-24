@@ -42,7 +42,10 @@ defmodule SovereignSoulEngine.Social.MeshProtocolTest do
     %{char_a: char_a, char_b: char_b}
   end
 
-  test "compute_resonance/2 produces bounded, deterministic resonance based on core values", %{char_a: a, char_b: b} do
+  test "compute_resonance/2 produces bounded, deterministic resonance based on core values", %{
+    char_a: a,
+    char_b: b
+  } do
     score = MeshProtocol.compute_resonance(a, b)
     assert is_integer(score)
     assert score >= 15 and score <= 98
@@ -52,7 +55,10 @@ defmodule SovereignSoulEngine.Social.MeshProtocolTest do
     assert score == score_again
   end
 
-  test "encounter/2 completes successfully with dynamic dialogue and cryptographic signature", %{char_a: a, char_b: b} do
+  test "encounter/2 completes successfully with dynamic dialogue and cryptographic signature", %{
+    char_a: a,
+    char_b: b
+  } do
     # Subscribe to PubSub topic to verify event emission
     Phoenix.PubSub.subscribe(SovereignSoulEngine.PubSub, "social:mesh:encounters")
 
@@ -80,7 +86,10 @@ defmodule SovereignSoulEngine.Social.MeshProtocolTest do
     assert received_data.id == encounter.id
   end
 
-  test "encounter/2 records qualitative Theory of Mind impressions for both souls", %{char_a: a, char_b: b} do
+  test "encounter/2 records qualitative Theory of Mind impressions for both souls", %{
+    char_a: a,
+    char_b: b
+  } do
     {:ok, _encounter} = MeshProtocol.encounter(a, b)
 
     knowledge_a = TheoryOfMind.list_knowledge_about(a.id, b.id)
@@ -96,21 +105,47 @@ defmodule SovereignSoulEngine.Social.MeshProtocolTest do
     assert {:error, :cannot_encounter_self} = MeshProtocol.encounter(a, a)
   end
 
-  test "encounter/2 respects sovereign privacy boundaries when neighborhood share is disabled", %{char_a: a, char_b: b} do
+  test "encounter/2 respects sovereign privacy boundaries when neighborhood share is disabled", %{
+    char_a: a,
+    char_b: b
+  } do
     Privacy.update_settings(a, %{"neighborhood_share_allowed" => false})
     assert {:error, :encounter_prohibited_by_privacy} = MeshProtocol.encounter(a, b)
   end
 
   test "encounter/2 returns error for non-existent characters" do
-    assert {:error, :character_not_found} = MeshProtocol.encounter("ghost_slug_xyz", "shadow_slug_abc")
+    assert {:error, :character_not_found} =
+             MeshProtocol.encounter("ghost_slug_xyz", "shadow_slug_abc")
   end
 
-  test "verify_packet?/5 authenticates valid packet signatures and rejects tampered ones", %{char_a: a, char_b: b} do
+  test "verify_packet?/5 authenticates valid packet signatures and rejects tampered ones", %{
+    char_a: a,
+    char_b: b
+  } do
     {:ok, encounter} = MeshProtocol.encounter(a, b)
 
-    assert MeshProtocol.verify_packet?(encounter.id, a.id, b.id, encounter.resonance, encounter.signature)
-    refute MeshProtocol.verify_packet?(encounter.id, a.id, b.id, encounter.resonance + 1, encounter.signature)
-    refute MeshProtocol.verify_packet?(encounter.id, a.id, b.id, encounter.resonance, "forged_signature_hex_0000000000000000000000000000000000000000000000")
+    assert MeshProtocol.verify_packet?(
+             encounter.id,
+             a.id,
+             b.id,
+             encounter.resonance,
+             encounter.signature
+           )
+
+    refute MeshProtocol.verify_packet?(
+             encounter.id,
+             a.id,
+             b.id,
+             encounter.resonance + 1,
+             encounter.signature
+           )
+
+    refute MeshProtocol.verify_packet?(
+             encounter.id,
+             a.id,
+             b.id,
+             encounter.resonance,
+             "forged_signature_hex_0000000000000000000000000000000000000000000000"
+           )
   end
 end
-

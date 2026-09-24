@@ -96,7 +96,9 @@ defmodule SovereignSoulEngine.Billing.PassTierTest do
                Billing.verify_age_by_dob(char, "invalid-date", %{"certify_18" => true})
     end
 
-    test "credit card verification awards commercial safe harbor age verification", %{character: char} do
+    test "credit card verification awards commercial safe harbor age verification", %{
+      character: char
+    } do
       assert {:ok, payload} = Billing.verify_age_by_credit_card(char)
       assert payload["verified"] == true
       assert payload["method"] == "credit_card_stripe"
@@ -133,7 +135,9 @@ defmodule SovereignSoulEngine.Billing.PassTierTest do
       assert Billing.get_subscription(char).tier_id == "companion_1499"
     end
 
-    test "setting archon_1999 automatically grants commercial 18+ age verification", %{character: char} do
+    test "setting archon_1999 automatically grants commercial 18+ age verification", %{
+      character: char
+    } do
       assert Billing.age_verified?(char) == false
 
       assert {:ok, sub} = Billing.set_subscription(char, "archon_1999")
@@ -149,7 +153,9 @@ defmodule SovereignSoulEngine.Billing.PassTierTest do
       assert {:error, :invalid_tier} = Billing.set_subscription(char, "fake_tier_123")
     end
 
-    test "cancel_subscription reverts status to canceled and downgrades to free", %{character: char} do
+    test "cancel_subscription reverts status to canceled and downgrades to free", %{
+      character: char
+    } do
       {:ok, sub_active} = Billing.set_subscription(char, "companion_1499")
       assert sub_active.tier_id == "companion_1499"
 

@@ -5,7 +5,13 @@ defmodule SovereignSoulEngine.Souls.DefenseMechanisms do
   guilt, trauma, and intolerable emotional vulnerability.
   """
 
-  @type defense_type :: :none | :projection | :reaction_formation | :intellectualization | :regression | :sublimation
+  @type defense_type ::
+          :none
+          | :projection
+          | :reaction_formation
+          | :intellectualization
+          | :regression
+          | :sublimation
 
   @type t :: %__MODULE__{
           defense: defense_type(),
@@ -39,10 +45,12 @@ defmodule SovereignSoulEngine.Souls.DefenseMechanisms do
       # 1. Projection: Intolerable shame or guilt projected outward
       shame >= 55 or guilt >= 55 ->
         intensity = max(shame, guilt)
+
         %__MODULE__{
           defense: :projection,
           intensity: intensity,
-          manifestation: "Accusing the conversational partner of the character's own repressed failings.",
+          manifestation:
+            "Accusing the conversational partner of the character's own repressed failings.",
           prompt_directive: """
           ACTIVE EGO DEFENSE — PROJECTION (Intensity #{intensity}/100):
           Your subconscious cannot bear your own internal shame or guilt.
@@ -54,10 +62,12 @@ defmodule SovereignSoulEngine.Souls.DefenseMechanisms do
       # 2. Reaction Formation: Hostility disguised as saccharine sweetness
       (anger >= 60 or wound >= 50) and (trust <= 40 and fear >= 40) ->
         intensity = div(anger + fear, 2)
+
         %__MODULE__{
           defense: :reaction_formation,
           intensity: intensity,
-          manifestation: "Displaying exaggerated, saccharine politeness to conceal burning hostility.",
+          manifestation:
+            "Displaying exaggerated, saccharine politeness to conceal burning hostility.",
           prompt_directive: """
           ACTIVE EGO DEFENSE — REACTION FORMATION (Intensity #{intensity}/100):
           You harbor deep, dangerous hostility toward this person, but fear the consequences of open conflict.
@@ -69,10 +79,12 @@ defmodule SovereignSoulEngine.Souls.DefenseMechanisms do
       # 3. Intellectualization: Severe emotional grief or wound converted into clinical analysis
       sadness >= 60 or wound >= 50 ->
         intensity = max(sadness, wound)
+
         %__MODULE__{
           defense: :intellectualization,
           intensity: intensity,
-          manifestation: "Converting raw emotional agony into detached, clinical, hyper-rational logic.",
+          manifestation:
+            "Converting raw emotional agony into detached, clinical, hyper-rational logic.",
           prompt_directive: """
           ACTIVE EGO DEFENSE — INTELLECTUALIZATION (Intensity #{intensity}/100):
           The emotional pain of this topic is too agonizing to feel directly.
@@ -84,10 +96,12 @@ defmodule SovereignSoulEngine.Souls.DefenseMechanisms do
       # 4. Regression: Childlike dependency under extreme fatigue and fear
       fatigue >= 75 and fear >= 65 ->
         intensity = div(fatigue + fear, 2)
+
         %__MODULE__{
           defense: :regression,
           intensity: intensity,
-          manifestation: "Reverting to childlike vulnerability, helplessness, and desperate attachment demands.",
+          manifestation:
+            "Reverting to childlike vulnerability, helplessness, and desperate attachment demands.",
           prompt_directive: """
           ACTIVE EGO DEFENSE — REGRESSION (Intensity #{intensity}/100):
           You have reached complete psychic and somatic exhaustion.
@@ -99,10 +113,12 @@ defmodule SovereignSoulEngine.Souls.DefenseMechanisms do
       # 5. Sublimation: Channeling destructive rage into hyper-focused competence
       confidence >= 70 and anger >= 55 ->
         intensity = div(confidence + anger, 2)
+
         %__MODULE__{
           defense: :sublimation,
           intensity: intensity,
-          manifestation: "Transmuting dangerous rage into icy, laser-focused competence and tactical resolve.",
+          manifestation:
+            "Transmuting dangerous rage into icy, laser-focused competence and tactical resolve.",
           prompt_directive: """
           ACTIVE EGO DEFENSE — SUBLIMATION (Intensity #{intensity}/100):
           You take burning fury and forge it into cold, razor-sharp discipline.

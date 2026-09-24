@@ -50,6 +50,11 @@ defmodule SovereignSoulEngine.Relay.Discovery do
     {:noreply, state}
   end
 
+  @impl true
+  def handle_info(_msg, state) do
+    {:noreply, state}
+  end
+
   defp do_discover do
     Application.get_env(:sovereign_soul_engine, :relay_peers, [])
     |> Enum.each(&query_peer/1)
@@ -60,7 +65,7 @@ defmodule SovereignSoulEngine.Relay.Discovery do
   defp query_peer(peer) do
     url = String.trim_trailing(peer, "/") <> "/sse/api/relay/peers"
 
-    case Req.get(url, retry: false) do
+    case Req.get(url, retry: false, receive_timeout: 3000, connect_options: [timeout: 1500]) do
       {:ok, %{status: 200, body: %{"peers" => peers}}} when is_list(peers) ->
         Enum.each(peers, fn p -> :ets.insert(@table, {p, true}) end)
 

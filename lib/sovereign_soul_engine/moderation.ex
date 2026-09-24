@@ -27,6 +27,7 @@ defmodule SovereignSoulEngine.Moderation do
   @doc "Adds a dynamic blocked term at runtime."
   def add_blocked_term(term) when is_binary(term) do
     term = String.trim(term)
+
     if term != "" do
       GenServer.call(__MODULE__, {:add_blocked_term, term})
     else
@@ -163,5 +164,10 @@ defmodule SovereignSoulEngine.Moderation do
   def handle_call({:set_maturity_rating, rating}, _from, state) do
     :ets.insert(@table, {:maturity_rating, rating})
     {:reply, :ok, state}
+  end
+
+  @impl true
+  def handle_info(_msg, state) do
+    {:noreply, state}
   end
 end

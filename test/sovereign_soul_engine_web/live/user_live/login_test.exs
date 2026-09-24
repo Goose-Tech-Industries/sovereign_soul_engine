@@ -27,7 +27,9 @@ defmodule SovereignSoulEngineWeb.UserLive.LoginTest do
 
       assert html =~ "If your email is in our system"
 
-      assert SovereignSoulEngine.Repo.get_by!(SovereignSoulEngine.Accounts.UserToken, user_id: user.id).context ==
+      assert SovereignSoulEngine.Repo.get_by!(SovereignSoulEngine.Accounts.UserToken,
+               user_id: user.id
+             ).context ==
                "login"
     end
 

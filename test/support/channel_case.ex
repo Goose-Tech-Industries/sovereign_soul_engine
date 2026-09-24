@@ -12,7 +12,8 @@ defmodule SovereignSoulEngineWeb.ChannelCase do
     end
   end
 
-  setup _tags do
+  setup tags do
+    SovereignSoulEngine.DataCase.setup_sandbox(tags)
     :ok
   end
 end

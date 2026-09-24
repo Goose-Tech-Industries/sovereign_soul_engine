@@ -204,7 +204,13 @@ defmodule SovereignSoulEngine.World.TownMap do
         "A labyrinth of teetering five-story gothic tenements built into the hollow of the western curtain wall. Here the Syndicate rules through silence, stolen goods, and black-market whispers. Ravina's informants use the interconnected rooftops to traverse the city unseen.",
       atmosphere:
         "Overhanging timber roofs blocking the sky; dripping tallow lamps in claustrophobic alleys; eyes watching from darkened cellar gratings.",
-      connections: ["high_palace", "kings_plaza", "south_bastion", "sunken_undercity", "barrowgrounds"],
+      connections: [
+        "high_palace",
+        "kings_plaza",
+        "south_bastion",
+        "sunken_undercity",
+        "barrowgrounds"
+      ],
       amenities: [
         "The Blind Beggar's Den",
         "Rooftop Smugglers' Runs",
@@ -300,7 +306,13 @@ defmodule SovereignSoulEngine.World.TownMap do
         "Home to weavers who card and spin the famous heavy tartan of Gleann Caorach. Beside the looms sit herbalists and alchemists, who brew poultices for the garrison and subtle sleep-tonics for the noble houses.",
       atmosphere:
         "Rhythmic thrum of wooden looms; scent of drying belladonna, elderflower, and sheep's wool; rows of slate cottages with herbal window boxes.",
-      connections: ["high_palace", "north_outpost", "crows_keep", "night_owl_quarter", "barrowgrounds"],
+      connections: [
+        "high_palace",
+        "north_outpost",
+        "crows_keep",
+        "night_owl_quarter",
+        "barrowgrounds"
+      ],
       amenities: [
         "The Great Loom Hall",
         "Master Apothecary Laboratory",
@@ -367,6 +379,10 @@ defmodule SovereignSoulEngine.World.TownMap do
     GenServer.start_link(__MODULE__, :ok, Keyword.put_new(opts, :name, __MODULE__))
   end
 
+  @doc "Returns the static canonical list of the 13 districts."
+  @spec districts() :: [map()]
+  def districts, do: @districts
+
   @doc "Returns the full town map including all 13 regions with live souls and drama."
   @spec get_map() :: map()
   def get_map do
@@ -401,7 +417,8 @@ defmodule SovereignSoulEngine.World.TownMap do
   Expands a district using the AI System (ProviderCascade).
   Generates a new point of interest, discovered secret, or atmospheric event.
   """
-  @spec expand_district_with_ai(String.t(), String.t(), keyword()) :: {:ok, map()} | {:error, term()}
+  @spec expand_district_with_ai(String.t(), String.t(), keyword()) ::
+          {:ok, map()} | {:error, term()}
   def expand_district_with_ai(district_slug, prompt \\ "", opts \\ []) do
     GenServer.call(__MODULE__, {:expand_district_with_ai, district_slug, prompt, opts}, 30_000)
   end
@@ -543,6 +560,11 @@ defmodule SovereignSoulEngine.World.TownMap do
   def handle_info({:deferred_move, char_id, target_slug}, state) do
     new_locations = Map.put(state.soul_locations, char_id, target_slug)
     {:noreply, %{state | soul_locations: new_locations}}
+  end
+
+  @impl true
+  def handle_info(_msg, state) do
+    {:noreply, state}
   end
 
   # --- Helpers & AI Generation ------------------------------------------------
@@ -687,8 +709,10 @@ defmodule SovereignSoulEngine.World.TownMap do
       type: "secret_vault",
       description:
         if(prompt != "",
-          do: "Influenced by '#{prompt}', a moss-covered iron grille reveals an ancient clan reliquary echoing with low chants.",
-          else: "Behind an age-worn Celtic crest, a narrow passage descends into cool darkness scented with dried pine and old iron."
+          do:
+            "Influenced by '#{prompt}', a moss-covered iron grille reveals an ancient clan reliquary echoing with low chants.",
+          else:
+            "Behind an age-worn Celtic crest, a narrow passage descends into cool darkness scented with dried pine and old iron."
         ),
       danger_shift: 1,
       uncovered_by: "Whispers overheard between night sentries",

@@ -13,6 +13,7 @@ defmodule SovereignSoulEngine.Goals.CharacterGoal do
     field :progress_notes, :string
 
     belongs_to :character, SovereignSoulEngine.Characters.Character
+
     belongs_to :target_character, SovereignSoulEngine.Characters.Character,
       foreign_key: :target_character_id
 
@@ -21,7 +22,16 @@ defmodule SovereignSoulEngine.Goals.CharacterGoal do
 
   def changeset(goal, attrs) do
     goal
-    |> cast(attrs, [:character_id, :goal, :current_step, :blocker, :priority, :status, :target_character_id, :progress_notes])
+    |> cast(attrs, [
+      :character_id,
+      :goal,
+      :current_step,
+      :blocker,
+      :priority,
+      :status,
+      :target_character_id,
+      :progress_notes
+    ])
     |> validate_required([:character_id, :goal])
     |> validate_number(:priority, greater_than_or_equal_to: 0, less_than_or_equal_to: 100)
     |> validate_inclusion(:status, ["active", "paused", "achieved", "abandoned"])

@@ -82,6 +82,11 @@ defmodule SovereignSoulEngine.Social.NPCScheduler do
     {:noreply, new_state}
   end
 
+  @impl true
+  def handle_info(_msg, state) do
+    {:noreply, state}
+  end
+
   # --- Tick logic ---
 
   defp do_tick(state) do

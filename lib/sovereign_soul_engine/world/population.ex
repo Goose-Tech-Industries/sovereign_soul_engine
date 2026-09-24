@@ -50,4 +50,9 @@ defmodule SovereignSoulEngine.World.Population do
     Process.send_after(self(), :ensure, @ensure_ms)
     {:noreply, state}
   end
+
+  @impl true
+  def handle_info(_msg, state) do
+    {:noreply, state}
+  end
 end

@@ -75,7 +75,9 @@ defmodule SovereignSoulEngineWeb.Api.VesselController do
 
     # 1. Update emotional state (lower stress, raise attachment & gratitude)
     case Repo.get_by(EmotionalState, character_id: companion.id) do
-      nil -> :ok
+      nil ->
+        :ok
+
       emotional ->
         new_stress = max(0, emotional.stress - 12)
         new_attachment = min(100, emotional.attachment + 8)

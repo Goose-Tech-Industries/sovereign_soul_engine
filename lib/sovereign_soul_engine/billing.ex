@@ -26,8 +26,14 @@ defmodule SovereignSoulEngine.Billing do
 
   # --- Age Verification -------------------------------------------------------
 
-  defdelegate verify_age_by_dob(char_or_id, dob, attestations \\ %{}), to: AgeVerification, as: :verify_by_dob
-  defdelegate verify_age_by_credit_card(char_or_id, opts \\ %{}), to: AgeVerification, as: :verify_by_credit_card
+  defdelegate verify_age_by_dob(char_or_id, dob, attestations \\ %{}),
+    to: AgeVerification,
+    as: :verify_by_dob
+
+  defdelegate verify_age_by_credit_card(char_or_id, opts \\ %{}),
+    to: AgeVerification,
+    as: :verify_by_credit_card
+
   defdelegate age_verified?(char_or_id), to: AgeVerification, as: :verified?
   defdelegate get_age_status(char_or_id), to: AgeVerification, as: :get_status
 
@@ -51,7 +57,11 @@ defmodule SovereignSoulEngine.Billing do
       stripe_subscription_id: Map.get(sub, "stripe_subscription_id"),
       updated_at: Map.get(sub, "updated_at"),
       age_verified?: AgeVerification.verified?(character),
-      maturity_rating: if(tier_id == "archon_1999", do: "adult", else: if(tier_id == "companion_1499", do: "mature", else: "teen"))
+      maturity_rating:
+        if(tier_id == "archon_1999",
+          do: "adult",
+          else: if(tier_id == "companion_1499", do: "mature", else: "teen")
+        )
     }
   end
 
@@ -74,8 +84,10 @@ defmodule SovereignSoulEngine.Billing do
       sub_payload = %{
         "tier" => tier_id,
         "status" => Keyword.get(opts, :status, "active"),
-        "stripe_subscription_id" => Keyword.get(opts, :stripe_subscription_id, "sub_local_#{tier_id}"),
-        "stripe_customer_id" => Keyword.get(opts, :stripe_customer_id, "cus_local_#{character.slug}"),
+        "stripe_subscription_id" =>
+          Keyword.get(opts, :stripe_subscription_id, "sub_local_#{tier_id}"),
+        "stripe_customer_id" =>
+          Keyword.get(opts, :stripe_customer_id, "cus_local_#{character.slug}"),
         "updated_at" => now_str
       }
 
@@ -175,7 +187,8 @@ defmodule SovereignSoulEngine.Billing do
   defp resolve_character(id_or_slug) when is_binary(id_or_slug) do
     case Ecto.UUID.cast(id_or_slug) do
       {:ok, uuid} ->
-        Characters.get_character(uuid) || Characters.get_character_by_slug(id_or_slug) || get_or_create_default_player()
+        Characters.get_character(uuid) || Characters.get_character_by_slug(id_or_slug) ||
+          get_or_create_default_player()
 
       :error ->
         Characters.get_character_by_slug(id_or_slug) || get_or_create_default_player()

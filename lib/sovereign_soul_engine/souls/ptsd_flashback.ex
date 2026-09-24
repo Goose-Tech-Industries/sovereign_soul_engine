@@ -40,7 +40,9 @@ defmodule SovereignSoulEngine.Souls.PTSDFlashback do
       no_flashback()
     else
       search_text =
-        String.downcase("#{dialogue_content} #{Map.get(scene_context, "mood", "")} #{Map.get(scene_context, "weather", "")} #{Map.get(scene_context, "narrative", "")}")
+        String.downcase(
+          "#{dialogue_content} #{Map.get(scene_context, "mood", "")} #{Map.get(scene_context, "weather", "")} #{Map.get(scene_context, "narrative", "")}"
+        )
 
       case Enum.find_value(traumatic_memories, &match_memory_to_cues(&1, search_text)) do
         nil ->
@@ -86,6 +88,7 @@ defmodule SovereignSoulEngine.Souls.PTSDFlashback do
 
   defp match_memory_to_cues(memory, search_text) do
     tags = memory.tags || []
+
     summary_words =
       (memory.summary || "")
       |> String.downcase()
@@ -94,9 +97,29 @@ defmodule SovereignSoulEngine.Souls.PTSDFlashback do
 
     # Common visceral trauma cues that bridge past to present
     universal_trauma_cues = [
-      "blood", "bleed", "blade", "knife", "poison", "fire", "burn", "locked",
-      "dark", "shadow", "screaming", "betrayed", "trapped", "abandoned", "drown",
-      "suffocate", "choke", "ruin", "corpse", "dead", "grave", "wound", "strike"
+      "blood",
+      "bleed",
+      "blade",
+      "knife",
+      "poison",
+      "fire",
+      "burn",
+      "locked",
+      "dark",
+      "shadow",
+      "screaming",
+      "betrayed",
+      "trapped",
+      "abandoned",
+      "drown",
+      "suffocate",
+      "choke",
+      "ruin",
+      "corpse",
+      "dead",
+      "grave",
+      "wound",
+      "strike"
     ]
 
     all_cues = Enum.uniq(tags ++ summary_words ++ universal_trauma_cues)

@@ -39,23 +39,33 @@ defmodule SovereignSoulEngineWeb.Api.SmartHomeController do
   """
   def sync(conn, params) do
     character_slug = params["character_slug"] || params["slug"] || "goose"
-    {:ok, profile} = SmartHomeBridge.sync_environment(character_slug)
 
-    json(conn, %{
-      status: "ok",
-      synced: true,
-      character_slug: character_slug,
-      lighting: %{
-        mode: profile.mode,
-        name: profile.name,
-        hex: profile.hex,
-        rgb: profile.rgb,
-        brightness_pct: profile.brightness_pct,
-        color_temp_kelvin: profile.color_temp_kelvin,
-        effect: profile.effect,
-        rationale: profile.rationale
-      },
-      neurochemistry: profile.neurochemistry
-    })
+    case SmartHomeBridge.sync_environment(character_slug) do
+      {:ok, profile} ->
+        json(conn, %{
+          status: "ok",
+          synced: true,
+          character_slug: character_slug,
+          lighting: %{
+            mode: profile.mode,
+            name: profile.name,
+            hex: profile.hex,
+            rgb: profile.rgb,
+            brightness_pct: profile.brightness_pct,
+            color_temp_kelvin: profile.color_temp_kelvin,
+            effect: profile.effect,
+            rationale: profile.rationale
+          },
+          neurochemistry: profile.neurochemistry
+        })
+
+      {:ignored, :disabled_by_privacy_settings} ->
+        json(conn, %{
+          status: "ignored_by_privacy_settings",
+          synced: false,
+          character_slug: character_slug,
+          message: "Smart home ambient lighting is disabled in user privacy settings."
+        })
+    end
   end
 end

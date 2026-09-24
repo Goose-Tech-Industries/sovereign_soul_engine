@@ -16,11 +16,17 @@ defmodule SovereignSoulEngineWeb.UserSocket do
       not rate_limit_ok?(connect_info) ->
         :error
 
-      not authenticated?(params) ->
-        :error
-
       true ->
-        {:ok, socket}
+        case authenticate(params) do
+          {:ok, tenant} ->
+            {:ok, assign(socket, :tenant, tenant)}
+
+          :open ->
+            {:ok, socket}
+
+          :error ->
+            :error
+        end
     end
   end
 
@@ -29,13 +35,28 @@ defmodule SovereignSoulEngineWeb.UserSocket do
 
   # In production a connection must present a valid tenant API key. In dev the
   # socket is open so self-sovereign DID demos (DB-free souls) keep working.
-  defp authenticated?(params) do
-    unless Application.get_env(:sovereign_soul_engine, :require_connect_auth, false) do
-      true
+  defp authenticate(params) do
+    if Application.get_env(:sovereign_soul_engine, :require_connect_auth, false) do
+      case params["api_key"] do
+        key when is_binary(key) and byte_size(key) > 0 ->
+          case Tenants.authenticate(key) do
+            %Tenants.Tenant{} = tenant -> {:ok, tenant}
+            _ -> :error
+          end
+
+        _ ->
+          :error
+      end
     else
       case params["api_key"] do
-        key when is_binary(key) and byte_size(key) > 0 -> not is_nil(Tenants.authenticate(key))
-        _ -> false
+        key when is_binary(key) and byte_size(key) > 0 ->
+          case Tenants.authenticate(key) do
+            %Tenants.Tenant{} = tenant -> {:ok, tenant}
+            _ -> :open
+          end
+
+        _ ->
+          :open
       end
     end
   end

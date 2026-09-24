@@ -40,6 +40,7 @@ defmodule SovereignSoulEngine.Actions.ActionResolverTest do
 
     test "rejects targeting self" do
       self_id = Ecto.UUID.generate()
+
       opts = [
         proposed_action: "attack",
         character_status: :active,
@@ -71,7 +72,10 @@ defmodule SovereignSoulEngine.Actions.ActionResolverTest do
       %{character: char, scene: scene}
     end
 
-    test "create, list, filter pending, and update action intent", %{character: char, scene: scene} do
+    test "create, list, filter pending, and update action intent", %{
+      character: char,
+      scene: scene
+    } do
       assert {:ok, %ActionIntent{} = intent} =
                Actions.create_action_intent(%{
                  character_id: char.id,
@@ -90,14 +94,20 @@ defmodule SovereignSoulEngine.Actions.ActionResolverTest do
       assert hd(char_actions).id == intent.id
 
       # List pending filtered by action types
-      pending_matching = Actions.list_pending_action_intents_for_character(char.id, ["lock_door", "flee"])
+      pending_matching =
+        Actions.list_pending_action_intents_for_character(char.id, ["lock_door", "flee"])
+
       assert length(pending_matching) == 1
 
-      pending_non_matching = Actions.list_pending_action_intents_for_character(char.id, ["attack"])
+      pending_non_matching =
+        Actions.list_pending_action_intents_for_character(char.id, ["attack"])
+
       assert length(pending_non_matching) == 0
 
       # Update action intent to approved
-      assert {:ok, updated} = Actions.update_action_intent(intent, %{validation_status: "approved"})
+      assert {:ok, updated} =
+               Actions.update_action_intent(intent, %{validation_status: "approved"})
+
       assert updated.validation_status == "approved"
 
       # No longer shows up as pending

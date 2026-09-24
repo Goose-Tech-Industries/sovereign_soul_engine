@@ -85,6 +85,7 @@ defmodule SovereignSoulEngine.LLM.AnthropicProvider do
            json: body,
            headers: headers,
            max_retries: 1,
+           connect_options: [timeout: 5000],
            receive_timeout: 25_000
          ) do
       {:ok, %{status: 200, body: response_body}} ->
