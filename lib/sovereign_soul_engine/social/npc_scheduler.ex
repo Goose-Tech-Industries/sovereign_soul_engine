@@ -110,7 +110,17 @@ defmodule SovereignSoulEngine.Social.NPCScheduler do
         case pick_conversation_pair(available_npcs) do
           {npc_a, npc_b} ->
             Task.start(fn ->
-              NPCConversation.run(npc_a.id, npc_b.id)
+              try do
+                NPCConversation.run(npc_a.id, npc_b.id)
+              rescue
+                error ->
+                  Logger.warning("NPCScheduler conversation skipped: #{Exception.message(error)}")
+              catch
+                kind, reason ->
+                  Logger.warning(
+                    "NPCScheduler conversation stopped (#{kind}): #{inspect(reason)}"
+                  )
+              end
             end)
 
             Logger.info("NPCScheduler: triggered conversation #{npc_a.name} ↔ #{npc_b.name}")
@@ -125,7 +135,13 @@ defmodule SovereignSoulEngine.Social.NPCScheduler do
 
     # Also spark an autonomous social post so the town accumulates history
     Task.start(fn ->
-      SocialFeed.spark_inter_soul_activity()
+      try do
+        SocialFeed.spark_inter_soul_activity()
+      rescue
+        error -> Logger.debug("NPCScheduler social activity skipped: #{Exception.message(error)}")
+      catch
+        _kind, _reason -> :ok
+      end
     end)
 
     %{
