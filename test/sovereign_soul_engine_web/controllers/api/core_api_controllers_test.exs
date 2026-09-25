@@ -211,6 +211,30 @@ defmodule SovereignSoulEngineWeb.Api.CoreApiControllersTest do
 
       assert json_response(conn, 422)["error"] == "message is empty"
     end
+
+    test "POST npc_reply returns 404 for an unknown or malformed NPC", %{conn: conn} do
+      conn =
+        post(conn, ~p"/sse/api/ambient_chat/npc_reply", %{
+          "npc_id" => Ecto.UUID.generate(),
+          "scene_id" => Ecto.UUID.generate(),
+          "player_id" => Ecto.UUID.generate(),
+          "message" => "Anyone there?"
+        })
+
+      assert json_response(conn, 404)["error"] == "npc not found"
+    end
+
+    test "POST npc_reply rejects a malformed NPC id", %{conn: conn} do
+      conn =
+        post(conn, ~p"/sse/api/ambient_chat/npc_reply", %{
+          "npc_id" => "not-a-uuid",
+          "scene_id" => Ecto.UUID.generate(),
+          "player_id" => Ecto.UUID.generate(),
+          "message" => "Anyone there?"
+        })
+
+      assert json_response(conn, 404)["error"] == "npc not found"
+    end
   end
 
   describe "NpcActionsController" do

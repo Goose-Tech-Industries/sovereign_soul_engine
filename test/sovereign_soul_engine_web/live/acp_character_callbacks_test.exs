@@ -37,4 +37,49 @@ defmodule SovereignSoulEngineWeb.AcpCharacterCallbacksTest do
     {:noreply, socket} = AcpCharacterLive.handle_info(:unexpected, socket)
     assert socket.assigns.id == character.id
   end
+
+  test "character ACP updates drafts, toggles scenes, and safely ignores empty writes" do
+    {:ok, character} =
+      Characters.create_character(%{
+        name: "Draft NPC",
+        slug: "draft-npc-#{System.unique_integer([:positive])}",
+        kind: "npc",
+        status: "active"
+      })
+
+    socket = %Phoenix.LiveView.Socket{assigns: %{__changed__: %{}}}
+    {:ok, socket} = AcpCharacterLive.mount(%{"id" => character.id}, %{}, socket)
+    socket = %{
+      socket
+      | assigns:
+          Map.merge(socket.assigns, %{
+            emotional_draft: %{"anger" => 0, "stress" => 0},
+            soul_draft: %{"speech_style" => "", "personality_traits" => %{}},
+            expanded_scene_ids: MapSet.new()
+          })
+    }
+
+    {:noreply, socket} =
+      AcpCharacterLive.handle_event("update_emotional_draft", %{"anger" => "55", "stress" => "31"}, socket)
+
+    assert socket.assigns.emotional_draft["anger"] == "55"
+    assert socket.assigns.emotional_draft["stress"] == "31"
+
+    {:noreply, socket} =
+      AcpCharacterLive.handle_event("update_soul_draft", %{"speech_style" => "measured"}, socket)
+
+    assert socket.assigns.soul_draft["speech_style"] == "measured"
+    {:noreply, socket} = AcpCharacterLive.handle_event("toggle_soul_trait", %{"trait" => "brave"}, socket)
+    assert socket.assigns.soul_draft["personality_traits"]["brave"] == true
+
+    {:noreply, socket} = AcpCharacterLive.handle_event("add_goal", %{"goal" => "   "}, socket)
+    {:noreply, socket} = AcpCharacterLive.handle_event("add_grief_arc", %{"subject" => "   "}, socket)
+    {:noreply, socket} = AcpCharacterLive.handle_event("add_relationship", %{"target_id" => ""}, socket)
+    assert socket.assigns.active_goals == []
+
+    {:noreply, socket} =
+      AcpCharacterLive.handle_event("toggle_scene_expand", %{"scene_id" => "scene-1"}, socket)
+
+    assert MapSet.member?(socket.assigns.expanded_scene_ids, "scene-1")
+  end
 end

@@ -66,6 +66,24 @@ defmodule SovereignSoulEngineWeb.Api.ExpansionControllersTest do
       assert Map.has_key?(body["prosody"], "pitch_semitones")
       assert Map.has_key?(body["prosody"], "rate_multiplier")
     end
+
+    test "GET prosody falls back to goose for an unknown character", %{conn: conn} do
+      conn = get(conn, ~p"/sse/api/voice/prosody?character_slug=missing-voice-character")
+      body = json_response(conn, 200)
+      assert body["status"] == "ok"
+      assert body["character_slug"] == "missing-voice-character"
+      assert is_map(body["prosody"])
+    end
+
+    test "POST synthesize returns a controlled error when local speech is unavailable", %{conn: conn} do
+      conn =
+        post(conn, ~p"/sse/api/voice/synthesize", %{
+          "character_slug" => "missing-voice-character",
+          "text" => "hello [REDACTED]"
+        })
+
+      assert json_response(conn, 400)["status"] == "error"
+    end
   end
 
   describe "EdgeController" do
