@@ -1,4 +1,4 @@
-defmodule SovereignSoulEngine.Voice.ProsodyEngineTest do
+defmodule SovereignSoulEngine.Voice.ProsodyEngineBoundaryTest do
   use ExUnit.Case, async: true
 
   alias SovereignSoulEngine.Voice.ProsodyEngine
