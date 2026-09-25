@@ -32,4 +32,34 @@ defmodule SovereignSoulEngineWeb.MapLiveTest do
 
     assert unchanged.assigns.tile_size == mounted.assigns.tile_size
   end
+
+  test "covers map controls, keyboard routing, and ambient state" do
+    socket = %Phoenix.LiveView.Socket{assigns: %{__changed__: %{}}}
+    {:ok, socket} = MapLive.mount(%{}, %{}, socket)
+
+    {:noreply, socket} = MapLive.handle_event("toggle_view_mode", %{}, socket)
+    assert socket.assigns.view_mode == "radar"
+    {:noreply, socket} = MapLive.handle_event("walk_direction", %{"direction" => "east"}, socket)
+    assert socket.assigns.last_direction == :east
+    {:noreply, socket} = MapLive.handle_event("handle_keydown", %{"key" => "m"}, socket)
+    assert socket.assigns.view_mode == "rpg"
+    {:noreply, socket} = MapLive.handle_event("focus_ai_input", %{}, socket)
+    {:noreply, socket} = MapLive.handle_event("handle_keydown", %{"key" => "w"}, socket)
+    assert socket.assigns.ai_input_focused?
+    {:noreply, socket} = MapLive.handle_event("blur_ai_input", %{}, socket)
+
+    {:noreply, socket} =
+      MapLive.handle_event("update_ai_prompt", %{"prompt" => "Describe this place"}, socket)
+
+    assert socket.assigns.ai_prompt == "Describe this place"
+
+    {:noreply, socket} =
+      MapLive.handle_event("hail_soul", %{"name" => "Fia", "slug" => "fia"}, socket)
+
+    assert socket.assigns.ambient_dialogue.name == "Fia"
+    {:noreply, socket} = MapLive.handle_event("dismiss_ambient_dialogue", %{}, socket)
+    assert socket.assigns.ambient_dialogue == nil
+    {:noreply, socket} = MapLive.handle_event("interact_nearby", %{}, socket)
+    assert is_map(socket.assigns)
+  end
 end
