@@ -7,6 +7,7 @@ defmodule SovereignSoulEngine.MixProject do
       version: "0.1.0",
       elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
+      test_paths: ["test"],
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       deps: deps(),
