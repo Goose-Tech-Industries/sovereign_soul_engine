@@ -28,7 +28,7 @@ defmodule SovereignSoulEngine.MixProject do
 
   def cli do
     [
-      preferred_envs: [precommit: :test]
+      preferred_envs: [precommit: :test, coverage: :test]
     ]
   end
 
