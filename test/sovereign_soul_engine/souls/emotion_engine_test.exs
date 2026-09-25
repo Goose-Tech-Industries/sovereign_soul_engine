@@ -378,4 +378,42 @@ defmodule SovereignSoulEngine.Souls.EmotionEngineTest do
       end)
     end
   end
+
+  describe "baseline, rumination, and somatic modifiers" do
+    test "drift moves dimensions toward baseline with bounded steps" do
+      state = %{anger: 0, fear: 50, stress: 100}
+      result = EmotionEngine.drift_toward_baseline(state, %{anger: 100, fear: 49, stress: 0, curiosity: 80})
+      assert result.anger == 3
+      assert result.fear == 49
+      assert result.stress == 97
+      assert result.curiosity == 3
+    end
+
+    test "drift ignores non-integer and absent targets" do
+      state = %{anger: 10}
+      assert EmotionEngine.drift_toward_baseline(state, %{anger: "20", fear: 30}).anger == 10
+    end
+
+    test "rumination only spikes stress above threshold and clamps" do
+      {quiet, nil} = EmotionEngine.apply_rumination(%{stress: 10}, 50)
+      assert quiet.stress == 10
+      {active, context} = EmotionEngine.apply_rumination(%{stress: 98}, 80)
+      assert active.stress == 100
+      assert context =~ "RUMINATION ACTIVE"
+    end
+
+    test "somatic modifiers cover nil, moderate, and severe symptoms" do
+      assert EmotionEngine.apply_somatic_modifiers(%{}, nil) == %{}
+      moderate = %{hunger: 70, pain: 60, fatigue: 70, illness_severity: 60}
+      result = EmotionEngine.apply_somatic_modifiers(%{}, moderate)
+      assert result.anger == 5
+      assert result.stress == 8
+      assert result.sadness == 5
+      severe = %{hunger: 90, pain: 90, fatigue: 90, illness_severity: 90}
+      severe_result = EmotionEngine.apply_somatic_modifiers(%{}, severe)
+      assert severe_result.confidence == -15
+      assert severe_result.stress == 8
+      assert severe_result.fear == 5
+    end
+  end
 end
