@@ -10,7 +10,7 @@ defmodule SovereignSoulEngine.Social.NPCSchedulerTest do
     assert is_integer(before.tick_count)
 
     NPCScheduler.trigger_tick()
-    Process.sleep(30)
+    _ = :sys.get_state(pid)
 
     after_tick = NPCScheduler.status()
     assert after_tick.tick_count >= before.tick_count
@@ -21,7 +21,17 @@ defmodule SovereignSoulEngine.Social.NPCSchedulerTest do
     pid = Process.whereis(NPCScheduler)
     send(pid, {:unexpected_scheduler_message, self()})
     send(pid, :unexpected_scheduler_atom)
-    Process.sleep(10)
-    assert Process.alive?(pid)
+    assert :sys.get_state(pid).tick_count >= 0
+  end
+
+  test "processes a direct timer tick and keeps its state contract" do
+    pid = Process.whereis(NPCScheduler)
+    before = NPCScheduler.status()
+    send(pid, :tick)
+    after_tick = :sys.get_state(pid)
+
+    assert after_tick.tick_count == before.tick_count + 1
+    assert %DateTime{} = after_tick.last_tick_at
+    assert is_integer(after_tick.conversations_run)
   end
 end
