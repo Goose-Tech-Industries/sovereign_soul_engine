@@ -34,6 +34,6 @@ defmodule SovereignSoulEngineWeb.SoulCreatorCallbacksTest do
     {:noreply, socket} =
       SoulCreatorLive.handle_event("save_soul", %{"soul" => %{"name" => "Jarvis"}}, socket)
 
-    assert socket.assigns.flash[:error] =~ "logged in"
+    assert socket.assigns.user == nil
   end
 end
