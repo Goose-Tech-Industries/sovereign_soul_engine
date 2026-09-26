@@ -75,7 +75,9 @@ defmodule SovereignSoulEngineWeb.Api.ExpansionControllersTest do
       assert is_map(body["prosody"])
     end
 
-    test "POST synthesize returns a controlled error when local speech is unavailable", %{conn: conn} do
+    test "POST synthesize returns a controlled error when local speech is unavailable", %{
+      conn: conn
+    } do
       conn =
         post(conn, ~p"/sse/api/voice/synthesize", %{
           "character_slug" => "missing-voice-character",

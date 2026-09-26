@@ -1,15 +1,10 @@
 defmodule SovereignSoulEngine.MixTasksTest do
-  use SovereignSoulEngine.DataCase, async: true
+  use SovereignSoulEngine.DataCase, async: false
 
   import ExUnit.CaptureIO
 
   alias SovereignSoulEngine.{Tenants, Repo}
   alias SovereignSoulEngine.Tenants.Tenant
-
-  setup do
-    Mix.Task.clear()
-    :ok
-  end
 
   test "create_tenant provisions a tenant and prints the key once" do
     source = "task_create_#{System.unique_integer([:positive])}"

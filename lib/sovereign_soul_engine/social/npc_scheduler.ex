@@ -106,10 +106,10 @@ defmodule SovereignSoulEngine.Social.NPCScheduler do
     tick_emotional_homeostasis(available_npcs)
 
     conversations_run =
-      if :rand.uniform() < @conversation_probability do
+      if Map.get(state, :random, &:rand.uniform/0).() < @conversation_probability do
         case pick_conversation_pair(available_npcs) do
           {npc_a, npc_b} ->
-            Task.start(fn ->
+            Map.get(state, :task_runner, &Task.start/1).(fn ->
               try do
                 NPCConversation.run(npc_a.id, npc_b.id)
               rescue
@@ -134,7 +134,7 @@ defmodule SovereignSoulEngine.Social.NPCScheduler do
       end
 
     # Also spark an autonomous social post so the town accumulates history
-    Task.start(fn ->
+    Map.get(state, :task_runner, &Task.start/1).(fn ->
       try do
         SocialFeed.spark_inter_soul_activity()
       rescue

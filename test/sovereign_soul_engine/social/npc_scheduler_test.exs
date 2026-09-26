@@ -3,6 +3,20 @@ defmodule SovereignSoulEngine.Social.NPCSchedulerTest do
 
   alias SovereignSoulEngine.Social.NPCScheduler
 
+  setup do
+    previous = :sys.get_state(NPCScheduler)
+
+    :sys.replace_state(NPCScheduler, fn state ->
+      Map.put(state, :task_runner, fn work ->
+        work.()
+        {:ok, self()}
+      end)
+    end)
+
+    on_exit(fn -> :sys.replace_state(NPCScheduler, fn _ -> previous end) end)
+    :ok
+  end
+
   test "reports scheduler state and advances a manual empty-world tick" do
     pid = Process.whereis(NPCScheduler)
     assert is_pid(pid)

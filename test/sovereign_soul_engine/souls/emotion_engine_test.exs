@@ -382,7 +382,15 @@ defmodule SovereignSoulEngine.Souls.EmotionEngineTest do
   describe "baseline, rumination, and somatic modifiers" do
     test "drift moves dimensions toward baseline with bounded steps" do
       state = %{anger: 0, fear: 50, stress: 100}
-      result = EmotionEngine.drift_toward_baseline(state, %{anger: 100, fear: 49, stress: 0, curiosity: 80})
+
+      result =
+        EmotionEngine.drift_toward_baseline(state, %{
+          anger: 100,
+          fear: 49,
+          stress: 0,
+          curiosity: 80
+        })
+
       assert result.anger == 3
       assert result.fear == 49
       assert result.stress == 97

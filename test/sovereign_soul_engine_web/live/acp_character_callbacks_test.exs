@@ -49,6 +49,7 @@ defmodule SovereignSoulEngineWeb.AcpCharacterCallbacksTest do
 
     socket = %Phoenix.LiveView.Socket{assigns: %{__changed__: %{}}}
     {:ok, socket} = AcpCharacterLive.mount(%{"id" => character.id}, %{}, socket)
+
     socket = %{
       socket
       | assigns:
@@ -60,7 +61,11 @@ defmodule SovereignSoulEngineWeb.AcpCharacterCallbacksTest do
     }
 
     {:noreply, socket} =
-      AcpCharacterLive.handle_event("update_emotional_draft", %{"anger" => "55", "stress" => "31"}, socket)
+      AcpCharacterLive.handle_event(
+        "update_emotional_draft",
+        %{"anger" => "55", "stress" => "31"},
+        socket
+      )
 
     assert socket.assigns.emotional_draft["anger"] == "55"
     assert socket.assigns.emotional_draft["stress"] == "31"
@@ -69,12 +74,20 @@ defmodule SovereignSoulEngineWeb.AcpCharacterCallbacksTest do
       AcpCharacterLive.handle_event("update_soul_draft", %{"speech_style" => "measured"}, socket)
 
     assert socket.assigns.soul_draft["speech_style"] == "measured"
-    {:noreply, socket} = AcpCharacterLive.handle_event("toggle_soul_trait", %{"trait" => "brave"}, socket)
+
+    {:noreply, socket} =
+      AcpCharacterLive.handle_event("toggle_soul_trait", %{"trait" => "brave"}, socket)
+
     assert socket.assigns.soul_draft["personality_traits"]["brave"] == true
 
     {:noreply, socket} = AcpCharacterLive.handle_event("add_goal", %{"goal" => "   "}, socket)
-    {:noreply, socket} = AcpCharacterLive.handle_event("add_grief_arc", %{"subject" => "   "}, socket)
-    {:noreply, socket} = AcpCharacterLive.handle_event("add_relationship", %{"target_id" => ""}, socket)
+
+    {:noreply, socket} =
+      AcpCharacterLive.handle_event("add_grief_arc", %{"subject" => "   "}, socket)
+
+    {:noreply, socket} =
+      AcpCharacterLive.handle_event("add_relationship", %{"target_id" => ""}, socket)
+
     assert socket.assigns.active_goals == []
 
     {:noreply, socket} =
